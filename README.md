@@ -8,9 +8,11 @@ presença e pagamentos.
 - Login dos responsáveis (administrador / secretaria)
 - Cadastro de **alunos** com busca por nome ou CPF, validação de CPF e ficha do aluno
 - Cadastro de **instrutores** e **veículos**
+- **Matrícula** do aluno (categoria, aulas contratadas, valor) com geração
+  automática das parcelas mensais e situação de cada parcela (pendente / atrasada / paga)
 - Painel com resumo
 
-Próximas etapas: matrícula com parcelas, agenda de aulas com presença,
+Próximas etapas: agenda de aulas com presença,
 baixa de pagamentos e painel financeiro.
 
 ## Como rodar no seu computador
