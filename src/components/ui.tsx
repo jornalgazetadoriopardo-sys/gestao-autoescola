@@ -43,21 +43,40 @@ const variantes = {
 
 type Variante = keyof typeof variantes;
 
+const tamanhos = {
+  normal: "px-4 py-2 text-sm shadow-sm",
+  pequeno: "px-2.5 py-1 text-xs",
+};
+
+type Tamanho = keyof typeof tamanhos;
+
 const botaoBase =
-  "inline-flex items-center justify-center rounded-md px-4 py-2 text-sm font-medium shadow-sm transition disabled:opacity-50";
+  "inline-flex items-center justify-center rounded-md font-medium transition disabled:opacity-50";
 
 export function Botao({
   variante = "primario",
+  tamanho = "normal",
   ...props
-}: ComponentProps<"button"> & { variante?: Variante }) {
-  return <button {...props} className={`${botaoBase} ${variantes[variante]} ${props.className ?? ""}`} />;
+}: ComponentProps<"button"> & { variante?: Variante; tamanho?: Tamanho }) {
+  return (
+    <button
+      {...props}
+      className={`${botaoBase} ${tamanhos[tamanho]} ${variantes[variante]} ${props.className ?? ""}`}
+    />
+  );
 }
 
 export function BotaoLink({
   variante = "primario",
+  tamanho = "normal",
   ...props
-}: ComponentProps<typeof Link> & { variante?: Variante }) {
-  return <Link {...props} className={`${botaoBase} ${variantes[variante]} ${props.className ?? ""}`} />;
+}: ComponentProps<typeof Link> & { variante?: Variante; tamanho?: Tamanho }) {
+  return (
+    <Link
+      {...props}
+      className={`${botaoBase} ${tamanhos[tamanho]} ${variantes[variante]} ${props.className ?? ""}`}
+    />
+  );
 }
 
 export function Cartao({ children, className = "" }: { children: ReactNode; className?: string }) {

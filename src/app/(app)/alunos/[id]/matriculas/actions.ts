@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
 import { exigirSessao } from "@/lib/auth";
-import { CATEGORIAS, lerMoeda } from "@/lib/format";
+import { CATEGORIAS, lerMoeda, lerPercentual } from "@/lib/format";
 import { gerarParcelas } from "@/lib/parcelas";
 import type { EstadoForm } from "@/components/form-acao";
 
@@ -13,11 +13,7 @@ function inteiro(dados: FormData, campo: string) {
   return /^\d+$/.test(v) ? Number(v) : null;
 }
 
-export async function criarMatricula(
-  alunoId: number,
-  _: EstadoForm,
-  dados: FormData,
-): Promise<EstadoForm> {
+export async function criarMatricula(alunoId: number, _: EstadoForm, dados: FormData): Promise<EstadoForm> {
   await exigirSessao();
 
   const categoria = String(dados.get("categoria") ?? "");
@@ -26,6 +22,7 @@ export async function criarMatricula(
   const valorTotal = lerMoeda(String(dados.get("valorTotal") ?? ""));
   const qtdParcelas = inteiro(dados, "qtdParcelas");
   const vencimento = String(dados.get("primeiroVencimento") ?? "");
+  const jurosInformado = lerPercentual(String(dados.get("jurosMes") ?? ""));
 
   if (!(CATEGORIAS as readonly string[]).includes(categoria)) return { erro: "Selecione a categoria." };
   if (qtdPraticas === null || qtdTeoricas === null) return { erro: "Informe a quantidade de aulas." };
@@ -34,15 +31,23 @@ export async function criarMatricula(
   if (qtdParcelas === null || qtdParcelas < 1 || qtdParcelas > 24) {
     return { erro: "O número de parcelas deve ser entre 1 e 24." };
   }
-  if (valorTotal > 0 && valorTotal < qtdParcelas) return { erro: "Valor total menor que o número de parcelas." };
+  if (valorTotal > 0 && valorTotal < qtdParcelas)
+    return { erro: "Valor total menor que o número de parcelas." };
   if (!/^\d{4}-\d{2}-\d{2}$/.test(vencimento)) return { erro: "Informe a data do primeiro vencimento." };
+  if (jurosInformado === null || jurosInformado > 1000) {
+    return { erro: "Juros inválido. Informe a porcentagem ao mês, entre 0 e 10 (ex.: 1,99)." };
+  }
+  // À vista não tem juros.
+  const jurosMesBp = qtdParcelas > 1 ? jurosInformado : 0;
 
   const aluno = await db.aluno.findUnique({ where: { id: alunoId } });
   if (!aluno) return { erro: "Aluno não encontrado." };
 
   // Matrícula gratuita (valor 0) não gera parcelas.
   const parcelas =
-    valorTotal > 0 ? gerarParcelas(valorTotal, qtdParcelas, new Date(`${vencimento}T00:00:00Z`)) : [];
+    valorTotal > 0
+      ? gerarParcelas(valorTotal, qtdParcelas, new Date(`${vencimento}T00:00:00Z`), jurosMesBp)
+      : [];
 
   await db.matricula.create({
     data: {
@@ -51,6 +56,7 @@ export async function criarMatricula(
       qtdPraticas,
       qtdTeoricas,
       valorTotalCentavos: valorTotal,
+      jurosMesBp,
       parcelas: { create: parcelas },
     },
   });

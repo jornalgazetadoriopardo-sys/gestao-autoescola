@@ -67,6 +67,8 @@ model Matricula {
   qtdPraticas        Int
   qtdTeoricas        Int
   valorTotalCentavos Int
+  // Juros ao mês em centésimos de ponto percentual (199 = 1,99% a.m.).
+  jurosMesBp         Int       @default(0)
   data               DateTime  @default(now())
   aulas              Aula[]
   parcelas           Parcela[]
@@ -84,6 +86,7 @@ model Aula {
   veiculo     Veiculo?   @relation(fields: [veiculoId], references: [id])
   tipo        String
   dataHora    DateTime
+  duracaoMin  Int        @default(50)
   status      String     @default("agendada")
   obs         String?
 

@@ -9,9 +9,18 @@ import {
   formatarData,
   formatarDataLocal,
   formatarMoeda,
+  formatarPercentual,
   formatarTelefone,
   situacaoParcela,
 } from "@/lib/format";
+import {
+  COR_STATUS_AULA,
+  STATUS_AULA,
+  TIPOS_AULA,
+  formatarDataHora,
+  resumoAulas,
+} from "@/lib/aulas";
+import { AcoesAula } from "../../aulas/acoes-aula";
 import { excluirMatricula } from "./matriculas/actions";
 
 export const dynamic = "force-dynamic";
@@ -25,7 +34,10 @@ export default async function FichaAlunoPage({ params }: { params: Promise<{ id:
     include: {
       matriculas: {
         orderBy: { data: "desc" },
-        include: { parcelas: { orderBy: { numero: "asc" } }, _count: { select: { aulas: true } } },
+        include: {
+          parcelas: { orderBy: { numero: "asc" } },
+          aulas: { orderBy: { dataHora: "asc" }, include: { instrutor: true, veiculo: true } },
+        },
       },
     },
   });
@@ -86,7 +98,9 @@ export default async function FichaAlunoPage({ params }: { params: Promise<{ id:
         {aluno.matriculas.map((m) => {
           const pago = m.parcelas.reduce((s, p) => s + (p.valorPagoCentavos ?? 0), 0);
           const emAberto = m.parcelas.filter((p) => !p.pagoEm).reduce((s, p) => s + p.valorCentavos, 0);
-          const podeExcluir = m._count.aulas === 0 && m.parcelas.every((p) => !p.pagoEm);
+          const totalParcelado = m.parcelas.reduce((s, p) => s + p.valorCentavos, 0);
+          const podeExcluir = m.aulas.length === 0 && m.parcelas.every((p) => !p.pagoEm);
+          const resumo = resumoAulas(m, m.aulas);
 
           return (
             <Cartao key={m.id}>
@@ -109,10 +123,74 @@ export default async function FichaAlunoPage({ params }: { params: Promise<{ id:
                 )}
               </div>
 
-              <div className="mb-4 grid grid-cols-3 gap-3 text-sm">
+              <div className="mb-3 flex items-center justify-between gap-3">
+                <h3 className="font-semibold">Aulas</h3>
+                <BotaoLink href={`/aulas/nova?matricula=${m.id}`} tamanho="pequeno">
+                  Agendar aula
+                </BotaoLink>
+              </div>
+              <div className="mb-4 grid gap-3 sm:grid-cols-2">
+                {(["pratica", "teorica"] as const)
+                  .filter((tipo) => resumo[tipo].contratadas > 0)
+                  .map((tipo) => {
+                    const r = resumo[tipo];
+                    return (
+                      <div key={tipo} className="rounded-md bg-slate-50 p-3 text-sm">
+                        <div className="mb-1 flex justify-between">
+                          <span className="font-medium">{tipo === "pratica" ? "Práticas" : "Teóricas"}</span>
+                          <span>
+                            {r.feitas} de {r.contratadas} feitas
+                          </span>
+                        </div>
+                        <div className="mb-1 h-2 overflow-hidden rounded-full bg-slate-200">
+                          <div
+                            className="h-full bg-green-600"
+                            style={{ width: `${Math.min((r.feitas / r.contratadas) * 100, 100)}%` }}
+                          />
+                        </div>
+                        <div className="text-xs text-slate-600">
+                          {r.agendadas} {r.agendadas === 1 ? "agendada" : "agendadas"} · {r.faltas}{" "}
+                          {r.faltas === 1 ? "falta" : "faltas"} · {r.restantes} para agendar
+                        </div>
+                      </div>
+                    );
+                  })}
+              </div>
+
+              {m.aulas.length > 0 && (
+                <div className="mb-6">
+                  <Tabela cabecalhos={["Data", "Tipo", "Instrutor", "Veículo", "Situação", ""]}>
+                    {m.aulas.map((a) => (
+                      <tr key={a.id} className={a.status === "cancelada" ? "text-slate-400" : ""}>
+                        <td className="px-4 py-2">{formatarDataHora(a.dataHora)}</td>
+                        <td className="px-4 py-2">{TIPOS_AULA[a.tipo]}</td>
+                        <td className="px-4 py-2">{a.instrutor?.nome ?? "—"}</td>
+                        <td className="px-4 py-2">{a.veiculo?.placa ?? "—"}</td>
+                        <td className="px-4 py-2">
+                          <Etiqueta cor={COR_STATUS_AULA[a.status as keyof typeof COR_STATUS_AULA] ?? "cinza"}>
+                            {STATUS_AULA[a.status] ?? a.status}
+                          </Etiqueta>
+                        </td>
+                        <td className="px-4 py-2">
+                          <AcoesAula aula={a} />
+                        </td>
+                      </tr>
+                    ))}
+                  </Tabela>
+                </div>
+              )}
+
+              <h3 className="mb-3 font-semibold">Financeiro</h3>
+              <div className="mb-4 grid grid-cols-2 gap-3 text-sm sm:grid-cols-4">
                 <div>
-                  <div className="text-xs uppercase text-slate-500">Valor total</div>
+                  <div className="text-xs uppercase text-slate-500">Valor contratado</div>
                   <div className="font-medium">{formatarMoeda(m.valorTotalCentavos)}</div>
+                </div>
+                <div>
+                  <div className="text-xs uppercase text-slate-500">
+                    Total parcelado{m.jurosMesBp > 0 && ` (${formatarPercentual(m.jurosMesBp)} a.m.)`}
+                  </div>
+                  <div className="font-medium">{formatarMoeda(totalParcelado)}</div>
                 </div>
                 <div>
                   <div className="text-xs uppercase text-slate-500">Pago</div>

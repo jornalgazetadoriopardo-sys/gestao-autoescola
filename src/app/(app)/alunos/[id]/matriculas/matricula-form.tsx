@@ -3,22 +3,33 @@
 import { useState } from "react";
 import { FormAcao } from "@/components/form-acao";
 import { Campo, Cartao, Input, Select } from "@/components/ui";
-import { CATEGORIAS, formatarData, formatarMoeda, lerMoeda } from "@/lib/format";
+import { CATEGORIAS, formatarData, formatarMoeda, lerMoeda, lerPercentual } from "@/lib/format";
 import { gerarParcelas } from "@/lib/parcelas";
 import { criarMatricula } from "./actions";
 
-export function MatriculaForm({ alunoId, categoria, hoje }: { alunoId: number; categoria: string; hoje: string }) {
+export function MatriculaForm({
+  alunoId,
+  categoria,
+  hoje,
+}: {
+  alunoId: number;
+  categoria: string;
+  hoje: string;
+}) {
   const [valor, setValor] = useState("");
   const [qtdParcelas, setQtdParcelas] = useState("1");
   const [vencimento, setVencimento] = useState(hoje);
+  const [juros, setJuros] = useState("");
 
   // Prévia das parcelas com a mesma regra usada ao salvar.
   const total = lerMoeda(valor);
   const n = Number(qtdParcelas);
+  const jurosBp = n > 1 ? lerPercentual(juros) : 0;
   const previa =
-    total && n >= 1 && n <= 24 && /^\d{4}-\d{2}-\d{2}$/.test(vencimento)
-      ? gerarParcelas(total, n, new Date(`${vencimento}T00:00:00Z`))
+    total && jurosBp !== null && n >= 1 && n <= 24 && /^\d{4}-\d{2}-\d{2}$/.test(vencimento)
+      ? gerarParcelas(total, n, new Date(`${vencimento}T00:00:00Z`), jurosBp)
       : [];
+  const totalParcelado = previa.reduce((s, p) => s + p.valorCentavos, 0);
 
   return (
     <div className="grid gap-6 lg:grid-cols-[minmax(0,40rem)_1fr]">
@@ -59,6 +70,16 @@ export function MatriculaForm({ alunoId, categoria, hoje }: { alunoId: number; c
                 ))}
               </Select>
             </Campo>
+            <Campo label="Juros ao mês (%)">
+              <Input
+                name="jurosMes"
+                inputMode="decimal"
+                placeholder="0"
+                disabled={n === 1}
+                value={n === 1 ? "" : juros}
+                onChange={(e) => setJuros(e.target.value)}
+              />
+            </Campo>
             <Campo label="1º vencimento *">
               <Input
                 name="primeiroVencimento"
@@ -76,19 +97,37 @@ export function MatriculaForm({ alunoId, categoria, hoje }: { alunoId: number; c
         <h2 className="mb-3 font-semibold">Parcelas que serão geradas</h2>
         {previa.length === 0 ? (
           <p className="text-sm text-slate-500">
-            {total === 0 ? "Matrícula sem valor: nenhuma parcela será gerada." : "Informe o valor total."}
+            {jurosBp === null
+              ? "Juros inválido. Use o formato 1,99."
+              : total === 0
+                ? "Matrícula sem valor: nenhuma parcela será gerada."
+                : "Informe o valor total."}
           </p>
         ) : (
-          <ul className="divide-y divide-slate-100 text-sm">
-            {previa.map((p) => (
-              <li key={p.numero} className="flex justify-between py-1.5">
-                <span>
-                  {p.numero}ª — {formatarData(p.vencimento)}
-                </span>
-                <span className="font-medium">{formatarMoeda(p.valorCentavos)}</span>
-              </li>
-            ))}
-          </ul>
+          <>
+            <ul className="divide-y divide-slate-100 text-sm">
+              {previa.map((p) => (
+                <li key={p.numero} className="flex justify-between py-1.5">
+                  <span>
+                    {p.numero}ª — {formatarData(p.vencimento)}
+                  </span>
+                  <span className="font-medium">{formatarMoeda(p.valorCentavos)}</span>
+                </li>
+              ))}
+            </ul>
+            {total !== null && totalParcelado !== total && (
+              <div className="mt-3 space-y-1 border-t border-slate-200 pt-3 text-sm">
+                <div className="flex justify-between">
+                  <span>Juros</span>
+                  <span>{formatarMoeda(totalParcelado - total)}</span>
+                </div>
+                <div className="flex justify-between font-semibold">
+                  <span>Total a pagar</span>
+                  <span>{formatarMoeda(totalParcelado)}</span>
+                </div>
+              </div>
+            )}
+          </>
         )}
       </Cartao>
     </div>

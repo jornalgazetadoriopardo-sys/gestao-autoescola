@@ -16,7 +16,7 @@ export function BotaoConfirmar({
     <form action={acao}>
       <Botao
         variante="perigo"
-        className="px-3 py-1 text-xs"
+        tamanho="pequeno"
         onClick={(e) => {
           if (!confirm(mensagem)) e.preventDefault();
         }}

@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 
 const itens = [
   { href: "/", label: "Painel" },
+  { href: "/aulas", label: "Agenda" },
   { href: "/alunos", label: "Alunos" },
   { href: "/instrutores", label: "Instrutores" },
   { href: "/veiculos", label: "Veículos" },
@@ -15,7 +16,7 @@ export function MenuLateral({ nome, sair }: { nome: string; sair: () => Promise<
   const ativo = (href: string) => (href === "/" ? caminho === "/" : caminho.startsWith(href));
 
   return (
-    <aside className="flex w-full flex-col bg-slate-900 text-slate-200 md:min-h-screen md:w-56">
+    <aside className="flex w-full shrink-0 flex-col bg-slate-900 text-slate-200 md:min-h-screen md:w-56">
       <div className="px-5 py-5 text-lg font-semibold text-white">Autoescola</div>
       <nav className="flex flex-row gap-1 overflow-x-auto px-3 md:flex-col">
         {itens.map((item) => (

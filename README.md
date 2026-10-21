@@ -10,10 +10,13 @@ presença e pagamentos.
 - Cadastro de **instrutores** e **veículos**
 - **Matrícula** do aluno (categoria, aulas contratadas, valor) com geração
   automática das parcelas mensais e situação de cada parcela (pendente / atrasada / paga)
+- **Juros ao mês** opcional no parcelamento (parcelas fixas pela Tabela Price)
+- **Agenda de aulas** por dia e por instrutor, com bloqueio de conflito de horário
+  (aluno, instrutor e veículo) e controle do saldo de aulas contratadas
+- **Presença**: marcar presente, falta ou cancelar; progresso de aulas na ficha do aluno
 - Painel com resumo
 
-Próximas etapas: agenda de aulas com presença,
-baixa de pagamentos e painel financeiro.
+Próximas etapas: baixa de pagamentos, recibo e painel financeiro.
 
 ## Como rodar no seu computador
 

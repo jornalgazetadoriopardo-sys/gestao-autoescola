@@ -65,6 +65,18 @@ export function lerMoeda(valor: string): number | null {
   return Math.round(Number(v) * 100);
 }
 
+// Converte "1,99" ou "2" (% ao mês) em centésimos de ponto (199). Vazio = 0.
+export function lerPercentual(valor: string): number | null {
+  const v = valor.trim().replace("%", "").replace(",", ".");
+  if (v === "") return 0;
+  if (!/^\d+(\.\d{1,2})?$/.test(v)) return null;
+  return Math.round(Number(v) * 100);
+}
+
+export function formatarPercentual(bp: number) {
+  return `${(bp / 100).toLocaleString("pt-BR", { maximumFractionDigits: 2 })}%`;
+}
+
 // Valor em centavos para campo de formulário ("1500,50").
 export function moedaParaInput(centavos: number | null | undefined) {
   return centavos == null ? "" : (centavos / 100).toFixed(2).replace(".", ",");
