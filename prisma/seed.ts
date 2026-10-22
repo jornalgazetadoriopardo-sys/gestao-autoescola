@@ -1,10 +1,11 @@
 import bcrypt from "bcryptjs";
 import { PrismaClient } from "@prisma/client";
+import { urlDoBanco } from "../src/lib/url-banco";
 
 // Cria o primeiro usuário administrador, se ainda não houver nenhum.
 // Em produção (Vercel) o e-mail e a senha vêm obrigatoriamente de
 // ADMIN_EMAIL e ADMIN_SENHA, para não existir senha padrão na internet.
-const db = new PrismaClient();
+const db = new PrismaClient({ datasourceUrl: urlDoBanco() });
 
 async function main() {
   if ((await db.usuario.count()) > 0) {
