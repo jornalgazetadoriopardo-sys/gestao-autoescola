@@ -22,9 +22,17 @@ export async function obterConfig(): Promise<Configuracao> {
       chavePix: null,
       avisoCarne: null,
       orientacoesAluno: null,
+      horaInicio: "07:00",
+      horaFim: "20:00",
+      intervaloMin: 60,
       logo: null,
     }
   );
+}
+
+// Horários de aula oferecidos nos formulários de agendamento.
+export function expedienteDe(c: Configuracao) {
+  return { horaInicio: c.horaInicio, horaFim: c.horaFim, intervaloMin: c.intervaloMin };
 }
 
 // "Rua X, 100 - Centro - Cidade/UF - CEP 00000-000"

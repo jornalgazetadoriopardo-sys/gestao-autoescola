@@ -1,15 +1,36 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { CalendarDays, ChevronLeft, ChevronRight, Plus, Repeat, Trash2, Wand2 } from "lucide-react";
+import {
+  CalendarDays,
+  Car,
+  ChevronLeft,
+  ChevronRight,
+  Plus,
+  Repeat,
+  Sparkles,
+  Trash2,
+  TriangleAlert,
+  Users,
+  Wand2,
+} from "lucide-react";
 import { FormAcao } from "@/components/form-acao";
 import { Botao, Campo, Cartao, Input, Select, Textarea } from "@/components/ui";
 import { DURACOES, somarDias } from "@/lib/aulas";
+import {
+  horariosDoExpediente,
+  instante,
+  opcoesDeHorario,
+  type Expediente,
+  type Ocupado,
+  type Pedido,
+} from "@/lib/disponibilidade";
 import { agendarVarias } from "./actions";
 import type { OpcaoMatricula } from "./aula-form";
+import { useOcupados } from "./use-ocupados";
 
 type Opcao = { id: number; nome: string; categorias: string };
-type Item = { chave: number; data: string; hora: string };
+type Item = { chave: number; data: string; hora: string; instrutorId: string; veiculoId: string };
 
 const SEMANA = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
 const MESES = [
@@ -31,12 +52,6 @@ function diaDaSemana(iso: string) {
   return new Date(`${iso}T12:00:00Z`).getUTCDay();
 }
 
-function somarMinutos(hora: string, minutos: number) {
-  const [h, m] = hora.split(":").map(Number);
-  const total = Math.min(h * 60 + m + minutos, 23 * 60 + 55);
-  return `${String(Math.floor(total / 60)).padStart(2, "0")}:${String(total % 60).padStart(2, "0")}`;
-}
-
 function formatarCurto(iso: string) {
   const [a, m, d] = iso.split("-");
   return `${SEMANA[diaDaSemana(iso)]}, ${d}/${m}/${a}`;
@@ -50,18 +65,22 @@ export function AulasLoteForm({
   veiculos,
   matriculaInicial,
   hoje,
+  expediente,
 }: {
   matriculas: OpcaoMatricula[];
   instrutores: Opcao[];
   veiculos: Opcao[];
   matriculaInicial?: number;
   hoje: string;
+  expediente: Expediente;
 }) {
   const [matriculaId, setMatriculaId] = useState(String(matriculaInicial ?? ""));
   const matricula = matriculas.find((m) => String(m.id) === matriculaId);
   const [tipo, setTipo] = useState(matricula && matricula.restantes.pratica === 0 ? "teorica" : "pratica");
   const [duracao, setDuracao] = useState("50");
-  const [horaPadrao, setHoraPadrao] = useState("08:00");
+  const [horaPadrao, setHoraPadrao] = useState(expediente.horaInicio);
+  const [instrutorPadrao, setInstrutorPadrao] = useState("");
+  const [veiculoPadrao, setVeiculoPadrao] = useState("");
   const [itens, setItens] = useState<Item[]>([]);
   const [mes, setMes] = useState(hoje.slice(0, 7));
 
@@ -95,7 +114,16 @@ export function AulasLoteForm({
     setItens((atual) =>
       atual.some((i) => i.data === iso)
         ? atual.filter((i) => i.data !== iso)
-        : [...atual, { chave: proximaChave++, data: iso, hora: horaPadrao }],
+        : [
+            ...atual,
+            {
+              chave: proximaChave++,
+              data: iso,
+              hora: horaPadrao,
+              instrutorId: instrutorPadrao,
+              veiculoId: veiculoPadrao,
+            },
+          ],
     );
   }
 
@@ -107,13 +135,101 @@ export function AulasLoteForm({
     for (let i = 0; i < 400 && novos.length < qtd; i++) {
       const iso = somarDias(aPartir, i);
       if (!diasRep.includes(diaDaSemana(iso)) || existentes.has(`${iso} ${horaPadrao}`)) continue;
-      novos.push({ chave: proximaChave++, data: iso, hora: horaPadrao });
+      novos.push({
+        chave: proximaChave++,
+        data: iso,
+        hora: horaPadrao,
+        instrutorId: instrutorPadrao,
+        veiculoId: veiculoPadrao,
+      });
     }
     setItens((atual) => [...atual, ...novos]);
     if (novos[0]) setMes(novos[0].data.slice(0, 7));
   }
 
   const excede = restantes !== null && itens.length > restantes;
+  const semInstrutor = itens.filter((i) => !i.instrutorId).length;
+  const semVeiculo = tipo === "pratica" ? itens.filter((i) => !i.veiculoId).length : 0;
+
+  // Disponibilidade: aulas já marcadas nos dias escolhidos + as outras aulas desta lista.
+  const { ocupados, carregando } = useOcupados(itens.map((i) => i.data));
+  const pedido = (item: Item): Pedido => ({
+    data: item.data,
+    duracaoMin: Number(duracao),
+    tipo,
+    instrutorId: Number(item.instrutorId) || null,
+    veiculoId: tipo === "pratica" ? Number(item.veiculoId) || null : null,
+    alunoId: matricula?.alunoId ?? null,
+  });
+  const comoOcupado = (item: Item): Ocupado => {
+    const inicio = instante(item.data, item.hora);
+    return {
+      id: -item.chave,
+      inicio,
+      fim: inicio + Number(duracao) * 60_000,
+      instrutorId: Number(item.instrutorId) || null,
+      veiculoId: tipo === "pratica" ? Number(item.veiculoId) || null : null,
+      alunoId: matricula?.alunoId ?? 0,
+      tipo,
+      descricao: "outra aula desta lista",
+    };
+  };
+  const ocupadosPara = (item: Item, lista: Item[] = itens) => [
+    ...ocupados,
+    ...lista.filter((i) => i.chave !== item.chave).map(comoOcupado),
+  ];
+  const opcoesDo = (item: Item, lista: Item[] = itens) =>
+    opcoesDeHorario(pedido(item), ocupadosPara(item, lista), expediente, item.hora);
+  const motivoDo = (item: Item) => opcoesDo(item).find((o) => o.hora === item.hora)?.motivo ?? null;
+  const prontoParaConferir = Boolean(matricula);
+  // Só confere a aula depois de escolhidos o instrutor e, na prática, o veículo.
+  const completa = (i: Item) => Boolean(i.instrutorId) && (tipo !== "pratica" || Boolean(i.veiculoId));
+  const conflitos = prontoParaConferir && !carregando ? itens.filter((i) => completa(i) && motivoDo(i)) : [];
+
+  // Move cada aula com horário ocupado para o primeiro horário livre do mesmo dia
+  // (de preferência depois do horário escolhido).
+  function ajustarOcupados() {
+    let lista = [...itens];
+    for (const item of [...lista].sort((a, b) => (a.data + a.hora).localeCompare(b.data + b.hora))) {
+      const atual = lista.find((i) => i.chave === item.chave)!;
+      const opcoes = opcoesDo(atual, lista);
+      if (!opcoes.find((o) => o.hora === atual.hora)?.motivo) continue;
+      const livre = opcoes.find((o) => !o.motivo && o.hora > atual.hora) ?? opcoes.find((o) => !o.motivo);
+      if (livre) lista = lista.map((i) => (i.chave === atual.chave ? { ...i, hora: livre.hora } : i));
+    }
+    setItens(lista);
+  }
+
+  // "+ Horário": outra aula no mesmo dia, no próximo horário livre.
+  function outroHorario(item: Item) {
+    const novo: Item = {
+      chave: proximaChave++,
+      data: item.data,
+      hora: item.hora,
+      instrutorId: item.instrutorId,
+      veiculoId: item.veiculoId,
+    };
+    const lista = [...itens, novo];
+    const opcoes = opcoesDo(novo, lista);
+    const livre = opcoes.find((o) => !o.motivo && o.hora > item.hora) ?? opcoes.find((o) => !o.motivo);
+    setItens([...itens, { ...novo, hora: livre?.hora ?? item.hora }]);
+  }
+
+  function alterarItem(chave: number, mudanca: Partial<Item>) {
+    setItens((atual) => atual.map((i) => (i.chave === chave ? { ...i, ...mudanca } : i)));
+  }
+
+  // Trocar o veículo padrão preenche as aulas que ainda estão sem veículo.
+  function mudarVeiculoPadrao(id: string) {
+    setVeiculoPadrao(id);
+    if (id) setItens((atual) => atual.map((i) => (i.veiculoId ? i : { ...i, veiculoId: id })));
+  }
+
+  // Trocar o instrutor padrão preenche as aulas que ainda estão sem instrutor.
+  function mudarInstrutorPadrao(id: string) {
+    setInstrutorPadrao(id);
+    if (id) setItens((atual) => atual.map((i) => (i.instrutorId ? i : { ...i, instrutorId: id })));
+  }
 
   return (
     <FormAcao
@@ -123,7 +239,14 @@ export function AulasLoteForm({
       <input
         type="hidden"
         name="itens"
-        value={JSON.stringify(ordenados.map(({ data, hora }) => ({ data, hora })))}
+        value={JSON.stringify(
+          ordenados.map(({ data, hora, instrutorId, veiculoId }) => ({
+            data,
+            hora,
+            instrutorId: Number(instrutorId) || null,
+            veiculoId: tipo === "pratica" ? Number(veiculoId) || null : null,
+          })),
+        )}
       />
 
       <Cartao>
@@ -156,26 +279,62 @@ export function AulasLoteForm({
               <option value="teorica">Teórica</option>
             </Select>
           </Campo>
-          <Campo label="Instrutor *">
-            <Select name="instrutorId" required defaultValue="">
-              <option value="">Selecione...</option>
-              {instrutores.map((i) => (
-                <option key={i.id} value={i.id}>
-                  {i.nome} ({i.categorias.replaceAll(",", ", ")})
-                </option>
-              ))}
-            </Select>
-          </Campo>
-          {tipo === "pratica" && (
-            <Campo label="Veículo *">
-              <Select name="veiculoId" required defaultValue="">
+          <Campo
+            label="Instrutor padrão"
+            ajuda="Vem preenchido em cada aula. Você pode trocar aula por aula na lista."
+          >
+            <div className="flex gap-2">
+              <Select value={instrutorPadrao} onChange={(e) => mudarInstrutorPadrao(e.target.value)}>
                 <option value="">Selecione...</option>
-                {veiculosCompativeis.map((v) => (
-                  <option key={v.id} value={v.id}>
-                    {v.nome}
+                {instrutores.map((i) => (
+                  <option key={i.id} value={i.id}>
+                    {i.nome} ({i.categorias.replaceAll(",", ", ")})
                   </option>
                 ))}
               </Select>
+              {instrutorPadrao && itens.some((i) => i.instrutorId !== instrutorPadrao) && (
+                <Botao
+                  type="button"
+                  variante="secundario"
+                  tamanho="pequeno"
+                  icone={Users}
+                  onClick={() =>
+                    setItens((atual) => atual.map((i) => ({ ...i, instrutorId: instrutorPadrao })))
+                  }
+                >
+                  Aplicar a todas
+                </Botao>
+              )}
+            </div>
+          </Campo>
+          {tipo === "pratica" && (
+            <Campo
+              label="Veículo padrão"
+              ajuda="Vem preenchido em cada aula prática. Você pode trocar aula por aula na lista."
+            >
+              <div className="flex gap-2">
+                <Select value={veiculoPadrao} onChange={(e) => mudarVeiculoPadrao(e.target.value)}>
+                  <option value="">Selecione...</option>
+                  {veiculosCompativeis.map((v) => (
+                    <option key={v.id} value={v.id}>
+                      {v.nome}
+                    </option>
+                  ))}
+                </Select>
+                {veiculoPadrao && itens.some((i) => i.veiculoId !== veiculoPadrao) && (
+                  <Botao
+                    type="button"
+                    variante="secundario"
+                    tamanho="pequeno"
+                    icone={Car}
+                    onClick={() =>
+                      setItens((atual) => atual.map((i) => ({ ...i, veiculoId: veiculoPadrao })))
+                    }
+                  >
+                    Aplicar a todas
+                  </Botao>
+                )}
+              </div>
             </Campo>
           )}
           <Campo label="Duração de cada aula">
@@ -188,12 +347,13 @@ export function AulasLoteForm({
             </Select>
           </Campo>
           <Campo label="Horário padrão" ajuda="Usado em cada dia que você clicar no calendário.">
-            <Input
-              type="time"
-              step={300}
-              value={horaPadrao}
-              onChange={(e) => setHoraPadrao(e.target.value)}
-            />
+            <Select value={horaPadrao} onChange={(e) => setHoraPadrao(e.target.value)}>
+              {horariosDoExpediente(expediente, Number(duracao)).map((h) => (
+                <option key={h} value={h}>
+                  {h}
+                </option>
+              ))}
+            </Select>
           </Campo>
         </div>
       </Cartao>
@@ -331,54 +491,131 @@ export function AulasLoteForm({
               : `${itens.length} ${itens.length === 1 ? "aula escolhida" : "aulas escolhidas"}`}
             {restantes !== null && ` · restam ${restantes} para agendar`}
             {excede && " — tire algumas datas"}
+            {semInstrutor > 0 && (
+              <span className="block font-semibold text-red-700">
+                {semInstrutor === 1 ? "1 aula está" : `${semInstrutor} aulas estão`} sem instrutor.
+              </span>
+            )}
+            {semVeiculo > 0 && (
+              <span className="block font-semibold text-red-700">
+                {semVeiculo === 1 ? "1 aula está" : `${semVeiculo} aulas estão`} sem veículo.
+              </span>
+            )}
+            {carregando && <span className="block text-sm text-slate-500">Conferindo a agenda...</span>}
+            {!prontoParaConferir && itens.length > 0 && (
+              <span className="block text-sm text-slate-500">
+                Escolha o aluno{tipo === "pratica" ? " e o veículo" : ""} para conferir os horários livres.
+              </span>
+            )}
           </p>
+          {conflitos.length > 0 && (
+            <div className="mb-4 flex flex-wrap items-center gap-3 rounded-xl border border-red-200 bg-red-50 p-3 text-red-800">
+              <TriangleAlert className="size-6 shrink-0" aria-hidden />
+              <span className="flex-1 text-base font-semibold">
+                {conflitos.length === 1 ? "1 aula está" : `${conflitos.length} aulas estão`} em horário
+                ocupado.
+              </span>
+              <Botao
+                type="button"
+                variante="secundario"
+                tamanho="pequeno"
+                icone={Sparkles}
+                onClick={ajustarOcupados}
+              >
+                Mudar para horários livres
+              </Botao>
+            </div>
+          )}
           {ordenados.length > 0 && (
-            <ul className="max-h-[32rem] divide-y divide-slate-100 overflow-y-auto">
-              {ordenados.map((item) => (
-                <li key={item.chave} className="flex items-center gap-2 py-2">
-                  <span className="min-w-36 flex-1 text-base font-medium">{formatarCurto(item.data)}</span>
-                  <Input
-                    type="time"
-                    step={300}
-                    required
-                    value={item.hora}
-                    aria-label={`Horário de ${formatarCurto(item.data)}`}
-                    onChange={(e) =>
-                      setItens((atual) =>
-                        atual.map((i) => (i.chave === item.chave ? { ...i, hora: e.target.value } : i)),
-                      )
-                    }
-                    className="w-32"
-                  />
-                  <Botao
-                    type="button"
-                    variante="secundario"
-                    tamanho="pequeno"
-                    icone={Plus}
-                    title="Outra aula no mesmo dia"
-                    onClick={() =>
-                      setItens((atual) => [
-                        ...atual,
-                        {
-                          chave: proximaChave++,
-                          data: item.data,
-                          hora: somarMinutos(item.hora, Number(duracao)),
-                        },
-                      ])
-                    }
-                  >
-                    Horário
-                  </Botao>
-                  <button
-                    type="button"
-                    onClick={() => setItens((atual) => atual.filter((i) => i.chave !== item.chave))}
-                    className="rounded-lg p-2 text-red-600 hover:bg-red-50"
-                    aria-label={`Remover ${formatarCurto(item.data)} ${item.hora}`}
-                  >
-                    <Trash2 className="size-5" />
-                  </button>
-                </li>
-              ))}
+            <ul className="divide-y divide-slate-100">
+              {ordenados.map((item) => {
+                const opcoes = prontoParaConferir ? opcoesDo(item) : [];
+                const motivo = prontoParaConferir && !carregando && completa(item) ? motivoDo(item) : null;
+                return (
+                  <li key={item.chave} className="space-y-2 py-3">
+                    <div className="flex items-center gap-2">
+                      <span className="flex-1 text-base font-semibold">{formatarCurto(item.data)}</span>
+                      <Botao
+                        type="button"
+                        variante="secundario"
+                        tamanho="pequeno"
+                        icone={Plus}
+                        title="Outra aula no mesmo dia"
+                        onClick={() => outroHorario(item)}
+                      >
+                        Horário
+                      </Botao>
+                      <button
+                        type="button"
+                        onClick={() => setItens((atual) => atual.filter((i) => i.chave !== item.chave))}
+                        className="rounded-lg p-2 text-red-600 hover:bg-red-50"
+                        aria-label={`Remover ${formatarCurto(item.data)} ${item.hora}`}
+                      >
+                        <Trash2 className="size-5" />
+                      </button>
+                    </div>
+                    <div className="grid grid-cols-[11.5rem_minmax(0,1fr)] gap-2">
+                      <Select
+                        value={item.hora}
+                        aria-label={`Horário de ${formatarCurto(item.data)}`}
+                        onChange={(e) => alterarItem(item.chave, { hora: e.target.value })}
+                        className={`py-2! ${motivo ? "border-red-400 bg-red-50" : ""}`}
+                      >
+                        {(opcoes.length > 0
+                          ? opcoes
+                          : horariosDoExpediente(expediente, Number(duracao))
+                              .concat(item.hora)
+                              .filter((h, i, l) => l.indexOf(h) === i)
+                              .sort()
+                              .map((hora) => ({ hora, motivo: null as string | null }))
+                        ).map((o) => (
+                          <option
+                            key={o.hora}
+                            value={o.hora}
+                            disabled={Boolean(o.motivo) && o.hora !== item.hora}
+                          >
+                            {o.hora}
+                            {o.motivo ? " (ocupado)" : ""}
+                          </option>
+                        ))}
+                      </Select>
+                      <Select
+                        value={item.instrutorId}
+                        aria-label={`Instrutor de ${formatarCurto(item.data)} ${item.hora}`}
+                        onChange={(e) => alterarItem(item.chave, { instrutorId: e.target.value })}
+                        className={`py-2! ${item.instrutorId ? "" : "border-red-400 bg-red-50"}`}
+                      >
+                        <option value="">Escolha o instrutor...</option>
+                        {instrutores.map((i) => (
+                          <option key={i.id} value={i.id}>
+                            {i.nome}
+                          </option>
+                        ))}
+                      </Select>
+                      {tipo === "pratica" && (
+                        <Select
+                          value={item.veiculoId}
+                          aria-label={`Veículo de ${formatarCurto(item.data)} ${item.hora}`}
+                          onChange={(e) => alterarItem(item.chave, { veiculoId: e.target.value })}
+                          className={`col-start-2 py-2! ${item.veiculoId ? "" : "border-red-400 bg-red-50"}`}
+                        >
+                          <option value="">Escolha o veículo...</option>
+                          {veiculosCompativeis.map((v) => (
+                            <option key={v.id} value={v.id}>
+                              {v.nome}
+                            </option>
+                          ))}
+                        </Select>
+                      )}
+                    </div>
+                    {motivo && (
+                      <p className="text-sm font-medium text-red-700">
+                        {item.hora} não está disponível: {motivo}. Escolha outro horário.
+                      </p>
+                    )}
+                  </li>
+                );
+              })}
             </ul>
           )}
           <div className="mt-4">
