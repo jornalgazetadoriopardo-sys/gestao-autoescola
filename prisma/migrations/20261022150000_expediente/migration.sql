@@ -1,0 +1,5 @@
+-- AlterTable
+ALTER TABLE "Configuracao" ADD COLUMN     "horaFim" TEXT NOT NULL DEFAULT '20:00',
+ADD COLUMN     "horaInicio" TEXT NOT NULL DEFAULT '07:00',
+ADD COLUMN     "intervaloMin" INTEGER NOT NULL DEFAULT 60;
+

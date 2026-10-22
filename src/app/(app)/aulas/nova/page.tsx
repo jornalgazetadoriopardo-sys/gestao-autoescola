@@ -2,6 +2,7 @@ import Link from "next/link";
 import { CalendarDays, CalendarPlus, CalendarRange, GraduationCap } from "lucide-react";
 import { BotaoLink, Cabecalho, Vazio } from "@/components/ui";
 import { db } from "@/lib/db";
+import { expedienteDe, obterConfig } from "@/lib/config";
 import { formatarDataLocal, hojeISO } from "@/lib/format";
 import { resumoAulas } from "@/lib/aulas";
 import { AulaForm, type OpcaoMatricula } from "../aula-form";
@@ -19,7 +20,7 @@ export default async function NovaAulaPage({
   const dia = /^\d{4}-\d{2}-\d{2}$/.test(params.dia ?? "") ? params.dia! : hoje;
   const varias = params.modo === "varias";
 
-  const [matriculas, instrutores, veiculos] = await Promise.all([
+  const [matriculas, instrutores, veiculos, config] = await Promise.all([
     db.matricula.findMany({
       where: { aluno: { status: "ativo" } },
       include: { aluno: true, aulas: { select: { tipo: true, status: true } } },
@@ -27,7 +28,9 @@ export default async function NovaAulaPage({
     }),
     db.instrutor.findMany({ where: { ativo: true }, orderBy: { nome: "asc" } }),
     db.veiculo.findMany({ where: { ativo: true }, orderBy: { placa: "asc" } }),
+    obterConfig(),
   ]);
+  const expediente = expedienteDe(config);
 
   // Só oferece matrículas que ainda têm aulas para agendar.
   const opcoes: OpcaoMatricula[] = matriculas
@@ -35,6 +38,7 @@ export default async function NovaAulaPage({
       const r = resumoAulas(m, m.aulas);
       return {
         id: m.id,
+        alunoId: m.alunoId,
         categoria: m.categoria,
         rotulo: `${m.aluno.nome} — categoria ${m.categoria} (matrícula de ${formatarDataLocal(m.data)})`,
         restantes: { pratica: r.pratica.restantes, teorica: r.teorica.restantes },
@@ -92,6 +96,7 @@ export default async function NovaAulaPage({
           veiculos={listaVeiculos}
           matriculaInicial={matriculaInicial}
           hoje={hoje}
+          expediente={expediente}
         />
       ) : (
         <AulaForm
@@ -100,6 +105,7 @@ export default async function NovaAulaPage({
           veiculos={listaVeiculos}
           matriculaInicial={matriculaInicial}
           dia={dia}
+          expediente={expediente}
         />
       )}
     </>

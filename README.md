@@ -22,6 +22,8 @@ presença e pagamentos.
   - Agendamento avulso (uma aula) ou **várias aulas de uma vez** pelo calendário
     (cada aula com o seu instrutor),
     com horário por dia e preenchimento automático ("toda terça e quinta às 14h")
+  - Os horários **ocupados ficam desabilitados** (aluno, instrutor ou veículo já em aula,
+    ou horário que já passou), dentro do expediente definido em Configurações
   - Cada aula pode ser **editada** (data, horário, instrutor, veículo...) ou excluída
 - **Veículos** com histórico de manutenção e **lembretes** ("me lembrar no dia...")
   que aparecem na tela inicial 7 dias antes

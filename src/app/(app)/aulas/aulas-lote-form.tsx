@@ -1,12 +1,32 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { CalendarDays, ChevronLeft, ChevronRight, Plus, Repeat, Trash2, Users, Wand2 } from "lucide-react";
+import {
+  CalendarDays,
+  ChevronLeft,
+  ChevronRight,
+  Plus,
+  Repeat,
+  Sparkles,
+  Trash2,
+  TriangleAlert,
+  Users,
+  Wand2,
+} from "lucide-react";
 import { FormAcao } from "@/components/form-acao";
 import { Botao, Campo, Cartao, Input, Select, Textarea } from "@/components/ui";
 import { DURACOES, somarDias } from "@/lib/aulas";
+import {
+  horariosDoExpediente,
+  instante,
+  opcoesDeHorario,
+  type Expediente,
+  type Ocupado,
+  type Pedido,
+} from "@/lib/disponibilidade";
 import { agendarVarias } from "./actions";
 import type { OpcaoMatricula } from "./aula-form";
+import { useOcupados } from "./use-ocupados";
 
 type Opcao = { id: number; nome: string; categorias: string };
 type Item = { chave: number; data: string; hora: string; instrutorId: string };
@@ -31,12 +51,6 @@ function diaDaSemana(iso: string) {
   return new Date(`${iso}T12:00:00Z`).getUTCDay();
 }
 
-function somarMinutos(hora: string, minutos: number) {
-  const [h, m] = hora.split(":").map(Number);
-  const total = Math.min(h * 60 + m + minutos, 23 * 60 + 55);
-  return `${String(Math.floor(total / 60)).padStart(2, "0")}:${String(total % 60).padStart(2, "0")}`;
-}
-
 function formatarCurto(iso: string) {
   const [a, m, d] = iso.split("-");
   return `${SEMANA[diaDaSemana(iso)]}, ${d}/${m}/${a}`;
@@ -50,19 +64,22 @@ export function AulasLoteForm({
   veiculos,
   matriculaInicial,
   hoje,
+  expediente,
 }: {
   matriculas: OpcaoMatricula[];
   instrutores: Opcao[];
   veiculos: Opcao[];
   matriculaInicial?: number;
   hoje: string;
+  expediente: Expediente;
 }) {
   const [matriculaId, setMatriculaId] = useState(String(matriculaInicial ?? ""));
   const matricula = matriculas.find((m) => String(m.id) === matriculaId);
   const [tipo, setTipo] = useState(matricula && matricula.restantes.pratica === 0 ? "teorica" : "pratica");
   const [duracao, setDuracao] = useState("50");
-  const [horaPadrao, setHoraPadrao] = useState("08:00");
+  const [horaPadrao, setHoraPadrao] = useState(expediente.horaInicio);
   const [instrutorPadrao, setInstrutorPadrao] = useState("");
+  const [veiculoId, setVeiculoId] = useState("");
   const [itens, setItens] = useState<Item[]>([]);
   const [mes, setMes] = useState(hoje.slice(0, 7));
 
@@ -116,6 +133,68 @@ export function AulasLoteForm({
 
   const excede = restantes !== null && itens.length > restantes;
   const semInstrutor = itens.filter((i) => !i.instrutorId).length;
+
+  // Disponibilidade: aulas já marcadas nos dias escolhidos + as outras aulas desta lista.
+  const { ocupados, carregando } = useOcupados(itens.map((i) => i.data));
+  const pedido = (item: Item): Pedido => ({
+    data: item.data,
+    duracaoMin: Number(duracao),
+    tipo,
+    instrutorId: Number(item.instrutorId) || null,
+    veiculoId: tipo === "pratica" ? Number(veiculoId) || null : null,
+    alunoId: matricula?.alunoId ?? null,
+  });
+  const comoOcupado = (item: Item): Ocupado => {
+    const inicio = instante(item.data, item.hora);
+    return {
+      id: -item.chave,
+      inicio,
+      fim: inicio + Number(duracao) * 60_000,
+      instrutorId: Number(item.instrutorId) || null,
+      veiculoId: tipo === "pratica" ? Number(veiculoId) || null : null,
+      alunoId: matricula?.alunoId ?? 0,
+      tipo,
+      descricao: "outra aula desta lista",
+    };
+  };
+  const ocupadosPara = (item: Item, lista: Item[] = itens) => [
+    ...ocupados,
+    ...lista.filter((i) => i.chave !== item.chave).map(comoOcupado),
+  ];
+  const opcoesDo = (item: Item, lista: Item[] = itens) =>
+    opcoesDeHorario(pedido(item), ocupadosPara(item, lista), expediente, item.hora);
+  const motivoDo = (item: Item) => opcoesDo(item).find((o) => o.hora === item.hora)?.motivo ?? null;
+  const prontoParaConferir = Boolean(matricula) && (tipo !== "pratica" || Boolean(veiculoId));
+  const conflitos =
+    prontoParaConferir && !carregando ? itens.filter((i) => i.instrutorId && motivoDo(i)) : [];
+
+  // Move cada aula com horário ocupado para o primeiro horário livre do mesmo dia
+  // (de preferência depois do horário escolhido).
+  function ajustarOcupados() {
+    let lista = [...itens];
+    for (const item of [...lista].sort((a, b) => (a.data + a.hora).localeCompare(b.data + b.hora))) {
+      const atual = lista.find((i) => i.chave === item.chave)!;
+      const opcoes = opcoesDo(atual, lista);
+      if (!opcoes.find((o) => o.hora === atual.hora)?.motivo) continue;
+      const livre = opcoes.find((o) => !o.motivo && o.hora > atual.hora) ?? opcoes.find((o) => !o.motivo);
+      if (livre) lista = lista.map((i) => (i.chave === atual.chave ? { ...i, hora: livre.hora } : i));
+    }
+    setItens(lista);
+  }
+
+  // "+ Horário": outra aula no mesmo dia, no próximo horário livre.
+  function outroHorario(item: Item) {
+    const novo: Item = {
+      chave: proximaChave++,
+      data: item.data,
+      hora: item.hora,
+      instrutorId: item.instrutorId,
+    };
+    const lista = [...itens, novo];
+    const opcoes = opcoesDo(novo, lista);
+    const livre = opcoes.find((o) => !o.motivo && o.hora > item.hora) ?? opcoes.find((o) => !o.motivo);
+    setItens([...itens, { ...novo, hora: livre?.hora ?? item.hora }]);
+  }
 
   function alterarItem(chave: number, mudanca: Partial<Item>) {
     setItens((atual) => atual.map((i) => (i.chave === chave ? { ...i, ...mudanca } : i)));
@@ -204,7 +283,12 @@ export function AulasLoteForm({
           </Campo>
           {tipo === "pratica" && (
             <Campo label="Veículo *">
-              <Select name="veiculoId" required defaultValue="">
+              <Select
+                name="veiculoId"
+                required
+                value={veiculoId}
+                onChange={(e) => setVeiculoId(e.target.value)}
+              >
                 <option value="">Selecione...</option>
                 {veiculosCompativeis.map((v) => (
                   <option key={v.id} value={v.id}>
@@ -224,12 +308,13 @@ export function AulasLoteForm({
             </Select>
           </Campo>
           <Campo label="Horário padrão" ajuda="Usado em cada dia que você clicar no calendário.">
-            <Input
-              type="time"
-              step={300}
-              value={horaPadrao}
-              onChange={(e) => setHoraPadrao(e.target.value)}
-            />
+            <Select value={horaPadrao} onChange={(e) => setHoraPadrao(e.target.value)}>
+              {horariosDoExpediente(expediente, Number(duracao)).map((h) => (
+                <option key={h} value={h}>
+                  {h}
+                </option>
+              ))}
+            </Select>
           </Campo>
         </div>
       </Cartao>
@@ -372,65 +457,106 @@ export function AulasLoteForm({
                 {semInstrutor === 1 ? "1 aula está" : `${semInstrutor} aulas estão`} sem instrutor.
               </span>
             )}
+            {carregando && <span className="block text-sm text-slate-500">Conferindo a agenda...</span>}
+            {!prontoParaConferir && itens.length > 0 && (
+              <span className="block text-sm text-slate-500">
+                Escolha o aluno{tipo === "pratica" ? " e o veículo" : ""} para conferir os horários livres.
+              </span>
+            )}
           </p>
+          {conflitos.length > 0 && (
+            <div className="mb-4 flex flex-wrap items-center gap-3 rounded-xl border border-red-200 bg-red-50 p-3 text-red-800">
+              <TriangleAlert className="size-6 shrink-0" aria-hidden />
+              <span className="flex-1 text-base font-semibold">
+                {conflitos.length === 1 ? "1 aula está" : `${conflitos.length} aulas estão`} em horário
+                ocupado.
+              </span>
+              <Botao
+                type="button"
+                variante="secundario"
+                tamanho="pequeno"
+                icone={Sparkles}
+                onClick={ajustarOcupados}
+              >
+                Mudar para horários livres
+              </Botao>
+            </div>
+          )}
           {ordenados.length > 0 && (
             <ul className="divide-y divide-slate-100">
-              {ordenados.map((item) => (
-                <li key={item.chave} className="flex flex-wrap items-center gap-2 py-2.5">
-                  <span className="min-w-36 flex-1 text-base font-medium">{formatarCurto(item.data)}</span>
-                  <div className="w-36">
-                    <Input
-                      type="time"
-                      step={300}
-                      required
-                      value={item.hora}
-                      aria-label={`Horário de ${formatarCurto(item.data)}`}
-                      onChange={(e) => alterarItem(item.chave, { hora: e.target.value })}
-                    />
-                  </div>
-                  <Botao
-                    type="button"
-                    variante="secundario"
-                    tamanho="pequeno"
-                    icone={Plus}
-                    title="Outra aula no mesmo dia"
-                    onClick={() =>
-                      setItens((atual) => [
-                        ...atual,
-                        {
-                          chave: proximaChave++,
-                          data: item.data,
-                          hora: somarMinutos(item.hora, Number(duracao)),
-                          instrutorId: item.instrutorId,
-                        },
-                      ])
-                    }
-                  >
-                    Horário
-                  </Botao>
-                  <button
-                    type="button"
-                    onClick={() => setItens((atual) => atual.filter((i) => i.chave !== item.chave))}
-                    className="rounded-lg p-2 text-red-600 hover:bg-red-50"
-                    aria-label={`Remover ${formatarCurto(item.data)} ${item.hora}`}
-                  >
-                    <Trash2 className="size-5" />
-                  </button>
-                  <Select
-                    value={item.instrutorId}
-                    aria-label={`Instrutor de ${formatarCurto(item.data)} ${item.hora}`}
-                    onChange={(e) => alterarItem(item.chave, { instrutorId: e.target.value })}
-                    className={`basis-full py-2! ${item.instrutorId ? "" : "border-red-400 bg-red-50"}`}
-                  >
-                    <option value="">Escolha o instrutor...</option>
-                    {instrutores.map((i) => (
-                      <option key={i.id} value={i.id}>
-                        Instrutor: {i.nome}
-                      </option>
-                    ))}
-                  </Select>
-                </li>
-              ))}
+              {ordenados.map((item) => {
+                const opcoes = prontoParaConferir ? opcoesDo(item) : [];
+                const motivo = prontoParaConferir && !carregando && item.instrutorId ? motivoDo(item) : null;
+                return (
+                  <li key={item.chave} className="space-y-2 py-3">
+                    <div className="flex items-center gap-2">
+                      <span className="flex-1 text-base font-semibold">{formatarCurto(item.data)}</span>
+                      <Botao
+                        type="button"
+                        variante="secundario"
+                        tamanho="pequeno"
+                        icone={Plus}
+                        title="Outra aula no mesmo dia"
+                        onClick={() => outroHorario(item)}
+                      >
+                        Horário
+                      </Botao>
+                      <button
+                        type="button"
+                        onClick={() => setItens((atual) => atual.filter((i) => i.chave !== item.chave))}
+                        className="rounded-lg p-2 text-red-600 hover:bg-red-50"
+                        aria-label={`Remover ${formatarCurto(item.data)} ${item.hora}`}
+                      >
+                        <Trash2 className="size-5" />
+                      </button>
+                    </div>
+                    <div className="grid grid-cols-[11.5rem_minmax(0,1fr)] gap-2">
+                      <Select
+                        value={item.hora}
+                        aria-label={`Horário de ${formatarCurto(item.data)}`}
+                        onChange={(e) => alterarItem(item.chave, { hora: e.target.value })}
+                        className={`py-2! ${motivo ? "border-red-400 bg-red-50" : ""}`}
+                      >
+                        {(opcoes.length > 0
+                          ? opcoes
+                          : horariosDoExpediente(expediente, Number(duracao))
+                              .concat(item.hora)
+                              .filter((h, i, l) => l.indexOf(h) === i)
+                              .sort()
+                              .map((hora) => ({ hora, motivo: null as string | null }))
+                        ).map((o) => (
+                          <option
+                            key={o.hora}
+                            value={o.hora}
+                            disabled={Boolean(o.motivo) && o.hora !== item.hora}
+                          >
+                            {o.hora}
+                            {o.motivo ? " (ocupado)" : ""}
+                          </option>
+                        ))}
+                      </Select>
+                      <Select
+                        value={item.instrutorId}
+                        aria-label={`Instrutor de ${formatarCurto(item.data)} ${item.hora}`}
+                        onChange={(e) => alterarItem(item.chave, { instrutorId: e.target.value })}
+                        className={`py-2! ${item.instrutorId ? "" : "border-red-400 bg-red-50"}`}
+                      >
+                        <option value="">Escolha o instrutor...</option>
+                        {instrutores.map((i) => (
+                          <option key={i.id} value={i.id}>
+                            {i.nome}
+                          </option>
+                        ))}
+                      </Select>
+                    </div>
+                    {motivo && (
+                      <p className="text-sm font-medium text-red-700">
+                        {item.hora} não está disponível: {motivo}. Escolha outro horário.
+                      </p>
+                    )}
+                  </li>
+                );
+              })}
             </ul>
           )}
           <div className="mt-4">

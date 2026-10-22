@@ -26,6 +26,17 @@ export async function salvarConfig(_: EstadoForm, dados: FormData): Promise<Esta
   }
 
   const uf = texto(dados, "uf")?.toUpperCase().slice(0, 2) ?? null;
+
+  // Expediente: horários oferecidos ao agendar aulas.
+  const horaInicio = String(dados.get("horaInicio") ?? "");
+  const horaFim = String(dados.get("horaFim") ?? "");
+  const intervaloMin = Number(dados.get("intervaloMin"));
+  if (!/^\d{2}:\d{2}$/.test(horaInicio) || !/^\d{2}:\d{2}$/.test(horaFim) || horaFim <= horaInicio) {
+    return { erro: "Expediente inválido: o fim deve ser depois do início." };
+  }
+  if (![10, 15, 20, 30, 45, 50, 60, 90, 100, 120].includes(intervaloMin)) {
+    return { erro: "Escolha o intervalo entre os horários das aulas." };
+  }
   const campos = {
     nome,
     razaoSocial: texto(dados, "razaoSocial"),
@@ -41,6 +52,9 @@ export async function salvarConfig(_: EstadoForm, dados: FormData): Promise<Esta
     chavePix: texto(dados, "chavePix"),
     avisoCarne: texto(dados, "avisoCarne"),
     orientacoesAluno: texto(dados, "orientacoesAluno"),
+    horaInicio,
+    horaFim,
+    intervaloMin,
     logo: logo || null,
   };
 
@@ -89,7 +103,8 @@ export async function trocarSenha(_: EstadoForm, dados: FormData): Promise<Estad
   const confirmacao = String(dados.get("confirmacao") ?? "");
 
   const usuario = await db.usuario.findUnique({ where: { id: sessao.usuarioId } });
-  if (!usuario || !(await bcrypt.compare(atual, usuario.senhaHash))) return { erro: "A senha atual está incorreta." };
+  if (!usuario || !(await bcrypt.compare(atual, usuario.senhaHash)))
+    return { erro: "A senha atual está incorreta." };
   if (nova.length < 8) return { erro: "A nova senha deve ter pelo menos 8 caracteres." };
   if (nova !== confirmacao) return { erro: "A confirmação não é igual à nova senha." };
 

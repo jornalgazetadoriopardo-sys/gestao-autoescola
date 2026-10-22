@@ -3,6 +3,7 @@ import { ArrowLeft, Pencil } from "lucide-react";
 import { BotaoConfirmar } from "@/components/botao-confirmar";
 import { BotaoLink, Cabecalho, Cartao, Etiqueta } from "@/components/ui";
 import { db } from "@/lib/db";
+import { expedienteDe, obterConfig } from "@/lib/config";
 import { COR_STATUS_AULA, FUSO, STATUS_AULA, TIPOS_AULA, formatarDataHora, formatarHora } from "@/lib/aulas";
 import { excluirAula } from "../../actions";
 import { EditarAulaForm } from "./editar-aula-form";
@@ -23,7 +24,7 @@ export default async function EditarAulaPage({
   if (!aula) notFound();
 
   // Instrutor e veículo atuais continuam na lista mesmo se foram desativados depois.
-  const [instrutores, veiculos] = await Promise.all([
+  const [instrutores, veiculos, config] = await Promise.all([
     db.instrutor.findMany({
       where: { OR: [{ ativo: true }, { id: aula.instrutorId ?? 0 }] },
       orderBy: { nome: "asc" },
@@ -32,6 +33,7 @@ export default async function EditarAulaPage({
       where: { OR: [{ ativo: true }, { id: aula.veiculoId ?? 0 }] },
       orderBy: { placa: "asc" },
     }),
+    obterConfig(),
   ]);
 
   const dia = aula.dataHora.toLocaleDateString("en-CA", { timeZone: FUSO });
@@ -57,6 +59,8 @@ export default async function EditarAulaPage({
           <EditarAulaForm
             aula={{
               id: aula.id,
+              alunoId: aula.matricula.alunoId,
+              status: aula.status,
               tipo: aula.tipo,
               instrutorId: aula.instrutorId,
               veiculoId: aula.veiculoId,
@@ -69,6 +73,7 @@ export default async function EditarAulaPage({
             instrutores={instrutores.map((i) => ({ id: i.id, nome: i.nome, categorias: i.categorias }))}
             veiculos={veiculos.map((v) => ({ id: v.id, nome: `${v.placa} · ${v.modelo}`, categorias: v.categoria }))}
             voltar={voltar}
+            expediente={expedienteDe(config)}
           />
         </Cartao>
 

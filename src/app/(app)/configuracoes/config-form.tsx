@@ -5,7 +5,7 @@ import { ImageUp, Trash2 } from "lucide-react";
 import type { Configuracao } from "@prisma/client";
 import { ORIENTACOES_PADRAO } from "@/lib/orientacoes";
 import { FormAcao } from "@/components/form-acao";
-import { Botao, Campo, Input, Textarea } from "@/components/ui";
+import { Botao, Campo, Input, Select, Textarea } from "@/components/ui";
 import { salvarConfig } from "./actions";
 
 const LADO_MAX = 360;
@@ -141,6 +141,34 @@ export function ConfigForm({ config }: { config: Configuracao }) {
         >
           <Textarea name="avisoCarne" rows={2} defaultValue={config.avisoCarne ?? ""} />
         </Campo>
+        <fieldset className="rounded-xl border border-slate-200 bg-slate-50 p-4 sm:col-span-2">
+          <legend className="px-1 text-base font-semibold text-slate-800">Horários das aulas</legend>
+          <p className="mb-3 text-sm text-slate-600">
+            Ao agendar, o sistema oferece os horários dentro do expediente e desabilita os que estiverem
+            ocupados.
+          </p>
+          <div className="grid gap-4 sm:grid-cols-3">
+            <Campo label="Primeira aula às">
+              <Input name="horaInicio" type="time" step={300} required defaultValue={config.horaInicio} />
+            </Campo>
+            <Campo label="Expediente termina às">
+              <Input name="horaFim" type="time" step={300} required defaultValue={config.horaFim} />
+            </Campo>
+            <Campo label="Uma aula a cada">
+              <Select name="intervaloMin" defaultValue={String(config.intervaloMin)}>
+                {[10, 15, 20, 30, 45, 50, 60, 90, 100, 120].map((m) => (
+                  <option key={m} value={m}>
+                    {m < 60
+                      ? `${m} minutos`
+                      : m === 60
+                        ? "1 hora"
+                        : `${Math.floor(m / 60)}h${m % 60 ? String(m % 60).padStart(2, "0") : ""}`}
+                  </option>
+                ))}
+              </Select>
+            </Campo>
+          </div>
+        </fieldset>
         <Campo
           label="Orientações para o aluno"
           ajuda="Impressas no guia entregue na matrícula. Uma orientação por linha."

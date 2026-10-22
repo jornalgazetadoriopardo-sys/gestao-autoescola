@@ -150,6 +150,10 @@ model Configuracao {
   avisoCarne  String?
   // Orientações impressas no guia do aluno entregue na matrícula.
   orientacoesAluno String?
+  // Expediente usado para oferecer os horários de aula (HH:MM) e o intervalo entre eles.
+  horaInicio       String  @default("07:00")
+  horaFim          String  @default("20:00")
+  intervaloMin     Int     @default(60)
   // Logotipo em data URL (imagem já reduzida no navegador).
   logo        String?
 }
