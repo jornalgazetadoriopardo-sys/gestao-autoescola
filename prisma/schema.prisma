@@ -1,13 +1,15 @@
-// Banco local em SQLite. Para migrar para PostgreSQL (ex.: Supabase),
-// troque o provider para "postgresql" e ajuste DATABASE_URL no .env.
+// Banco PostgreSQL (Supabase em produção).
+// DATABASE_URL: conexão pelo pooler (porta 6543), usada pelo sistema.
+// DIRECT_URL: conexão de sessão (porta 5432), usada para aplicar migrações.
 
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
-  provider = "sqlite"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 // Responsáveis da autoescola que acessam o sistema.

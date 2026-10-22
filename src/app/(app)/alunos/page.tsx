@@ -20,7 +20,7 @@ export default async function AlunosPage({
   const where: Prisma.AlunoWhereInput = {};
   if (status !== "todos") where.status = status;
   if (busca) {
-    where.OR = [{ nome: { contains: busca } }];
+    where.OR = [{ nome: { contains: busca, mode: "insensitive" } }];
     if (digitos) where.OR.push({ cpf: { contains: digitos } });
   }
 
