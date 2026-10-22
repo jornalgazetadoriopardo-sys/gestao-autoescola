@@ -7,8 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "setup": "prisma migrate dev && prisma db seed",
-    "db:migrate": "prisma migrate dev",
+    "setup": "node scripts/preparar-env.mjs && prisma migrate deploy && prisma db seed",
+    "db:migrate": "prisma migrate deploy",
     "db:studio": "prisma studio"
   },
   "dependencies": {

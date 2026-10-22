@@ -18,24 +18,41 @@ presença e pagamentos.
 
 Próximas etapas: baixa de pagamentos, recibo e painel financeiro.
 
-## Como rodar no seu computador
+## Como rodar no seu computador (Windows)
 
-Requisito: [Node.js](https://nodejs.org) 20 ou mais recente.
+1. Instale o **Node.js** (versão LTS) em https://nodejs.org — avance com as
+   opções padrão do instalador.
+2. **Feche e abra de novo** o Prompt de Comando (cmd) e confira:
+   ```
+   node -v
+   ```
+3. Entre na pasta do sistema e rode, uma única vez:
+   ```
+   npm install
+   npm run setup
+   ```
+   O `setup` cria o arquivo `.env`, o banco local (`prisma/dev.db`) e o usuário inicial.
+4. Para usar o sistema, rode:
+   ```
+   npm run dev
+   ```
+   e acesse http://localhost:3000 no navegador. Deixe a janela do cmd aberta
+   enquanto usa; para parar, aperte `Ctrl + C`.
 
-```bash
-npm install
-cp .env.example .env      # depois troque SESSION_SECRET por um valor aleatório
-npm run setup             # cria o banco local (prisma/dev.db) e o usuário inicial
-npm run dev
-```
-
-Acesse http://localhost:3000 e entre com:
+Login inicial:
 
 - **E-mail:** `admin@autoescola.local`
 - **Senha:** `admin123`
 
 Para criar o usuário inicial com outro e-mail/senha, defina `ADMIN_EMAIL` e
 `ADMIN_SENHA` antes de rodar `npm run setup`.
+
+### Ao baixar uma versão nova
+
+```
+npm install
+npm run db:migrate
+```
 
 ## Tecnologia
 
