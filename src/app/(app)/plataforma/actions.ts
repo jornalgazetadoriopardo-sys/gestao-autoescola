@@ -5,6 +5,7 @@ import { Prisma } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { dbGlobal } from "@/lib/db";
 import { exigirSuperadmin } from "@/lib/auth";
+import { ErroImportacao, importarAutoescola } from "@/lib/backup";
 import type { EstadoForm } from "@/components/form-acao";
 
 function texto(dados: FormData, campo: string) {
@@ -55,4 +56,39 @@ export async function alternarAutoescola(autoescolaId: number) {
   if (!autoescola) return;
   await dbGlobal.autoescola.update({ where: { id: autoescolaId }, data: { ativo: !autoescola.ativo } });
   revalidatePath("/plataforma");
+}
+
+const ARQUIVO_MAX = 4 * 1024 * 1024;
+
+// Recebe o arquivo exportado (de outro servidor) e cria a autoescola com tudo.
+export async function importarArquivo(_: EstadoForm, dados: FormData): Promise<EstadoForm> {
+  await exigirSuperadmin();
+
+  const arquivo = dados.get("arquivo");
+  if (!(arquivo instanceof File) || arquivo.size === 0) return { erro: "Escolha o arquivo exportado (.json)." };
+  if (arquivo.size > ARQUIVO_MAX) return { erro: "Arquivo grande demais (máximo 4 MB)." };
+
+  let conteudo: unknown;
+  try {
+    conteudo = JSON.parse(await arquivo.text());
+  } catch {
+    return { erro: "Não foi possível ler o arquivo. Use o arquivo .json baixado em Exportar." };
+  }
+
+  try {
+    const r = await importarAutoescola(conteudo);
+    revalidatePath("/plataforma");
+    return {
+      ok:
+        `Autoescola ${r.nome} importada: ${r.totais.usuarios} usuário(s), ${r.totais.alunos} aluno(s), ` +
+        `${r.totais.aulas} aula(s) e ${r.totais.parcelas} parcela(s). Os usuários entram com as mesmas senhas de antes.`,
+    };
+  } catch (e) {
+    if (e instanceof ErroImportacao) return { erro: e.message };
+    if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002") {
+      return { erro: "Arquivo inválido: há CPF, placa ou e-mail repetido. Nada foi importado." };
+    }
+    console.error(e);
+    return { erro: "Não foi possível importar. Nada foi gravado." };
+  }
 }

@@ -37,6 +37,21 @@ presença e pagamentos.
 - **Plataforma** (só para o dono do sistema): cria autoescolas com o primeiro
   administrador, mostra quantos usuários e alunos cada uma tem e suspende ou reativa
   o acesso (os dados continuam guardados)
+- **Exportar e importar autoescola** (Plataforma): baixa um arquivo `.json` com todos os
+  dados de uma autoescola (alunos, matrículas, parcelas, aulas, veículos, manutenções,
+  instrutores, configurações e usuários com as senhas) e, em outro servidor, cria a
+  autoescola de novo a partir dele. Serve para mudar de servidor sem perder nada
+
+### Mudar de servidor
+
+1. No servidor antigo, entre como dono da plataforma, abra **Plataforma** e clique em
+   **Exportar** em cada autoescola. Guarde os arquivos em lugar seguro: eles têm dados
+   pessoais dos alunos e as senhas (criptografadas) dos usuários.
+2. No servidor novo, abra **Plataforma → Importar autoescola** e envie cada arquivo.
+   Ou importa tudo, ou nada. Os usuários entram com o mesmo e-mail e a mesma senha.
+3. Se um e-mail do arquivo já existir no servidor novo (por exemplo, o seu, criado por
+   `ADMIN_EMAIL`), a importação é recusada e mostra quais são. Use outro `ADMIN_EMAIL`
+   no servidor novo ou troque o e-mail desse usuário antes.
 
 ### Como a separação entre autoescolas funciona
 
