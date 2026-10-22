@@ -40,6 +40,7 @@ export async function salvarConfig(_: EstadoForm, dados: FormData): Promise<Esta
     email: texto(dados, "email"),
     chavePix: texto(dados, "chavePix"),
     avisoCarne: texto(dados, "avisoCarne"),
+    orientacoesAluno: texto(dados, "orientacoesAluno"),
     logo: logo || null,
   };
 

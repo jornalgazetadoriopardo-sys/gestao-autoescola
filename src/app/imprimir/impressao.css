@@ -15,6 +15,11 @@
 }
 
 @media print {
+  /* Sem o fundo cinza do sistema nas folhas impressas. */
+  html,
+  body {
+    background: white !important;
+  }
   .folha {
     width: auto;
     min-height: 0;

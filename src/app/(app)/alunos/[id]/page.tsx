@@ -2,7 +2,9 @@ import { notFound } from "next/navigation";
 import {
   ArrowLeft,
   BookOpen,
+  BookOpenCheck,
   CalendarPlus,
+  CalendarRange,
   CircleCheck,
   FileText,
   GraduationCap,
@@ -43,9 +45,9 @@ export default async function FichaAlunoPage({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ nova?: string; recebido?: string }>;
+  searchParams: Promise<{ nova?: string; recebido?: string; agendadas?: string }>;
 }) {
-  const { nova, recebido } = await searchParams;
+  const { nova, recebido, agendadas } = await searchParams;
   const aluno = await db.aluno.findUnique({
     where: { id: Number((await params).id) || 0 },
     include: {
@@ -85,7 +87,12 @@ export default async function FichaAlunoPage({
             <BotaoLink href="/alunos" variante="secundario" icone={ArrowLeft}>
               Voltar
             </BotaoLink>
-            <BotaoLink href={`/imprimir/aluno/${aluno.id}`} target="_blank" variante="secundario" icone={FileText}>
+            <BotaoLink
+              href={`/imprimir/aluno/${aluno.id}`}
+              target="_blank"
+              variante="secundario"
+              icone={FileText}
+            >
               Relatório
             </BotaoLink>
             <BotaoLink href={`/alunos/${aluno.id}/editar`} variante="secundario" icone={Pencil}>
@@ -100,23 +107,52 @@ export default async function FichaAlunoPage({
 
       {matriculaNova && (
         <Aviso tipo="sucesso" icone={CircleCheck}>
-          <span>Matrícula criada com sucesso!</span>
+          <span>Matrícula criada com sucesso! Entregue o guia ao aluno:</span>
+          <BotaoLink
+            href={`/imprimir/matricula/${matriculaNova.id}`}
+            target="_blank"
+            tamanho="pequeno"
+            icone={BookOpenCheck}
+          >
+            Guia do aluno
+          </BotaoLink>
           {matriculaNova.formaPagamento === "carne" && matriculaNova.parcelas.length > 0 && (
-            <BotaoLink href={`/imprimir/carne/${matriculaNova.id}`} target="_blank" tamanho="pequeno" icone={Printer}>
+            <BotaoLink
+              href={`/imprimir/carne/${matriculaNova.id}`}
+              target="_blank"
+              tamanho="pequeno"
+              icone={Printer}
+            >
               Imprimir carnê
             </BotaoLink>
           )}
           {matriculaNova.formaPagamento !== "carne" && matriculaNova.parcelas[0] && (
-            <BotaoLink href={`/imprimir/recibo/${matriculaNova.parcelas[0].id}`} target="_blank" tamanho="pequeno" icone={Printer}>
+            <BotaoLink
+              href={`/imprimir/recibo/${matriculaNova.parcelas[0].id}`}
+              target="_blank"
+              tamanho="pequeno"
+              icone={Printer}
+            >
               Imprimir recibo
             </BotaoLink>
           )}
         </Aviso>
       )}
+      {Number(agendadas) > 0 && (
+        <Aviso tipo="sucesso" icone={CircleCheck}>
+          {Number(agendadas) === 1 ? "1 aula agendada!" : `${Number(agendadas)} aulas agendadas!`} Veja a
+          lista abaixo. Para mudar uma aula, use o botão Editar.
+        </Aviso>
+      )}
       {parcelaRecebida?.pagoEm && (
         <Aviso tipo="sucesso" icone={CircleCheck}>
           <span>Pagamento da parcela {parcelaRecebida.numero} registrado!</span>
-          <BotaoLink href={`/imprimir/recibo/${parcelaRecebida.id}`} target="_blank" tamanho="pequeno" icone={Printer}>
+          <BotaoLink
+            href={`/imprimir/recibo/${parcelaRecebida.id}`}
+            target="_blank"
+            tamanho="pequeno"
+            icone={Printer}
+          >
             Imprimir recibo
           </BotaoLink>
         </Aviso>
@@ -175,8 +211,23 @@ export default async function FichaAlunoPage({
                   </div>
                 </div>
                 <div className="flex flex-wrap gap-2">
+                  <BotaoLink
+                    href={`/imprimir/matricula/${m.id}`}
+                    target="_blank"
+                    variante="secundario"
+                    tamanho="pequeno"
+                    icone={BookOpenCheck}
+                  >
+                    Guia do aluno
+                  </BotaoLink>
                   {m.formaPagamento === "carne" && m.parcelas.length > 0 && (
-                    <BotaoLink href={`/imprimir/carne/${m.id}`} target="_blank" variante="secundario" tamanho="pequeno" icone={Printer}>
+                    <BotaoLink
+                      href={`/imprimir/carne/${m.id}`}
+                      target="_blank"
+                      variante="secundario"
+                      tamanho="pequeno"
+                      icone={Printer}
+                    >
                       Imprimir carnê
                     </BotaoLink>
                   )}
@@ -196,9 +247,23 @@ export default async function FichaAlunoPage({
                 <h3 className="flex items-center gap-2 text-lg font-semibold">
                   <BookOpen className="size-5 text-slate-500" aria-hidden /> Aulas
                 </h3>
-                <BotaoLink href={`/aulas/nova?matricula=${m.id}`} tamanho="pequeno" icone={CalendarPlus}>
-                  Agendar aula
-                </BotaoLink>
+                <div className="flex flex-wrap gap-2">
+                  <BotaoLink
+                    href={`/aulas/nova?matricula=${m.id}`}
+                    variante="secundario"
+                    tamanho="pequeno"
+                    icone={CalendarPlus}
+                  >
+                    Uma aula
+                  </BotaoLink>
+                  <BotaoLink
+                    href={`/aulas/nova?modo=varias&matricula=${m.id}`}
+                    tamanho="pequeno"
+                    icone={CalendarRange}
+                  >
+                    Várias aulas
+                  </BotaoLink>
+                </div>
               </div>
               <div className="mb-4 grid gap-3 sm:grid-cols-2">
                 {(["pratica", "teorica"] as const)
@@ -209,7 +274,9 @@ export default async function FichaAlunoPage({
                     return (
                       <div key={tipo} className="rounded-xl bg-slate-50 p-4">
                         <div className="mb-2 flex justify-between text-base">
-                          <span className="font-semibold">{tipo === "pratica" ? "Práticas" : "Teóricas"}</span>
+                          <span className="font-semibold">
+                            {tipo === "pratica" ? "Práticas" : "Teóricas"}
+                          </span>
                           <span>
                             {r.feitas} de {r.contratadas} feitas
                           </span>
@@ -246,12 +313,14 @@ export default async function FichaAlunoPage({
                         <td className="px-4 py-2.5">{a.instrutor?.nome ?? "—"}</td>
                         <td className="px-4 py-2.5">{a.veiculo?.placa ?? "—"}</td>
                         <td className="px-4 py-2.5">
-                          <Etiqueta cor={COR_STATUS_AULA[a.status as keyof typeof COR_STATUS_AULA] ?? "cinza"}>
+                          <Etiqueta
+                            cor={COR_STATUS_AULA[a.status as keyof typeof COR_STATUS_AULA] ?? "cinza"}
+                          >
                             {STATUS_AULA[a.status] ?? a.status}
                           </Etiqueta>
                         </td>
                         <td className="px-4 py-2.5">
-                          <AcoesAula aula={a} />
+                          <AcoesAula aula={a} voltar={`/alunos/${aluno.id}`} />
                         </td>
                       </tr>
                     ))}
@@ -269,7 +338,11 @@ export default async function FichaAlunoPage({
                   valor={formatarMoeda(totalParcelado)}
                 />
                 <Valor rotulo="Pago" valor={formatarMoeda(pago)} cor="text-green-700" />
-                <Valor rotulo="Em aberto" valor={formatarMoeda(emAberto)} cor={emAberto ? "text-amber-700" : undefined} />
+                <Valor
+                  rotulo="Em aberto"
+                  valor={formatarMoeda(emAberto)}
+                  cor={emAberto ? "text-amber-700" : undefined}
+                />
               </div>
 
               {m.parcelas.length > 0 && (

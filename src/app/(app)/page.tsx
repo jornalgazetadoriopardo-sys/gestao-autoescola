@@ -159,7 +159,7 @@ export default async function InicioPage() {
                 </Etiqueta>
               </td>
               <td className="px-4 py-3">
-                <AcoesAula aula={a} />
+                <AcoesAula aula={a} voltar="/" />
               </td>
             </tr>
           ))}

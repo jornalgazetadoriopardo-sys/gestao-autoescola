@@ -21,6 +21,7 @@ export async function obterConfig(): Promise<Configuracao> {
       email: null,
       chavePix: null,
       avisoCarne: null,
+      orientacoesAluno: null,
       logo: null,
     }
   );

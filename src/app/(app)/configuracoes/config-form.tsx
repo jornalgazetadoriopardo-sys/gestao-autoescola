@@ -3,6 +3,7 @@
 import { useRef, useState } from "react";
 import { ImageUp, Trash2 } from "lucide-react";
 import type { Configuracao } from "@prisma/client";
+import { ORIENTACOES_PADRAO } from "@/lib/orientacoes";
 import { FormAcao } from "@/components/form-acao";
 import { Botao, Campo, Input, Textarea } from "@/components/ui";
 import { salvarConfig } from "./actions";
@@ -47,11 +48,23 @@ export function ConfigForm({ config }: { config: Configuracao }) {
           <p className="text-base font-medium text-slate-800">Logotipo</p>
           <p className="text-sm text-slate-600">Aparece no menu, nos recibos, no carnê e nos relatórios.</p>
           <div className="flex flex-wrap gap-2">
-            <Botao type="button" variante="secundario" tamanho="pequeno" icone={ImageUp} onClick={() => arquivo.current?.click()}>
+            <Botao
+              type="button"
+              variante="secundario"
+              tamanho="pequeno"
+              icone={ImageUp}
+              onClick={() => arquivo.current?.click()}
+            >
               {logo ? "Trocar imagem" : "Escolher imagem"}
             </Botao>
             {logo && (
-              <Botao type="button" variante="perigo" tamanho="pequeno" icone={Trash2} onClick={() => setLogo("")}>
+              <Botao
+                type="button"
+                variante="perigo"
+                tamanho="pequeno"
+                icone={Trash2}
+                onClick={() => setLogo("")}
+              >
                 Remover
               </Botao>
             )}
@@ -114,7 +127,11 @@ export function ConfigForm({ config }: { config: Configuracao }) {
         <Campo label="E-mail">
           <Input name="email" type="email" defaultValue={config.email ?? ""} />
         </Campo>
-        <Campo label="Chave Pix" ajuda="Impressa no carnê para o aluno pagar por Pix." className="sm:col-span-2">
+        <Campo
+          label="Chave Pix"
+          ajuda="Impressa no carnê para o aluno pagar por Pix."
+          className="sm:col-span-2"
+        >
           <Input name="chavePix" defaultValue={config.chavePix ?? ""} />
         </Campo>
         <Campo
@@ -123,6 +140,17 @@ export function ConfigForm({ config }: { config: Configuracao }) {
           className="sm:col-span-2"
         >
           <Textarea name="avisoCarne" rows={2} defaultValue={config.avisoCarne ?? ""} />
+        </Campo>
+        <Campo
+          label="Orientações para o aluno"
+          ajuda="Impressas no guia entregue na matrícula. Uma orientação por linha."
+          className="sm:col-span-2"
+        >
+          <Textarea
+            name="orientacoesAluno"
+            rows={6}
+            defaultValue={config.orientacoesAluno ?? ORIENTACOES_PADRAO}
+          />
         </Campo>
       </div>
     </FormAcao>
