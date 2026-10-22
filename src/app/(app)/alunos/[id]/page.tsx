@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import {
   ArrowLeft,
   BookOpen,
+  BookOpenCheck,
   CalendarPlus,
   CalendarRange,
   CircleCheck,
@@ -106,7 +107,15 @@ export default async function FichaAlunoPage({
 
       {matriculaNova && (
         <Aviso tipo="sucesso" icone={CircleCheck}>
-          <span>Matrícula criada com sucesso!</span>
+          <span>Matrícula criada com sucesso! Entregue o guia ao aluno:</span>
+          <BotaoLink
+            href={`/imprimir/matricula/${matriculaNova.id}`}
+            target="_blank"
+            tamanho="pequeno"
+            icone={BookOpenCheck}
+          >
+            Guia do aluno
+          </BotaoLink>
           {matriculaNova.formaPagamento === "carne" && matriculaNova.parcelas.length > 0 && (
             <BotaoLink
               href={`/imprimir/carne/${matriculaNova.id}`}
@@ -202,6 +211,15 @@ export default async function FichaAlunoPage({
                   </div>
                 </div>
                 <div className="flex flex-wrap gap-2">
+                  <BotaoLink
+                    href={`/imprimir/matricula/${m.id}`}
+                    target="_blank"
+                    variante="secundario"
+                    tamanho="pequeno"
+                    icone={BookOpenCheck}
+                  >
+                    Guia do aluno
+                  </BotaoLink>
                   {m.formaPagamento === "carne" && m.parcelas.length > 0 && (
                     <BotaoLink
                       href={`/imprimir/carne/${m.id}`}

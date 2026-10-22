@@ -12,6 +12,10 @@ presença e pagamentos.
   - *Parcelado pela autoescola*: gera as parcelas (com juros ao mês opcional) e o
     **carnê para imprimir** (4 parcelas por folha A4, para recortar)
   - *Cartão*, *Pix* ou *dinheiro* à vista: a matrícula já fica quitada
+- **Guia do aluno** gerado na matrícula (imprimir ou salvar em PDF): dados, pagamento,
+  **cronograma** com um quadro por aula contratada (preenchido com as aulas agendadas
+  ou em branco para anotar data e horário), orientações e assinaturas; botão para
+  enviar o resumo pelo WhatsApp
 - **Pagamentos**: parcelas atrasadas, a vencer e pagas; baixa com data, valor e
   forma de pagamento; **recibo** em A4 (via do aluno e via da autoescola)
 - **Agenda de aulas** com bloqueio de conflito de horário, saldo de aulas e presença

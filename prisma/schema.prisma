@@ -148,6 +148,8 @@ model Configuracao {
   chavePix    String?
   // Texto impresso no rodapé do carnê (ex.: multa após o vencimento).
   avisoCarne  String?
+  // Orientações impressas no guia do aluno entregue na matrícula.
+  orientacoesAluno String?
   // Logotipo em data URL (imagem já reduzida no navegador).
   logo        String?
 }
