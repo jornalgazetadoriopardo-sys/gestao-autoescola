@@ -1,0 +1,32 @@
+@page {
+  size: A4;
+  margin: 8mm;
+}
+
+/* Folha A4 na tela; no papel ocupa a área útil da página. */
+.folha {
+  width: 210mm;
+  min-height: 297mm;
+  margin: 0 auto 8mm;
+  padding: 10mm;
+  background: white;
+  box-shadow: 0 2px 12px rgb(0 0 0 / 0.15);
+  color: #0f172a;
+}
+
+@media print {
+  .folha {
+    width: auto;
+    min-height: 0;
+    margin: 0;
+    padding: 0;
+    box-shadow: none;
+  }
+  .quebra {
+    break-after: page;
+  }
+  .impressao {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+}

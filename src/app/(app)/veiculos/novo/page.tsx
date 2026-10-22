@@ -1,10 +1,11 @@
+import { Car } from "lucide-react";
 import { Cabecalho } from "@/components/ui";
 import { VeiculoForm } from "../veiculo-form";
 
 export default function NovoVeiculoPage() {
   return (
     <>
-      <Cabecalho titulo="Novo veículo" />
+      <Cabecalho titulo="Novo veículo" icone={Car} />
       <VeiculoForm />
     </>
   );

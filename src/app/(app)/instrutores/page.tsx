@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Plus, UserRound } from "lucide-react";
 import { BotaoLink, Cabecalho, Etiqueta, LinhaVazia, Tabela } from "@/components/ui";
 import { db } from "@/lib/db";
 import { formatarTelefone } from "@/lib/format";
@@ -10,7 +11,16 @@ export default async function InstrutoresPage() {
 
   return (
     <>
-      <Cabecalho titulo="Instrutores" acoes={<BotaoLink href="/instrutores/novo">Novo instrutor</BotaoLink>} />
+      <Cabecalho
+        titulo="Instrutores"
+        descricao="Clique no nome para editar."
+        icone={UserRound}
+        acoes={
+          <BotaoLink href="/instrutores/novo" icone={Plus}>
+            Novo instrutor
+          </BotaoLink>
+        }
+      />
       <Tabela cabecalhos={["Nome", "Telefone", "Categorias", "Situação"]}>
         {instrutores.length === 0 && <LinhaVazia colunas={4} texto="Nenhum instrutor cadastrado." />}
         {instrutores.map((i) => (

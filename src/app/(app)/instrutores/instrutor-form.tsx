@@ -16,17 +16,20 @@ export function InstrutorForm({ instrutor }: { instrutor?: Instrutor }) {
           <Input name="telefone" inputMode="tel" defaultValue={formatarTelefone(instrutor?.telefone)} />
         </Campo>
         <fieldset>
-          <legend className="mb-1 text-sm font-medium text-slate-700">Categorias que ensina *</legend>
-          <div className="flex gap-4">
+          <legend className="mb-2 text-base font-medium text-slate-800">Categorias que ensina *</legend>
+          <div className="flex flex-wrap gap-3">
             {["A", "B", "C", "D", "E"].map((c) => (
-              <label key={c} className="flex items-center gap-1 text-sm">
+              <label
+                key={c}
+                className="flex items-center gap-2 rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-base font-semibold"
+              >
                 <input type="checkbox" name="categorias" value={c} defaultChecked={marcadas.includes(c)} />
                 {c}
               </label>
             ))}
           </div>
         </fieldset>
-        <label className="flex items-center gap-2 text-sm">
+        <label className="flex items-center gap-2 text-base">
           <input type="checkbox" name="ativo" defaultChecked={instrutor?.ativo ?? true} />
           Ativo
         </label>

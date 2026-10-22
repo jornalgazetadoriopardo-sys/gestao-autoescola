@@ -34,3 +34,10 @@ export async function exigirSessao() {
   if (!sessao) redirect("/login");
   return sessao;
 }
+
+// Páginas e ações restritas ao administrador (ex.: cadastro de usuários).
+export async function exigirAdmin() {
+  const sessao = await exigirSessao();
+  if (sessao.papel !== "admin") redirect("/");
+  return sessao;
+}

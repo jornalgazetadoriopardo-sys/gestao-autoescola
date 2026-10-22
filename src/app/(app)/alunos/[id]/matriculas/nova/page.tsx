@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { GraduationCap } from "lucide-react";
 import { Cabecalho } from "@/components/ui";
 import { db } from "@/lib/db";
 import { hojeISO } from "@/lib/format";
@@ -10,7 +11,7 @@ export default async function NovaMatriculaPage({ params }: { params: Promise<{ 
 
   return (
     <>
-      <Cabecalho titulo={`Nova matrícula: ${aluno.nome}`} />
+      <Cabecalho titulo="Nova matrícula" descricao={`Aluno: ${aluno.nome}`} icone={GraduationCap} />
       <MatriculaForm alunoId={aluno.id} categoria={aluno.categoria} hoje={hojeISO()} />
     </>
   );

@@ -1,4 +1,5 @@
-import { Cabecalho } from "@/components/ui";
+import { CalendarPlus, GraduationCap } from "lucide-react";
+import { BotaoLink, Cabecalho, Vazio } from "@/components/ui";
 import { db } from "@/lib/db";
 import { formatarDataLocal, hojeISO } from "@/lib/format";
 import { resumoAulas } from "@/lib/aulas";
@@ -39,11 +40,19 @@ export default async function NovaAulaPage({
 
   return (
     <>
-      <Cabecalho titulo="Agendar aula" />
+      <Cabecalho
+        titulo="Agendar aula"
+        descricao="Escolha o aluno, o instrutor e o horário."
+        icone={CalendarPlus}
+        cor="roxo"
+      />
       {opcoes.length === 0 ? (
-        <p className="text-sm text-slate-600">
-          Nenhum aluno ativo com aulas disponíveis. Crie uma matrícula na ficha do aluno primeiro.
-        </p>
+        <Vazio
+          icone={GraduationCap}
+          titulo="Nenhum aluno com aulas disponíveis"
+          texto="Para agendar, o aluno precisa estar ativo e ter uma matrícula com aulas a agendar."
+          acao={<BotaoLink href="/alunos">Ir para alunos</BotaoLink>}
+        />
       ) : (
         <AulaForm
           matriculas={opcoes}
