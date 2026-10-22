@@ -12,53 +12,85 @@ datasource db {
   directUrl = env("DIRECT_URL")
 }
 
+// Cada autoescola que usa o sistema. Os dados de uma não são vistos pelas outras:
+// usuários, alunos, instrutores e veículos pertencem a uma autoescola, e as demais
+// tabelas pertencem a ela por meio deles (ver src/lib/db.ts).
+model Autoescola {
+  id           Int           @id @default(autoincrement())
+  nome         String
+  ativo        Boolean       @default(true)
+  criadoEm     DateTime      @default(now())
+  usuarios     Usuario[]
+  alunos       Aluno[]
+  instrutores  Instrutor[]
+  veiculos     Veiculo[]
+  configuracao Configuracao?
+}
+
 // Responsáveis da autoescola que acessam o sistema.
-// papel: "admin" | "secretaria"
+// papel: "admin" | "secretaria". `superadmin` é o dono da plataforma, que cadastra autoescolas.
 model Usuario {
-  id        Int      @id @default(autoincrement())
-  nome      String
-  email     String   @unique
-  senhaHash String
-  papel     String   @default("secretaria")
-  ativo     Boolean  @default(true)
-  criadoEm  DateTime @default(now())
+  id           Int        @id @default(autoincrement())
+  autoescolaId Int
+  autoescola   Autoescola @relation(fields: [autoescolaId], references: [id])
+  nome         String
+  email        String     @unique
+  senhaHash    String
+  papel        String     @default("secretaria")
+  superadmin   Boolean    @default(false)
+  ativo        Boolean    @default(true)
+  criadoEm     DateTime   @default(now())
+
+  @@index([autoescolaId])
 }
 
 // status: "ativo" | "concluido" | "desistente"
 model Aluno {
-  id         Int         @id @default(autoincrement())
-  nome       String
-  cpf        String      @unique
-  telefone   String?
-  email      String?
-  nascimento DateTime?
-  endereco   String?
-  categoria  String
-  status     String      @default("ativo")
-  obs        String?
-  criadoEm   DateTime    @default(now())
-  matriculas Matricula[]
+  id           Int         @id @default(autoincrement())
+  autoescolaId Int
+  autoescola   Autoescola  @relation(fields: [autoescolaId], references: [id])
+  nome         String
+  cpf          String
+  telefone     String?
+  email        String?
+  nascimento   DateTime?
+  endereco     String?
+  categoria    String
+  status       String      @default("ativo")
+  obs          String?
+  criadoEm     DateTime    @default(now())
+  matriculas   Matricula[]
+
+  @@unique([autoescolaId, cpf])
 }
 
 model Instrutor {
-  id         Int      @id @default(autoincrement())
-  nome       String
-  telefone   String?
-  categorias String
-  ativo      Boolean  @default(true)
-  criadoEm   DateTime @default(now())
-  aulas      Aula[]
+  id           Int        @id @default(autoincrement())
+  autoescolaId Int
+  autoescola   Autoescola @relation(fields: [autoescolaId], references: [id])
+  nome         String
+  telefone     String?
+  categorias   String
+  ativo        Boolean    @default(true)
+  criadoEm     DateTime   @default(now())
+  aulas        Aula[]
+
+  @@index([autoescolaId])
 }
 
 model Veiculo {
-  id        Int      @id @default(autoincrement())
-  placa     String   @unique
-  modelo    String
-  categoria String
-  ativo     Boolean  @default(true)
-  criadoEm  DateTime @default(now())
-  aulas     Aula[]
-  manutencoes Manutencao[]
+  id           Int          @id @default(autoincrement())
+  autoescolaId Int
+  autoescola   Autoescola   @relation(fields: [autoescolaId], references: [id])
+  placa        String
+  modelo       String
+  categoria    String
+  ativo        Boolean      @default(true)
+  criadoEm     DateTime     @default(now())
+  aulas        Aula[]
+  manutencoes  Manutencao[]
+
+  @@unique([autoescolaId, placa])
 }
 
 // Pacote contratado pelo aluno. Valores em centavos.
@@ -131,29 +163,30 @@ model Manutencao {
   @@index([lembrarEm])
 }
 
-// Dados da autoescola (linha única, id = 1), usados no menu, recibos e carnês.
+// Dados de cada autoescola (id = id da autoescola), usados no menu, recibos e carnês.
 model Configuracao {
-  id          Int     @id @default(1)
-  nome        String  @default("Minha Autoescola")
-  razaoSocial String?
-  cnpj        String?
-  endereco    String?
-  bairro      String?
-  cidade      String?
-  uf          String?
-  cep         String?
-  telefone    String?
-  whatsapp    String?
-  email       String?
-  chavePix    String?
+  id               Int        @id
+  autoescola       Autoescola @relation(fields: [id], references: [id])
+  nome             String     @default("Minha Autoescola")
+  razaoSocial      String?
+  cnpj             String?
+  endereco         String?
+  bairro           String?
+  cidade           String?
+  uf               String?
+  cep              String?
+  telefone         String?
+  whatsapp         String?
+  email            String?
+  chavePix         String?
   // Texto impresso no rodapé do carnê (ex.: multa após o vencimento).
-  avisoCarne  String?
+  avisoCarne       String?
   // Orientações impressas no guia do aluno entregue na matrícula.
   orientacoesAluno String?
   // Expediente usado para oferecer os horários de aula (HH:MM) e o intervalo entre eles.
-  horaInicio       String  @default("07:00")
-  horaFim          String  @default("20:00")
-  intervaloMin     Int     @default(60)
+  horaInicio       String     @default("07:00")
+  horaFim          String     @default("20:00")
+  intervaloMin     Int        @default(60)
   // Logotipo em data URL (imagem já reduzida no navegador).
-  logo        String?
+  logo             String?
 }

@@ -14,7 +14,7 @@ export async function salvarInstrutor(
   _: EstadoForm,
   dados: FormData,
 ): Promise<EstadoForm> {
-  await exigirSessao();
+  const sessao = await exigirSessao();
 
   const nome = String(dados.get("nome") ?? "").trim();
   const categorias = dados
@@ -33,7 +33,7 @@ export async function salvarInstrutor(
   };
 
   if (id) await db.instrutor.update({ where: { id }, data: campos });
-  else await db.instrutor.create({ data: campos });
+  else await db.instrutor.create({ data: { ...campos, autoescolaId: sessao.autoescolaId } });
 
   revalidatePath("/instrutores");
   redirect("/instrutores");

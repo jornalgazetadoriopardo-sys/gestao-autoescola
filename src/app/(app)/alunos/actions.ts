@@ -18,7 +18,7 @@ export async function salvarAluno(
   _: EstadoForm,
   dados: FormData,
 ): Promise<EstadoForm> {
-  await exigirSessao();
+  const sessao = await exigirSessao();
 
   const nome = texto(dados, "nome");
   const cpf = somenteDigitos(texto(dados, "cpf") ?? "");
@@ -48,7 +48,7 @@ export async function salvarAluno(
     if (id) {
       await db.aluno.update({ where: { id }, data: campos });
     } else {
-      alunoId = (await db.aluno.create({ data: campos })).id;
+      alunoId = (await db.aluno.create({ data: { ...campos, autoescolaId: sessao.autoescolaId } })).id;
     }
   } catch (e) {
     if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002") {

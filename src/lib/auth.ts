@@ -1,13 +1,9 @@
 import "server-only";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import {
-  SESSION_COOKIE,
-  SESSION_DURATION_S,
-  assinarSessao,
-  verificarSessao,
-  type Sessao,
-} from "./session";
+import { SESSION_COOKIE, SESSION_DURATION_S, assinarSessao, type Sessao } from "./session";
+import { sessaoDoCookie } from "./sessao-atual";
+import { situacaoDaSessao } from "./db";
 
 export async function iniciarSessao(sessao: Sessao) {
   const token = await assinarSessao(sessao);
@@ -25,13 +21,14 @@ export async function encerrarSessao() {
 }
 
 export async function obterSessao() {
-  return verificarSessao((await cookies()).get(SESSION_COOKIE)?.value);
+  return sessaoDoCookie();
 }
 
 // Usada em páginas e server actions: garante que há alguém logado.
 export async function exigirSessao() {
-  const sessao = await obterSessao();
+  const { sessao, situacao } = await situacaoDaSessao();
   if (!sessao) redirect("/login");
+  if (situacao !== "ok") redirect(`/sair?motivo=${situacao}`);
   return sessao;
 }
 
@@ -39,5 +36,12 @@ export async function exigirSessao() {
 export async function exigirAdmin() {
   const sessao = await exigirSessao();
   if (sessao.papel !== "admin") redirect("/");
+  return sessao;
+}
+
+// Painel da plataforma: só o dono do sistema.
+export async function exigirSuperadmin() {
+  const sessao = await exigirSessao();
+  if (!sessao.superadmin) redirect("/");
   return sessao;
 }

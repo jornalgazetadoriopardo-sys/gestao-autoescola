@@ -31,6 +31,25 @@ presença e pagamentos.
   faltas, quanto falta para concluir e pagamentos), financeiro e de aulas por período
 - **Configurações**: dados e logotipo da autoescola (usados no menu, carnê, recibos
   e relatórios), usuários (administrador ou secretaria) e troca de senha
+- **Várias autoescolas** no mesmo sistema: cada usuário pertence a uma autoescola e
+  só vê os dados dela (alunos, aulas, pagamentos, veículos, instrutores, configurações).
+  CPF e placa podem se repetir entre autoescolas diferentes
+- **Plataforma** (só para o dono do sistema): cria autoescolas com o primeiro
+  administrador, mostra quantos usuários e alunos cada uma tem e suspende ou reativa
+  o acesso (os dados continuam guardados)
+
+### Como a separação entre autoescolas funciona
+
+Todo acesso ao banco passa por `db` (`src/lib/db.ts`), que pega a autoescola da
+sessão e acrescenta o filtro dela em toda consulta, preenche a autoescola em todo
+cadastro e confere se aluno, matrícula, instrutor e veículo usados num cadastro são
+da mesma autoescola. Uma tabela nova sem regra de autoescola é recusada. A cada
+requisição o sistema também confere se o usuário e a autoescola continuam ativos.
+`dbGlobal` (sem filtro) só é usado no login e no painel da Plataforma.
+
+O primeiro administrador criado (`ADMIN_EMAIL`) é o dono da plataforma e fica na
+autoescola nº 1. Quem já usava o sistema antes desta versão: os dados existentes
+viraram a autoescola nº 1 e o primeiro administrador virou o dono da plataforma.
 
 ## Publicar na internet (Supabase + Vercel)
 
@@ -105,4 +124,5 @@ npx prisma migrate diff --from-schema-datasource prisma/schema.prisma \
 npx prisma migrate deploy
 ```
 
-Em tabelas novas, acrescente `ALTER TABLE "Tabela" ENABLE ROW LEVEL SECURITY;`.
+Em tabelas novas, acrescente `ALTER TABLE "Tabela" ENABLE ROW LEVEL SECURITY;`
+e diga em `src/lib/db.ts` (`FILTRO`) a qual autoescola cada registro pertence.

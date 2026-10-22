@@ -11,6 +11,7 @@ import {
   LogOut,
   Menu,
   Settings,
+  ShieldCheck,
   UserRound,
   Users,
   Wallet,
@@ -32,11 +33,13 @@ export function MenuLateral({
   nome,
   autoescola,
   logo,
+  superadmin,
   sair,
 }: {
   nome: string;
   autoescola: string;
   logo: string | null;
+  superadmin: boolean;
   sair: () => Promise<void>;
 }) {
   const caminho = usePathname();
@@ -68,7 +71,7 @@ export function MenuLateral({
 
       <div className={`${aberto ? "flex" : "hidden"} flex-1 flex-col md:flex`}>
         <nav className="flex flex-col gap-1 px-3">
-          {itens.map(({ href, label, icone: Icone }) => (
+          {(superadmin ? [...itens, { href: "/plataforma", label: "Plataforma", icone: ShieldCheck }] : itens).map(({ href, label, icone: Icone }) => (
             <Link
               key={href}
               href={href}
