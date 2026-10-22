@@ -15,16 +15,17 @@ function id(dados: FormData, campo: string) {
   return Number.isInteger(v) && v > 0 ? v : null;
 }
 
-// Campos comuns a uma aula (ou a todas as aulas de um lote).
-function lerComum(dados: FormData) {
+// Campos comuns a uma aula (ou a todas as aulas de um lote). No lote o
+// instrutor vem em cada aula, então ele não é exigido aqui.
+function lerComum(dados: FormData, exigirInstrutor = true) {
   const tipo = String(dados.get("tipo") ?? "");
-  const instrutorId = id(dados, "instrutorId");
+  const instrutorId = id(dados, "instrutorId") ?? 0;
   const veiculoId = tipo === "pratica" ? id(dados, "veiculoId") : null;
   const duracaoMin = Number(dados.get("duracaoMin"));
   const obs = String(dados.get("obs") ?? "").trim() || null;
 
   if (!(tipo in TIPOS_AULA)) return { erro: "Selecione o tipo de aula." };
-  if (!instrutorId) return { erro: "Selecione o instrutor." };
+  if (exigirInstrutor && !instrutorId) return { erro: "Selecione o instrutor." };
   if (tipo === "pratica" && !veiculoId) return { erro: "Selecione o veículo da aula prática." };
   if (!DURACOES.includes(duracaoMin)) return { erro: "Duração inválida." };
   return { tipo, instrutorId, veiculoId, duracaoMin, obs };
@@ -75,10 +76,10 @@ export async function agendarVarias(_: EstadoForm, dados: FormData): Promise<Est
 
   const matriculaId = id(dados, "matriculaId");
   if (!matriculaId) return { erro: "Selecione o aluno / matrícula." };
-  const comum = lerComum(dados);
+  const comum = lerComum(dados, false);
   if ("erro" in comum) return comum;
 
-  let itens: { data: string; hora: string }[];
+  let itens: { data: string; hora: string; instrutorId?: unknown }[];
   try {
     itens = JSON.parse(String(dados.get("itens") ?? "[]"));
   } catch {
@@ -91,7 +92,11 @@ export async function agendarVarias(_: EstadoForm, dados: FormData): Promise<Est
   for (const item of itens) {
     const dataHora = lerDataHora(String(item?.data ?? ""), String(item?.hora ?? ""));
     if (!dataHora) return { erro: "Preencha o horário de todas as datas escolhidas." };
-    aulas.push({ ...comum, dataHora });
+    const instrutorId = Number(item?.instrutorId);
+    if (!Number.isInteger(instrutorId) || instrutorId <= 0) {
+      return { erro: "Escolha o instrutor de todas as aulas da lista." };
+    }
+    aulas.push({ ...comum, instrutorId, dataHora });
   }
 
   const erro = await verificarAulas(matriculaId, aulas);

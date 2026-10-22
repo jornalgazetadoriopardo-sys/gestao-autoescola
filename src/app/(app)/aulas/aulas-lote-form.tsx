@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { CalendarDays, ChevronLeft, ChevronRight, Plus, Repeat, Trash2, Wand2 } from "lucide-react";
+import { CalendarDays, ChevronLeft, ChevronRight, Plus, Repeat, Trash2, Users, Wand2 } from "lucide-react";
 import { FormAcao } from "@/components/form-acao";
 import { Botao, Campo, Cartao, Input, Select, Textarea } from "@/components/ui";
 import { DURACOES, somarDias } from "@/lib/aulas";
@@ -9,7 +9,7 @@ import { agendarVarias } from "./actions";
 import type { OpcaoMatricula } from "./aula-form";
 
 type Opcao = { id: number; nome: string; categorias: string };
-type Item = { chave: number; data: string; hora: string };
+type Item = { chave: number; data: string; hora: string; instrutorId: string };
 
 const SEMANA = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
 const MESES = [
@@ -62,6 +62,7 @@ export function AulasLoteForm({
   const [tipo, setTipo] = useState(matricula && matricula.restantes.pratica === 0 ? "teorica" : "pratica");
   const [duracao, setDuracao] = useState("50");
   const [horaPadrao, setHoraPadrao] = useState("08:00");
+  const [instrutorPadrao, setInstrutorPadrao] = useState("");
   const [itens, setItens] = useState<Item[]>([]);
   const [mes, setMes] = useState(hoje.slice(0, 7));
 
@@ -95,7 +96,7 @@ export function AulasLoteForm({
     setItens((atual) =>
       atual.some((i) => i.data === iso)
         ? atual.filter((i) => i.data !== iso)
-        : [...atual, { chave: proximaChave++, data: iso, hora: horaPadrao }],
+        : [...atual, { chave: proximaChave++, data: iso, hora: horaPadrao, instrutorId: instrutorPadrao }],
     );
   }
 
@@ -107,13 +108,24 @@ export function AulasLoteForm({
     for (let i = 0; i < 400 && novos.length < qtd; i++) {
       const iso = somarDias(aPartir, i);
       if (!diasRep.includes(diaDaSemana(iso)) || existentes.has(`${iso} ${horaPadrao}`)) continue;
-      novos.push({ chave: proximaChave++, data: iso, hora: horaPadrao });
+      novos.push({ chave: proximaChave++, data: iso, hora: horaPadrao, instrutorId: instrutorPadrao });
     }
     setItens((atual) => [...atual, ...novos]);
     if (novos[0]) setMes(novos[0].data.slice(0, 7));
   }
 
   const excede = restantes !== null && itens.length > restantes;
+  const semInstrutor = itens.filter((i) => !i.instrutorId).length;
+
+  function alterarItem(chave: number, mudanca: Partial<Item>) {
+    setItens((atual) => atual.map((i) => (i.chave === chave ? { ...i, ...mudanca } : i)));
+  }
+
+  // Trocar o instrutor padrão preenche as aulas que ainda estão sem instrutor.
+  function mudarInstrutorPadrao(id: string) {
+    setInstrutorPadrao(id);
+    if (id) setItens((atual) => atual.map((i) => (i.instrutorId ? i : { ...i, instrutorId: id })));
+  }
 
   return (
     <FormAcao
@@ -123,7 +135,13 @@ export function AulasLoteForm({
       <input
         type="hidden"
         name="itens"
-        value={JSON.stringify(ordenados.map(({ data, hora }) => ({ data, hora })))}
+        value={JSON.stringify(
+          ordenados.map(({ data, hora, instrutorId }) => ({
+            data,
+            hora,
+            instrutorId: Number(instrutorId) || null,
+          })),
+        )}
       />
 
       <Cartao>
@@ -156,15 +174,33 @@ export function AulasLoteForm({
               <option value="teorica">Teórica</option>
             </Select>
           </Campo>
-          <Campo label="Instrutor *">
-            <Select name="instrutorId" required defaultValue="">
-              <option value="">Selecione...</option>
-              {instrutores.map((i) => (
-                <option key={i.id} value={i.id}>
-                  {i.nome} ({i.categorias.replaceAll(",", ", ")})
-                </option>
-              ))}
-            </Select>
+          <Campo
+            label="Instrutor padrão"
+            ajuda="Vem preenchido em cada aula. Você pode trocar aula por aula na lista."
+          >
+            <div className="flex gap-2">
+              <Select value={instrutorPadrao} onChange={(e) => mudarInstrutorPadrao(e.target.value)}>
+                <option value="">Selecione...</option>
+                {instrutores.map((i) => (
+                  <option key={i.id} value={i.id}>
+                    {i.nome} ({i.categorias.replaceAll(",", ", ")})
+                  </option>
+                ))}
+              </Select>
+              {instrutorPadrao && itens.some((i) => i.instrutorId !== instrutorPadrao) && (
+                <Botao
+                  type="button"
+                  variante="secundario"
+                  tamanho="pequeno"
+                  icone={Users}
+                  onClick={() =>
+                    setItens((atual) => atual.map((i) => ({ ...i, instrutorId: instrutorPadrao })))
+                  }
+                >
+                  Aplicar a todas
+                </Botao>
+              )}
+            </div>
           </Campo>
           {tipo === "pratica" && (
             <Campo label="Veículo *">
@@ -331,25 +367,27 @@ export function AulasLoteForm({
               : `${itens.length} ${itens.length === 1 ? "aula escolhida" : "aulas escolhidas"}`}
             {restantes !== null && ` · restam ${restantes} para agendar`}
             {excede && " — tire algumas datas"}
+            {semInstrutor > 0 && (
+              <span className="block font-semibold text-red-700">
+                {semInstrutor === 1 ? "1 aula está" : `${semInstrutor} aulas estão`} sem instrutor.
+              </span>
+            )}
           </p>
           {ordenados.length > 0 && (
-            <ul className="max-h-[32rem] divide-y divide-slate-100 overflow-y-auto">
+            <ul className="divide-y divide-slate-100">
               {ordenados.map((item) => (
-                <li key={item.chave} className="flex items-center gap-2 py-2">
+                <li key={item.chave} className="flex flex-wrap items-center gap-2 py-2.5">
                   <span className="min-w-36 flex-1 text-base font-medium">{formatarCurto(item.data)}</span>
-                  <Input
-                    type="time"
-                    step={300}
-                    required
-                    value={item.hora}
-                    aria-label={`Horário de ${formatarCurto(item.data)}`}
-                    onChange={(e) =>
-                      setItens((atual) =>
-                        atual.map((i) => (i.chave === item.chave ? { ...i, hora: e.target.value } : i)),
-                      )
-                    }
-                    className="w-32"
-                  />
+                  <div className="w-36">
+                    <Input
+                      type="time"
+                      step={300}
+                      required
+                      value={item.hora}
+                      aria-label={`Horário de ${formatarCurto(item.data)}`}
+                      onChange={(e) => alterarItem(item.chave, { hora: e.target.value })}
+                    />
+                  </div>
                   <Botao
                     type="button"
                     variante="secundario"
@@ -363,6 +401,7 @@ export function AulasLoteForm({
                           chave: proximaChave++,
                           data: item.data,
                           hora: somarMinutos(item.hora, Number(duracao)),
+                          instrutorId: item.instrutorId,
                         },
                       ])
                     }
@@ -377,6 +416,19 @@ export function AulasLoteForm({
                   >
                     <Trash2 className="size-5" />
                   </button>
+                  <Select
+                    value={item.instrutorId}
+                    aria-label={`Instrutor de ${formatarCurto(item.data)} ${item.hora}`}
+                    onChange={(e) => alterarItem(item.chave, { instrutorId: e.target.value })}
+                    className={`basis-full py-2! ${item.instrutorId ? "" : "border-red-400 bg-red-50"}`}
+                  >
+                    <option value="">Escolha o instrutor...</option>
+                    {instrutores.map((i) => (
+                      <option key={i.id} value={i.id}>
+                        Instrutor: {i.nome}
+                      </option>
+                    ))}
+                  </Select>
                 </li>
               ))}
             </ul>
