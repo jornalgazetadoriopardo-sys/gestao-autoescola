@@ -1,0 +1,111 @@
+// Banco PostgreSQL (Supabase em produção).
+// DATABASE_URL: conexão pelo pooler (porta 6543), usada pelo sistema.
+// DIRECT_URL: conexão de sessão (porta 5432), usada para aplicar migrações.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// Responsáveis da autoescola que acessam o sistema.
+// papel: "admin" | "secretaria"
+model Usuario {
+  id        Int      @id @default(autoincrement())
+  nome      String
+  email     String   @unique
+  senhaHash String
+  papel     String   @default("secretaria")
+  ativo     Boolean  @default(true)
+  criadoEm  DateTime @default(now())
+}
+
+// status: "ativo" | "concluido" | "desistente"
+model Aluno {
+  id         Int         @id @default(autoincrement())
+  nome       String
+  cpf        String      @unique
+  telefone   String?
+  email      String?
+  nascimento DateTime?
+  endereco   String?
+  categoria  String
+  status     String      @default("ativo")
+  obs        String?
+  criadoEm   DateTime    @default(now())
+  matriculas Matricula[]
+}
+
+model Instrutor {
+  id         Int      @id @default(autoincrement())
+  nome       String
+  telefone   String?
+  categorias String
+  ativo      Boolean  @default(true)
+  criadoEm   DateTime @default(now())
+  aulas      Aula[]
+}
+
+model Veiculo {
+  id        Int      @id @default(autoincrement())
+  placa     String   @unique
+  modelo    String
+  categoria String
+  ativo     Boolean  @default(true)
+  criadoEm  DateTime @default(now())
+  aulas     Aula[]
+}
+
+// Pacote contratado pelo aluno. Valores em centavos.
+model Matricula {
+  id                 Int       @id @default(autoincrement())
+  alunoId            Int
+  aluno              Aluno     @relation(fields: [alunoId], references: [id])
+  categoria          String
+  qtdPraticas        Int
+  qtdTeoricas        Int
+  valorTotalCentavos Int
+  // Juros ao mês em centésimos de ponto percentual (199 = 1,99% a.m.).
+  jurosMesBp         Int       @default(0)
+  data               DateTime  @default(now())
+  aulas              Aula[]
+  parcelas           Parcela[]
+}
+
+// tipo: "pratica" | "teorica"
+// status: "agendada" | "presente" | "faltou" | "cancelada"
+model Aula {
+  id          Int        @id @default(autoincrement())
+  matriculaId Int
+  matricula   Matricula  @relation(fields: [matriculaId], references: [id])
+  instrutorId Int?
+  instrutor   Instrutor? @relation(fields: [instrutorId], references: [id])
+  veiculoId   Int?
+  veiculo     Veiculo?   @relation(fields: [veiculoId], references: [id])
+  tipo        String
+  dataHora    DateTime
+  duracaoMin  Int        @default(50)
+  status      String     @default("agendada")
+  obs         String?
+
+  @@index([dataHora])
+}
+
+// forma: "dinheiro" | "pix" | "cartao" | "boleto"
+model Parcela {
+  id                Int       @id @default(autoincrement())
+  matriculaId       Int
+  matricula         Matricula @relation(fields: [matriculaId], references: [id])
+  numero            Int
+  valorCentavos     Int
+  vencimento        DateTime
+  pagoEm            DateTime?
+  valorPagoCentavos Int?
+  forma             String?
+
+  @@index([vencimento])
+}
