@@ -15,7 +15,7 @@ function texto(dados: FormData, campo: string) {
 const LOGO_MAX = 600_000; // ~450 KB de imagem; o navegador já reduz antes de enviar
 
 export async function salvarConfig(_: EstadoForm, dados: FormData): Promise<EstadoForm> {
-  await exigirAdmin();
+  const sessao = await exigirAdmin();
 
   const nome = texto(dados, "nome");
   if (!nome) return { erro: "Informe o nome da autoescola." };
@@ -58,13 +58,16 @@ export async function salvarConfig(_: EstadoForm, dados: FormData): Promise<Esta
     logo: logo || null,
   };
 
-  await db.configuracao.upsert({ where: { id: 1 }, create: { id: 1, ...campos }, update: campos });
+  // As configurações usam o mesmo id da autoescola.
+  const id = sessao.autoescolaId;
+  await db.configuracao.upsert({ where: { id }, create: { id, ...campos }, update: campos });
+  await db.autoescola.update({ where: { id }, data: { nome } });
   revalidatePath("/", "layout");
   return { ok: "Dados da autoescola salvos!" };
 }
 
 export async function criarUsuario(_: EstadoForm, dados: FormData): Promise<EstadoForm> {
-  await exigirAdmin();
+  const sessao = await exigirAdmin();
 
   const nome = texto(dados, "nome");
   const email = texto(dados, "email")?.toLowerCase();
@@ -76,7 +79,7 @@ export async function criarUsuario(_: EstadoForm, dados: FormData): Promise<Esta
   if (senha.length < 8) return { erro: "A senha deve ter pelo menos 8 caracteres." };
 
   try {
-    await db.usuario.create({ data: { nome, email, papel, senhaHash: await bcrypt.hash(senha, 10) } });
+    await db.usuario.create({ data: { autoescolaId: sessao.autoescolaId, nome, email, papel, senhaHash: await bcrypt.hash(senha, 10) } });
   } catch (e) {
     if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002") {
       return { erro: "Já existe um usuário com este e-mail." };

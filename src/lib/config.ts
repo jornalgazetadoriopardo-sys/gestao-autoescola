@@ -2,13 +2,16 @@ import "server-only";
 import type { Configuracao } from "@prisma/client";
 import { db } from "./db";
 
-// Dados da autoescola. Enquanto nada foi salvo, devolve valores padrão.
+// Dados da autoescola de quem está logado. Enquanto nada foi salvo, devolve
+// valores padrão com o nome cadastrado da autoescola.
 export async function obterConfig(): Promise<Configuracao> {
-  const config = await db.configuracao.findUnique({ where: { id: 1 } });
+  const config = await db.configuracao.findFirst();
+  if (config) return config;
+  const autoescola = await db.autoescola.findFirstOrThrow();
   return (
-    config ?? {
-      id: 1,
-      nome: "Minha Autoescola",
+    {
+      id: autoescola.id,
+      nome: autoescola.nome,
       razaoSocial: null,
       cnpj: null,
       endereco: null,

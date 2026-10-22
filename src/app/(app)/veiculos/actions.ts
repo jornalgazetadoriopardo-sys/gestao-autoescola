@@ -15,7 +15,7 @@ export async function salvarVeiculo(
   _: EstadoForm,
   dados: FormData,
 ): Promise<EstadoForm> {
-  await exigirSessao();
+  const sessao = await exigirSessao();
 
   const placa = String(dados.get("placa") ?? "").toUpperCase().replace(/[^A-Z0-9]/g, "");
   const modelo = String(dados.get("modelo") ?? "").trim();
@@ -30,7 +30,7 @@ export async function salvarVeiculo(
 
   try {
     if (id) await db.veiculo.update({ where: { id }, data: campos });
-    else await db.veiculo.create({ data: campos });
+    else await db.veiculo.create({ data: { ...campos, autoescolaId: sessao.autoescolaId } });
   } catch (e) {
     if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002") {
       return { erro: "Já existe um veículo com esta placa." };
