@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import {
   CalendarDays,
+  Car,
   ChevronLeft,
   ChevronRight,
   Plus,
@@ -29,7 +30,7 @@ import type { OpcaoMatricula } from "./aula-form";
 import { useOcupados } from "./use-ocupados";
 
 type Opcao = { id: number; nome: string; categorias: string };
-type Item = { chave: number; data: string; hora: string; instrutorId: string };
+type Item = { chave: number; data: string; hora: string; instrutorId: string; veiculoId: string };
 
 const SEMANA = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
 const MESES = [
@@ -79,7 +80,7 @@ export function AulasLoteForm({
   const [duracao, setDuracao] = useState("50");
   const [horaPadrao, setHoraPadrao] = useState(expediente.horaInicio);
   const [instrutorPadrao, setInstrutorPadrao] = useState("");
-  const [veiculoId, setVeiculoId] = useState("");
+  const [veiculoPadrao, setVeiculoPadrao] = useState("");
   const [itens, setItens] = useState<Item[]>([]);
   const [mes, setMes] = useState(hoje.slice(0, 7));
 
@@ -113,7 +114,16 @@ export function AulasLoteForm({
     setItens((atual) =>
       atual.some((i) => i.data === iso)
         ? atual.filter((i) => i.data !== iso)
-        : [...atual, { chave: proximaChave++, data: iso, hora: horaPadrao, instrutorId: instrutorPadrao }],
+        : [
+            ...atual,
+            {
+              chave: proximaChave++,
+              data: iso,
+              hora: horaPadrao,
+              instrutorId: instrutorPadrao,
+              veiculoId: veiculoPadrao,
+            },
+          ],
     );
   }
 
@@ -125,7 +135,13 @@ export function AulasLoteForm({
     for (let i = 0; i < 400 && novos.length < qtd; i++) {
       const iso = somarDias(aPartir, i);
       if (!diasRep.includes(diaDaSemana(iso)) || existentes.has(`${iso} ${horaPadrao}`)) continue;
-      novos.push({ chave: proximaChave++, data: iso, hora: horaPadrao, instrutorId: instrutorPadrao });
+      novos.push({
+        chave: proximaChave++,
+        data: iso,
+        hora: horaPadrao,
+        instrutorId: instrutorPadrao,
+        veiculoId: veiculoPadrao,
+      });
     }
     setItens((atual) => [...atual, ...novos]);
     if (novos[0]) setMes(novos[0].data.slice(0, 7));
@@ -133,6 +149,7 @@ export function AulasLoteForm({
 
   const excede = restantes !== null && itens.length > restantes;
   const semInstrutor = itens.filter((i) => !i.instrutorId).length;
+  const semVeiculo = tipo === "pratica" ? itens.filter((i) => !i.veiculoId).length : 0;
 
   // Disponibilidade: aulas já marcadas nos dias escolhidos + as outras aulas desta lista.
   const { ocupados, carregando } = useOcupados(itens.map((i) => i.data));
@@ -141,7 +158,7 @@ export function AulasLoteForm({
     duracaoMin: Number(duracao),
     tipo,
     instrutorId: Number(item.instrutorId) || null,
-    veiculoId: tipo === "pratica" ? Number(veiculoId) || null : null,
+    veiculoId: tipo === "pratica" ? Number(item.veiculoId) || null : null,
     alunoId: matricula?.alunoId ?? null,
   });
   const comoOcupado = (item: Item): Ocupado => {
@@ -151,7 +168,7 @@ export function AulasLoteForm({
       inicio,
       fim: inicio + Number(duracao) * 60_000,
       instrutorId: Number(item.instrutorId) || null,
-      veiculoId: tipo === "pratica" ? Number(veiculoId) || null : null,
+      veiculoId: tipo === "pratica" ? Number(item.veiculoId) || null : null,
       alunoId: matricula?.alunoId ?? 0,
       tipo,
       descricao: "outra aula desta lista",
@@ -164,9 +181,10 @@ export function AulasLoteForm({
   const opcoesDo = (item: Item, lista: Item[] = itens) =>
     opcoesDeHorario(pedido(item), ocupadosPara(item, lista), expediente, item.hora);
   const motivoDo = (item: Item) => opcoesDo(item).find((o) => o.hora === item.hora)?.motivo ?? null;
-  const prontoParaConferir = Boolean(matricula) && (tipo !== "pratica" || Boolean(veiculoId));
-  const conflitos =
-    prontoParaConferir && !carregando ? itens.filter((i) => i.instrutorId && motivoDo(i)) : [];
+  const prontoParaConferir = Boolean(matricula);
+  // Só confere a aula depois de escolhidos o instrutor e, na prática, o veículo.
+  const completa = (i: Item) => Boolean(i.instrutorId) && (tipo !== "pratica" || Boolean(i.veiculoId));
+  const conflitos = prontoParaConferir && !carregando ? itens.filter((i) => completa(i) && motivoDo(i)) : [];
 
   // Move cada aula com horário ocupado para o primeiro horário livre do mesmo dia
   // (de preferência depois do horário escolhido).
@@ -189,6 +207,7 @@ export function AulasLoteForm({
       data: item.data,
       hora: item.hora,
       instrutorId: item.instrutorId,
+      veiculoId: item.veiculoId,
     };
     const lista = [...itens, novo];
     const opcoes = opcoesDo(novo, lista);
@@ -198,6 +217,12 @@ export function AulasLoteForm({
 
   function alterarItem(chave: number, mudanca: Partial<Item>) {
     setItens((atual) => atual.map((i) => (i.chave === chave ? { ...i, ...mudanca } : i)));
+  }
+
+  // Trocar o veículo padrão preenche as aulas que ainda estão sem veículo.
+  function mudarVeiculoPadrao(id: string) {
+    setVeiculoPadrao(id);
+    if (id) setItens((atual) => atual.map((i) => (i.veiculoId ? i : { ...i, veiculoId: id })));
   }
 
   // Trocar o instrutor padrão preenche as aulas que ainda estão sem instrutor.
@@ -215,10 +240,11 @@ export function AulasLoteForm({
         type="hidden"
         name="itens"
         value={JSON.stringify(
-          ordenados.map(({ data, hora, instrutorId }) => ({
+          ordenados.map(({ data, hora, instrutorId, veiculoId }) => ({
             data,
             hora,
             instrutorId: Number(instrutorId) || null,
+            veiculoId: tipo === "pratica" ? Number(veiculoId) || null : null,
           })),
         )}
       />
@@ -282,20 +308,33 @@ export function AulasLoteForm({
             </div>
           </Campo>
           {tipo === "pratica" && (
-            <Campo label="Veículo *">
-              <Select
-                name="veiculoId"
-                required
-                value={veiculoId}
-                onChange={(e) => setVeiculoId(e.target.value)}
-              >
-                <option value="">Selecione...</option>
-                {veiculosCompativeis.map((v) => (
-                  <option key={v.id} value={v.id}>
-                    {v.nome}
-                  </option>
-                ))}
-              </Select>
+            <Campo
+              label="Veículo padrão"
+              ajuda="Vem preenchido em cada aula prática. Você pode trocar aula por aula na lista."
+            >
+              <div className="flex gap-2">
+                <Select value={veiculoPadrao} onChange={(e) => mudarVeiculoPadrao(e.target.value)}>
+                  <option value="">Selecione...</option>
+                  {veiculosCompativeis.map((v) => (
+                    <option key={v.id} value={v.id}>
+                      {v.nome}
+                    </option>
+                  ))}
+                </Select>
+                {veiculoPadrao && itens.some((i) => i.veiculoId !== veiculoPadrao) && (
+                  <Botao
+                    type="button"
+                    variante="secundario"
+                    tamanho="pequeno"
+                    icone={Car}
+                    onClick={() =>
+                      setItens((atual) => atual.map((i) => ({ ...i, veiculoId: veiculoPadrao })))
+                    }
+                  >
+                    Aplicar a todas
+                  </Botao>
+                )}
+              </div>
             </Campo>
           )}
           <Campo label="Duração de cada aula">
@@ -457,6 +496,11 @@ export function AulasLoteForm({
                 {semInstrutor === 1 ? "1 aula está" : `${semInstrutor} aulas estão`} sem instrutor.
               </span>
             )}
+            {semVeiculo > 0 && (
+              <span className="block font-semibold text-red-700">
+                {semVeiculo === 1 ? "1 aula está" : `${semVeiculo} aulas estão`} sem veículo.
+              </span>
+            )}
             {carregando && <span className="block text-sm text-slate-500">Conferindo a agenda...</span>}
             {!prontoParaConferir && itens.length > 0 && (
               <span className="block text-sm text-slate-500">
@@ -486,7 +530,7 @@ export function AulasLoteForm({
             <ul className="divide-y divide-slate-100">
               {ordenados.map((item) => {
                 const opcoes = prontoParaConferir ? opcoesDo(item) : [];
-                const motivo = prontoParaConferir && !carregando && item.instrutorId ? motivoDo(item) : null;
+                const motivo = prontoParaConferir && !carregando && completa(item) ? motivoDo(item) : null;
                 return (
                   <li key={item.chave} className="space-y-2 py-3">
                     <div className="flex items-center gap-2">
@@ -548,6 +592,21 @@ export function AulasLoteForm({
                           </option>
                         ))}
                       </Select>
+                      {tipo === "pratica" && (
+                        <Select
+                          value={item.veiculoId}
+                          aria-label={`Veículo de ${formatarCurto(item.data)} ${item.hora}`}
+                          onChange={(e) => alterarItem(item.chave, { veiculoId: e.target.value })}
+                          className={`col-start-2 py-2! ${item.veiculoId ? "" : "border-red-400 bg-red-50"}`}
+                        >
+                          <option value="">Escolha o veículo...</option>
+                          {veiculosCompativeis.map((v) => (
+                            <option key={v.id} value={v.id}>
+                              {v.nome}
+                            </option>
+                          ))}
+                        </Select>
+                      )}
                     </div>
                     {motivo && (
                       <p className="text-sm font-medium text-red-700">

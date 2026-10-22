@@ -20,7 +20,7 @@ presença e pagamentos.
   forma de pagamento; **recibo** em A4 (via do aluno e via da autoescola)
 - **Agenda de aulas** com bloqueio de conflito de horário, saldo de aulas e presença
   - Agendamento avulso (uma aula) ou **várias aulas de uma vez** pelo calendário
-    (cada aula com o seu instrutor),
+    (cada aula com o seu instrutor e veículo),
     com horário por dia e preenchimento automático ("toda terça e quinta às 14h")
   - Os horários **ocupados ficam desabilitados** (aluno, instrutor ou veículo já em aula,
     ou horário que já passou), dentro do expediente definido em Configurações

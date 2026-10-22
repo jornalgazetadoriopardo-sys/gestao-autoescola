@@ -16,8 +16,8 @@ function id(dados: FormData, campo: string) {
 }
 
 // Campos comuns a uma aula (ou a todas as aulas de um lote). No lote o
-// instrutor vem em cada aula, então ele não é exigido aqui.
-function lerComum(dados: FormData, exigirInstrutor = true) {
+// instrutor e o veículo vêm em cada aula, então não são exigidos aqui.
+function lerComum(dados: FormData, lote = false) {
   const tipo = String(dados.get("tipo") ?? "");
   const instrutorId = id(dados, "instrutorId") ?? 0;
   const veiculoId = tipo === "pratica" ? id(dados, "veiculoId") : null;
@@ -25,8 +25,8 @@ function lerComum(dados: FormData, exigirInstrutor = true) {
   const obs = String(dados.get("obs") ?? "").trim() || null;
 
   if (!(tipo in TIPOS_AULA)) return { erro: "Selecione o tipo de aula." };
-  if (exigirInstrutor && !instrutorId) return { erro: "Selecione o instrutor." };
-  if (tipo === "pratica" && !veiculoId) return { erro: "Selecione o veículo da aula prática." };
+  if (!lote && !instrutorId) return { erro: "Selecione o instrutor." };
+  if (!lote && tipo === "pratica" && !veiculoId) return { erro: "Selecione o veículo da aula prática." };
   if (!DURACOES.includes(duracaoMin)) return { erro: "Duração inválida." };
   return { tipo, instrutorId, veiculoId, duracaoMin, obs };
 }
@@ -76,16 +76,17 @@ export async function agendarVarias(_: EstadoForm, dados: FormData): Promise<Est
 
   const matriculaId = id(dados, "matriculaId");
   if (!matriculaId) return { erro: "Selecione o aluno / matrícula." };
-  const comum = lerComum(dados, false);
+  const comum = lerComum(dados, true);
   if ("erro" in comum) return comum;
 
-  let itens: { data: string; hora: string; instrutorId?: unknown }[];
+  let itens: { data: string; hora: string; instrutorId?: unknown; veiculoId?: unknown }[];
   try {
     itens = JSON.parse(String(dados.get("itens") ?? "[]"));
   } catch {
     return { erro: "Lista de datas inválida." };
   }
-  if (!Array.isArray(itens) || itens.length === 0) return { erro: "Clique no calendário para escolher as datas." };
+  if (!Array.isArray(itens) || itens.length === 0)
+    return { erro: "Clique no calendário para escolher as datas." };
   if (itens.length > MAX_LOTE) return { erro: `Escolha no máximo ${MAX_LOTE} aulas de uma vez.` };
 
   const aulas: NovaAula[] = [];
@@ -96,7 +97,14 @@ export async function agendarVarias(_: EstadoForm, dados: FormData): Promise<Est
     if (!Number.isInteger(instrutorId) || instrutorId <= 0) {
       return { erro: "Escolha o instrutor de todas as aulas da lista." };
     }
-    aulas.push({ ...comum, instrutorId, dataHora });
+    let veiculoId: number | null = null;
+    if (comum.tipo === "pratica") {
+      veiculoId = Number(item?.veiculoId);
+      if (!Number.isInteger(veiculoId) || veiculoId <= 0) {
+        return { erro: "Escolha o veículo de todas as aulas práticas da lista." };
+      }
+    }
+    aulas.push({ ...comum, instrutorId, veiculoId, dataHora });
   }
 
   const erro = await verificarAulas(matriculaId, aulas);
@@ -133,7 +141,8 @@ export async function excluirAula(aulaId: number, voltar: string) {
   await exigirSessao();
   const aula = await db.aula.findUnique({ where: { id: aulaId }, include: { matricula: true } });
   if (!aula) return;
-  if (aula.status === "presente") throw new Error("Aula com presença não pode ser excluída. Use 'Desfazer' antes.");
+  if (aula.status === "presente")
+    throw new Error("Aula com presença não pode ser excluída. Use 'Desfazer' antes.");
   await db.aula.delete({ where: { id: aulaId } });
   revalidar(aula.matricula.alunoId);
   redirect(destinoSeguro(voltar, `/aulas?dia=${diaDe(aula.dataHora)}`));
