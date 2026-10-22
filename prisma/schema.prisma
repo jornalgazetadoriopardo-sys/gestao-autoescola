@@ -58,6 +58,7 @@ model Veiculo {
   ativo     Boolean  @default(true)
   criadoEm  DateTime @default(now())
   aulas     Aula[]
+  manutencoes Manutencao[]
 }
 
 // Pacote contratado pelo aluno. Valores em centavos.
@@ -71,6 +72,8 @@ model Matricula {
   valorTotalCentavos Int
   // Juros ao mês em centésimos de ponto percentual (199 = 1,99% a.m.).
   jurosMesBp         Int       @default(0)
+  // "carne" (parcelado pela autoescola) | "cartao" | "pix" | "dinheiro" (à vista, já quitado)
+  formaPagamento     String    @default("carne")
   data               DateTime  @default(now())
   aulas              Aula[]
   parcelas           Parcela[]
@@ -106,6 +109,45 @@ model Parcela {
   pagoEm            DateTime?
   valorPagoCentavos Int?
   forma             String?
+  obs               String?
 
   @@index([vencimento])
+}
+
+// Manutenções e lembretes de cada veículo.
+model Manutencao {
+  id                Int       @id @default(autoincrement())
+  veiculoId         Int
+  veiculo           Veiculo   @relation(fields: [veiculoId], references: [id])
+  descricao         String
+  data              DateTime?
+  km                Int?
+  valorCentavos     Int?
+  lembrarEm         DateTime?
+  lembreteConcluido Boolean   @default(false)
+  obs               String?
+  criadoEm          DateTime  @default(now())
+
+  @@index([lembrarEm])
+}
+
+// Dados da autoescola (linha única, id = 1), usados no menu, recibos e carnês.
+model Configuracao {
+  id          Int     @id @default(1)
+  nome        String  @default("Minha Autoescola")
+  razaoSocial String?
+  cnpj        String?
+  endereco    String?
+  bairro      String?
+  cidade      String?
+  uf          String?
+  cep         String?
+  telefone    String?
+  whatsapp    String?
+  email       String?
+  chavePix    String?
+  // Texto impresso no rodapé do carnê (ex.: multa após o vencimento).
+  avisoCarne  String?
+  // Logotipo em data URL (imagem já reduzida no navegador).
+  logo        String?
 }

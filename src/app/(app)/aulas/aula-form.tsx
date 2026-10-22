@@ -40,7 +40,7 @@ export function AulaForm({
   return (
     <Cartao className="max-w-3xl">
       <FormAcao acao={agendarAula} textoBotao="Agendar aula">
-        <div className="grid gap-4 sm:grid-cols-2">
+        <div className="grid gap-5 sm:grid-cols-2">
           <Campo label="Aluno / matrícula *" className="sm:col-span-2">
             <Select
               name="matriculaId"
@@ -56,7 +56,7 @@ export function AulaForm({
               ))}
             </Select>
             {matricula && (
-              <span className="mt-1 block text-xs text-slate-500">
+              <span className="mt-1.5 block text-sm font-medium text-blue-800">
                 Restam {matricula.restantes.pratica} aulas práticas e {matricula.restantes.teorica} teóricas para
                 agendar.
               </span>

@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { Pencil } from "lucide-react";
 import { Cabecalho } from "@/components/ui";
 import { db } from "@/lib/db";
 import { AlunoForm } from "../../aluno-form";
@@ -9,7 +10,7 @@ export default async function EditarAlunoPage({ params }: { params: Promise<{ id
 
   return (
     <>
-      <Cabecalho titulo={`Editar: ${aluno.nome}`} />
+      <Cabecalho titulo="Editar aluno" descricao={aluno.nome} icone={Pencil} />
       <AlunoForm aluno={aluno} />
     </>
   );

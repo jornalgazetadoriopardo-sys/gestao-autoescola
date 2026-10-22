@@ -22,7 +22,7 @@ export function VeiculoForm({ veiculo }: { veiculo?: Veiculo }) {
             <option value="E">E (carreta)</option>
           </Select>
         </Campo>
-        <label className="flex items-center gap-2 text-sm">
+        <label className="flex items-center gap-2 text-base">
           <input type="checkbox" name="ativo" defaultChecked={veiculo?.ativo ?? true} />
           Ativo
         </label>

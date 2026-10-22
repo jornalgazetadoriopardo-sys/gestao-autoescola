@@ -5,18 +5,22 @@ presença e pagamentos.
 
 ## O que já funciona
 
-- Login dos responsáveis (administrador / secretaria)
-- Cadastro de **alunos** com busca por nome ou CPF, validação de CPF e ficha do aluno
-- Cadastro de **instrutores** e **veículos**
-- **Matrícula** do aluno (categoria, aulas contratadas, valor) com geração
-  automática das parcelas mensais e situação de cada parcela (pendente / atrasada / paga)
-- **Juros ao mês** opcional no parcelamento (parcelas fixas pela Tabela Price)
-- **Agenda de aulas** por dia e por instrutor, com bloqueio de conflito de horário
-  (aluno, instrutor e veículo) e controle do saldo de aulas contratadas
-- **Presença**: marcar presente, falta ou cancelar; progresso de aulas na ficha do aluno
-- Painel com resumo
-
-Próximas etapas: baixa de pagamentos, recibo e painel financeiro.
+- **Início**: atalhos para as tarefas do dia, avisos (parcelas em atraso, parcelas
+  que vencem hoje, lembretes de manutenção) e aulas de hoje com presença
+- **Alunos**: cadastro, busca por nome/CPF e ficha com aulas, pagamentos e relatório
+- **Matrícula** com forma de pagamento:
+  - *Parcelado pela autoescola*: gera as parcelas (com juros ao mês opcional) e o
+    **carnê para imprimir** (4 parcelas por folha A4, para recortar)
+  - *Cartão*, *Pix* ou *dinheiro* à vista: a matrícula já fica quitada
+- **Pagamentos**: parcelas atrasadas, a vencer e pagas; baixa com data, valor e
+  forma de pagamento; **recibo** em A4 (via do aluno e via da autoescola)
+- **Agenda de aulas** com bloqueio de conflito de horário, saldo de aulas e presença
+- **Veículos** com histórico de manutenção e **lembretes** ("me lembrar no dia...")
+  que aparecem na tela inicial 7 dias antes
+- **Relatórios** para imprimir ou salvar em PDF: do aluno (aulas, presenças,
+  faltas, quanto falta para concluir e pagamentos), financeiro e de aulas por período
+- **Configurações**: dados e logotipo da autoescola (usados no menu, carnê, recibos
+  e relatórios), usuários (administrador ou secretaria) e troca de senha
 
 ## Publicar na internet (Supabase + Vercel)
 
@@ -76,3 +80,19 @@ Depois de baixar uma versão nova: `npm install` e `npm run db:migrate`.
 - Hospedagem na Vercel (região São Paulo)
 
 Comandos úteis: `npm run db:studio` abre uma interface para ver/editar o banco.
+
+### Criar uma migração nova (desenvolvimento)
+
+A migração que liga o RLS (`bloquear_api_publica`) depende da tabela
+`_prisma_migrations`, então o `prisma migrate dev` não consegue recriar o
+histórico num banco temporário. Para mudar o banco, edite `prisma/schema.prisma`
+e gere o SQL comparando com o banco atual:
+
+```
+mkdir prisma/migrations/AAAAMMDDHHMMSS_nome
+npx prisma migrate diff --from-schema-datasource prisma/schema.prisma \
+  --to-schema-datamodel prisma/schema.prisma --script > prisma/migrations/AAAAMMDDHHMMSS_nome/migration.sql
+npx prisma migrate deploy
+```
+
+Em tabelas novas, acrescente `ALTER TABLE "Tabela" ENABLE ROW LEVEL SECURITY;`.

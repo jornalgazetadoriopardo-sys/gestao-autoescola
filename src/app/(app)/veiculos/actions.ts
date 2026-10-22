@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
 import { exigirSessao } from "@/lib/auth";
+import { lerMoeda } from "@/lib/format";
 import type { EstadoForm } from "@/components/form-acao";
 
 const CATEGORIAS_VEICULO = ["A", "B", "C", "D", "E"];
@@ -38,5 +39,61 @@ export async function salvarVeiculo(
   }
 
   revalidatePath("/veiculos");
-  redirect("/veiculos");
+  redirect(id ? `/veiculos/${id}` : "/veiculos");
+}
+
+function data(dados: FormData, campo: string) {
+  const v = String(dados.get(campo) ?? "");
+  return /^\d{4}-\d{2}-\d{2}$/.test(v) ? new Date(`${v}T00:00:00Z`) : null;
+}
+
+// Registra uma manutenção (feita ou a fazer) e, se informado, o dia do lembrete.
+export async function salvarManutencao(veiculoId: number, _: EstadoForm, dados: FormData): Promise<EstadoForm> {
+  await exigirSessao();
+
+  const descricao = String(dados.get("descricao") ?? "").trim();
+  const kmTexto = String(dados.get("km") ?? "").replace(/\D/g, "");
+  const valorTexto = String(dados.get("valor") ?? "").trim();
+  const valorCentavos = valorTexto ? lerMoeda(valorTexto) : null;
+  const lembrarEm = data(dados, "lembrarEm");
+  const realizadaEm = data(dados, "data");
+
+  if (!descricao) return { erro: "Informe o serviço. Ex.: Troca de óleo" };
+  if (valorTexto && valorCentavos === null) return { erro: "Valor inválido. Ex.: 250,00" };
+  if (!realizadaEm && !lembrarEm) return { erro: "Informe a data em que foi feita ou o dia para lembrar." };
+
+  await db.manutencao.create({
+    data: {
+      veiculoId,
+      descricao,
+      data: realizadaEm,
+      km: kmTexto ? Number(kmTexto) : null,
+      valorCentavos,
+      lembrarEm,
+      obs: String(dados.get("obs") ?? "").trim() || null,
+    },
+  });
+
+  revalidatePath(`/veiculos/${veiculoId}`);
+  revalidatePath("/veiculos");
+  revalidatePath("/");
+  // O parâmetro novo faz o formulário voltar limpo.
+  redirect(`/veiculos/${veiculoId}?salvo=${Date.now()}`);
+}
+
+export async function excluirManutencao(manutencaoId: number) {
+  await exigirSessao();
+  const m = await db.manutencao.delete({ where: { id: manutencaoId } });
+  revalidatePath(`/veiculos/${m.veiculoId}`);
+  revalidatePath("/veiculos");
+  revalidatePath("/");
+}
+
+// Marca o lembrete como resolvido: some da tela inicial.
+export async function concluirLembrete(manutencaoId: number) {
+  await exigirSessao();
+  const m = await db.manutencao.update({ where: { id: manutencaoId }, data: { lembreteConcluido: true } });
+  revalidatePath(`/veiculos/${m.veiculoId}`);
+  revalidatePath("/veiculos");
+  revalidatePath("/");
 }

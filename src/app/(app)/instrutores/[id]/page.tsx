@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { Pencil } from "lucide-react";
 import { Cabecalho } from "@/components/ui";
 import { db } from "@/lib/db";
 import { InstrutorForm } from "../instrutor-form";
@@ -9,7 +10,7 @@ export default async function EditarInstrutorPage({ params }: { params: Promise<
 
   return (
     <>
-      <Cabecalho titulo={`Editar: ${instrutor.nome}`} />
+      <Cabecalho titulo="Editar instrutor" descricao={instrutor.nome} icone={Pencil} />
       <InstrutorForm instrutor={instrutor} />
     </>
   );
