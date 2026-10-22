@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { CalendarDays, CalendarPlus, ChevronLeft, ChevronRight, Search } from "lucide-react";
+import { CalendarDays, CalendarPlus, CalendarRange, ChevronLeft, ChevronRight, Search } from "lucide-react";
 import { Botao, BotaoLink, Cabecalho, Etiqueta, Input, Select, Tabela, Vazio } from "@/components/ui";
 import { db } from "@/lib/db";
 import { hojeISO } from "@/lib/format";
@@ -48,14 +48,24 @@ export default async function AgendaPage({
         icone={CalendarDays}
         cor="roxo"
         acoes={
-          <BotaoLink href={`/aulas/nova?dia=${dia}`} icone={CalendarPlus}>
-            Agendar aula
-          </BotaoLink>
+          <>
+            <BotaoLink href={`/aulas/nova?dia=${dia}`} variante="secundario" icone={CalendarPlus}>
+              Uma aula
+            </BotaoLink>
+            <BotaoLink href="/aulas/nova?modo=varias" icone={CalendarRange}>
+              Várias aulas
+            </BotaoLink>
+          </>
         }
       />
 
       <div className="mb-5 flex flex-wrap items-center gap-3 rounded-xl bg-white p-3 shadow-sm">
-        <BotaoLink href={link(somarDias(dia, -1))} variante="secundario" icone={ChevronLeft} aria-label="Dia anterior">
+        <BotaoLink
+          href={link(somarDias(dia, -1))}
+          variante="secundario"
+          icone={ChevronLeft}
+          aria-label="Dia anterior"
+        >
           Anterior
         </BotaoLink>
         <div className="min-w-56 flex-1 text-center">
@@ -116,7 +126,10 @@ export default async function AgendaPage({
                 {formatarHora(a.dataHora)}–{formatarHora(fimDaAula(a))}
               </td>
               <td className="px-4 py-3">
-                <Link href={`/alunos/${a.matricula.alunoId}`} className="font-medium text-blue-700 hover:underline">
+                <Link
+                  href={`/alunos/${a.matricula.alunoId}`}
+                  className="font-medium text-blue-700 hover:underline"
+                >
                   {a.matricula.aluno.nome}
                 </Link>
               </td>
@@ -129,7 +142,7 @@ export default async function AgendaPage({
                 </Etiqueta>
               </td>
               <td className="px-4 py-3">
-                <AcoesAula aula={a} />
+                <AcoesAula aula={a} voltar={link(dia)} />
               </td>
             </tr>
           ))}
