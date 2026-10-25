@@ -3,6 +3,7 @@ import { CircleCheck, HandCoins, Printer } from "lucide-react";
 import { Aviso, BotaoLink, Cabecalho, Cartao } from "@/components/ui";
 import { db } from "@/lib/db";
 import { formatarCpf, formatarData, formatarMoeda, hojeISO, moedaParaInput, situacaoParcela } from "@/lib/format";
+import { SO_PARCELAS } from "@/lib/pagamentos";
 import { receberParcela } from "../../actions";
 import { PagamentoForm } from "@/components/pagamento-form";
 
@@ -17,7 +18,7 @@ export default async function ReceberPage({
 }) {
   const parcela = await db.parcela.findUnique({
     where: { id: Number((await params).id) || 0 },
-    include: { matricula: { include: { aluno: true, _count: { select: { parcelas: true } } } } },
+    include: { matricula: { include: { aluno: true, _count: { select: { parcelas: { where: SO_PARCELAS } } } } } },
   });
   if (!parcela) notFound();
   const { aluno } = parcela.matricula;
@@ -46,7 +47,7 @@ export default async function ReceberPage({
             <Info rotulo="Aluno" valor={aluno.nome} extra={formatarCpf(aluno.cpf)} />
             <Info
               rotulo="Parcela"
-              valor={`${parcela.numero} de ${parcela.matricula._count.parcelas}`}
+              valor={parcela.numero === 0 ? "Entrada" : `${parcela.numero} de ${parcela.matricula._count.parcelas}`}
               extra={`Categoria ${parcela.matricula.categoria}`}
             />
             <Info

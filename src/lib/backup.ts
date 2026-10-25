@@ -212,6 +212,10 @@ export async function importarAutoescola(arquivo: unknown) {
             contratoNome: r.strN(C, "contratoNome"),
             contratoEm: r.dataN(C, "contratoEm"),
             taxasPadrao: C.taxasPadrao && typeof C.taxasPadrao === "object" ? (C.taxasPadrao as object) : undefined,
+            calendarioLicenciamento:
+              C.calendarioLicenciamento && typeof C.calendarioLicenciamento === "object"
+                ? (C.calendarioLicenciamento as object)
+                : undefined,
           },
         });
       }
@@ -286,6 +290,8 @@ export async function importarAutoescola(arquivo: unknown) {
           placa: ve.str(x, "placa"),
           modelo: ve.str(x, "modelo"),
           categoria: ve.str(x, "categoria"),
+          tipoLicenciamento: ve.strN(x, "tipoLicenciamento") === "pesado" ? "pesado" : "leve",
+          licenciamentoPagoAno: ve.intN(x, "licenciamentoPagoAno"),
           ativo: ve.bool(x, "ativo"),
           criadoEm: ve.dataN(x, "criadoEm") ?? undefined,
         })),
@@ -319,6 +325,8 @@ export async function importarAutoescola(arquivo: unknown) {
           jurosMesBp: mt.int(x, "jurosMesBp"),
           formaPagamento: mt.str(x, "formaPagamento"),
           tipoProcesso: mt.strN(x, "tipoProcesso") ?? "primeira",
+          entradaCentavos: mt.intN(x, "entradaCentavos") ?? 0,
+          entradaForma: mt.strN(x, "entradaForma"),
           cursoTeorico: mt.strN(x, "cursoTeorico") ?? "autoescola",
           data: mt.data(x, "data"),
         })),

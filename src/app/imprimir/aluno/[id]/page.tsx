@@ -14,6 +14,7 @@ import {
 import { STATUS_AULA, TIPOS_AULA, formatarDataHora, resumoAulas } from "@/lib/aulas";
 import { FORMAS_MATRICULA } from "@/lib/pagamentos";
 import { urlFoto } from "@/lib/foto";
+import { rotuloParcela, totalDeParcelas } from "@/lib/pagamentos";
 import { CabecalhoDocumento } from "../../cabecalho-documento";
 import { RodapeDocumento } from "../../rodape-documento";
 
@@ -174,9 +175,7 @@ export default async function RelatorioAlunoPage({ params }: { params: Promise<{
                     const s = situacaoParcela(p);
                     return (
                       <tr key={p.id} className="border-b border-slate-200">
-                        <td className="py-1">
-                          {p.numero}/{m.parcelas.length}
-                        </td>
+                        <td className="py-1">{rotuloParcela(p.numero, totalDeParcelas(m.parcelas))}</td>
                         <td className="py-1">{formatarData(p.vencimento)}</td>
                         <td className="py-1">{formatarMoeda(p.valorCentavos)}</td>
                         <td

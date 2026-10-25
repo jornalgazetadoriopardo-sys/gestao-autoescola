@@ -4,6 +4,7 @@ import { FormAcao } from "@/components/form-acao";
 import { BotaoLink, Cabecalho, Campo, Cartao, Input, Select, Textarea } from "@/components/ui";
 import { db } from "@/lib/db";
 import { FORMAS_PAGAMENTO, dataParaInput, moedaParaInput } from "@/lib/format";
+import { SO_PARCELAS } from "@/lib/pagamentos";
 import { editarParcela } from "../../actions";
 
 export const dynamic = "force-dynamic";
@@ -17,7 +18,7 @@ export default async function EditarParcelaPage({
 }) {
   const parcela = await db.parcela.findUnique({
     where: { id: Number((await params).id) || 0 },
-    include: { matricula: { include: { aluno: true, _count: { select: { parcelas: true } } } } },
+    include: { matricula: { include: { aluno: true, _count: { select: { parcelas: { where: SO_PARCELAS } } } } } },
   });
   if (!parcela) notFound();
   const { aluno } = parcela.matricula;
@@ -27,7 +28,7 @@ export default async function EditarParcelaPage({
     <>
       <Cabecalho
         titulo="Alterar parcela"
-        descricao={`${aluno.nome} · parcela ${parcela.numero} de ${parcela.matricula._count.parcelas}`}
+        descricao={`${aluno.nome} · ${parcela.numero === 0 ? "entrada" : `parcela ${parcela.numero} de ${parcela.matricula._count.parcelas}`}`}
         icone={Pencil}
         cor="verde"
         acoes={

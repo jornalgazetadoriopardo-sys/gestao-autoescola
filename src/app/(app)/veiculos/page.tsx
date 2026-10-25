@@ -4,10 +4,14 @@ import { BotaoLink, Cabecalho, Cartao, Etiqueta, IconeRedondo, Vazio } from "@/c
 import { db } from "@/lib/db";
 import { formatarData } from "@/lib/format";
 import { diasAte } from "@/lib/lembretes";
+import { lerCalendario, situacaoLicenciamento } from "@/lib/licenciamento";
+import { EtiquetaLicenciamento } from "./etiqueta-licenciamento";
 
 export const dynamic = "force-dynamic";
 
 export default async function VeiculosPage() {
+  const config = await db.configuracao.findFirst({ select: { calendarioLicenciamento: true } });
+  const calendario = lerCalendario(config?.calendarioLicenciamento);
   const veiculos = await db.veiculo.findMany({
     orderBy: [{ ativo: "desc" }, { placa: "asc" }],
     include: {
@@ -62,6 +66,7 @@ export default async function VeiculosPage() {
                   </div>
                   <div className="mt-4 flex flex-wrap items-center gap-2 text-sm">
                     {!v.ativo && <Etiqueta>Inativo</Etiqueta>}
+                    {v.ativo && <EtiquetaLicenciamento situacao={situacaoLicenciamento(v, calendario)} />}
                     {lembrete ? (
                       <span
                         className={`flex items-center gap-1.5 rounded-lg px-2.5 py-1 font-medium ${

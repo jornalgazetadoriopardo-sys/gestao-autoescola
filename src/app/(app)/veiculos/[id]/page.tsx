@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, BellRing, Car, Check, Fuel, Pencil, Plus, Wrench } from "lucide-react";
+import { ArrowLeft, BellRing, Car, Check, Fuel, Pencil, Plus, Undo2, Wrench } from "lucide-react";
 import { BotaoConfirmar } from "@/components/botao-confirmar";
 import { FormAcao } from "@/components/form-acao";
 import {
@@ -21,6 +21,14 @@ import { db } from "@/lib/db";
 import { formatarLitros } from "@/lib/despesas";
 import { dataParaInput, formatarData, formatarMoeda, hojeISO, moedaParaInput } from "@/lib/format";
 import { SERVICOS_SUGERIDOS, diasAte, quandoLembrar } from "@/lib/lembretes";
+import { marcarLicenciamento } from "../actions";
+import { EtiquetaLicenciamento } from "../etiqueta-licenciamento";
+import {
+  DIAS_AVISO_LICENCIAMENTO,
+  TIPOS_LICENCIAMENTO,
+  lerCalendario,
+  situacaoLicenciamento,
+} from "@/lib/licenciamento";
 import { concluirLembrete, excluirManutencao, salvarManutencao } from "../actions";
 
 export const dynamic = "force-dynamic";
@@ -42,6 +50,8 @@ export default async function VeiculoPage({
   const editando = veiculo.manutencoes.find((m) => String(m.id) === editar);
   // Abastecimentos são despesas: só o administrador vê.
   const admin = (await exigirSessao()).papel === "admin";
+  const config = await db.configuracao.findFirst({ select: { calendarioLicenciamento: true } });
+  const licenciamento = situacaoLicenciamento(veiculo, lerCalendario(config?.calendarioLicenciamento));
   const abastecimentos = admin
     ? await db.despesa.findMany({
         where: { veiculoId: veiculo.id, categoria: "combustivel" },
@@ -74,6 +84,30 @@ export default async function VeiculoPage({
 
       <div className="grid gap-6 xl:grid-cols-[1fr_26rem]">
         <div className="min-w-0">
+          <div className="mb-6 flex flex-wrap items-center gap-3 rounded-xl border border-slate-200 bg-white p-4">
+            <div className="flex-1 text-base">
+              <EtiquetaLicenciamento situacao={licenciamento} />
+              <p className="mt-1 text-sm text-slate-600">
+                Calculado pelo final da placa ({TIPOS_LICENCIAMENTO[veiculo.tipoLicenciamento]?.titulo.toLowerCase()}).
+                O aviso aparece na tela inicial {DIAS_AVISO_LICENCIAMENTO} dias antes.
+              </p>
+            </div>
+            {licenciamento.vencimento &&
+              (licenciamento.pago ? (
+                <form action={marcarLicenciamento.bind(null, veiculo.id, false)}>
+                  <Botao variante="secundario" tamanho="pequeno" icone={Undo2}>
+                    Desfazer
+                  </Botao>
+                </form>
+              ) : (
+                <form action={marcarLicenciamento.bind(null, veiculo.id, true)}>
+                  <Botao variante="sucesso" tamanho="pequeno" icone={Check}>
+                    Já paguei o licenciamento
+                  </Botao>
+                </form>
+              ))}
+          </div>
+
           {lembretes.length > 0 && (
             <>
               <h2 className="mb-3 flex items-center gap-2 text-xl font-semibold">

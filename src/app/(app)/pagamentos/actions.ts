@@ -6,6 +6,7 @@ import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
 import { exigirSessao } from "@/lib/auth";
 import { FORMAS_PAGAMENTO, lerMoeda } from "@/lib/format";
+import { SO_PARCELAS } from "@/lib/pagamentos";
 import type { EstadoForm } from "@/components/form-acao";
 
 // Dá baixa numa parcela: registra data, valor recebido e forma de pagamento.
@@ -58,9 +59,10 @@ function revalidar(alunoId: number) {
 }
 
 // Numera as parcelas da matrícula pela ordem de vencimento (1, 2, 3...).
+// A entrada (número 0) fica de fora.
 async function renumerar(matriculaId: number) {
   const parcelas = await db.parcela.findMany({
-    where: { matriculaId },
+    where: { matriculaId, ...SO_PARCELAS },
     orderBy: [{ vencimento: "asc" }, { id: "asc" }],
     select: { id: true, numero: true },
   });
@@ -97,6 +99,13 @@ export async function editarParcela(parcelaId: number, _: EstadoForm, dados: For
     Object.assign(campos, { pagoEm: new Date(`${pagoEm}T00:00:00Z`), valorPagoCentavos: valorPago, forma });
   }
   const atual = await db.parcela.update({ where: { id: parcelaId }, data: campos, include: { matricula: true } });
+  // A entrada também fica registrada na matrícula (contrato e ficha).
+  if (atual.numero === 0) {
+    await db.matricula.update({
+      where: { id: atual.matriculaId },
+      data: { entradaCentavos: atual.valorPagoCentavos ?? atual.valorCentavos, entradaForma: atual.forma },
+    });
+  }
   await renumerar(atual.matriculaId);
   revalidar(atual.matricula.alunoId);
   const voltar = String(dados.get("voltar") ?? "");
@@ -108,6 +117,9 @@ export async function excluirParcela(parcelaId: number) {
   const parcela = await db.parcela.findUnique({ where: { id: parcelaId }, include: { matricula: true } });
   if (!parcela) return;
   await db.parcela.delete({ where: { id: parcelaId } });
+  if (parcela.numero === 0) {
+    await db.matricula.update({ where: { id: parcela.matriculaId }, data: { entradaCentavos: 0, entradaForma: null } });
+  }
   await renumerar(parcela.matriculaId);
   revalidar(parcela.matricula.alunoId);
 }
@@ -121,7 +133,7 @@ export async function adicionarParcela(matriculaId: number, _: EstadoForm, dados
   if (!DIA.test(vencimento)) return { erro: "Informe o vencimento." };
   const matricula = await db.matricula.findUnique({
     where: { id: matriculaId },
-    include: { _count: { select: { parcelas: true } } },
+    include: { _count: { select: { parcelas: { where: SO_PARCELAS } } } },
   });
   if (!matricula) return { erro: "Matrícula não encontrada." };
   await db.parcela.create({

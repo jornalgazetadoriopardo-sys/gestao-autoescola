@@ -34,7 +34,7 @@ import {
   situacaoParcela,
 } from "@/lib/format";
 import { COR_STATUS_AULA, STATUS_AULA, TIPOS_AULA, formatarDataHora, resumoAulas } from "@/lib/aulas";
-import { FORMAS_MATRICULA } from "@/lib/pagamentos";
+import { descricaoPagamento, rotuloParcela, totalDeParcelas } from "@/lib/pagamentos";
 import { CURSOS_TEORICOS, TIPOS_PROCESSO } from "@/lib/etapas";
 import { AvisoTaxaRecebida } from "../../exames/aviso-taxa";
 import { TabelaEtapas } from "../../exames/tabela-etapas";
@@ -143,21 +143,19 @@ export default async function FichaAlunoPage({
               Contrato
             </BotaoDownload>
           )}
-          {matriculaNova.formaPagamento === "carne" && matriculaNova.parcelas.length > 0 && (
+          {matriculaNova.formaPagamento === "carne" && totalDeParcelas(matriculaNova.parcelas) > 0 && (
             <BotaoLink href={`/imprimir/carne/${matriculaNova.id}`} target="_blank" tamanho="pequeno" icone={Printer}>
               Imprimir carnê
             </BotaoLink>
           )}
-          {matriculaNova.formaPagamento !== "carne" && matriculaNova.parcelas[0] && (
-            <BotaoLink
-              href={`/imprimir/recibo/${matriculaNova.parcelas[0].id}`}
-              target="_blank"
-              tamanho="pequeno"
-              icone={Printer}
-            >
-              Imprimir recibo
-            </BotaoLink>
-          )}
+          {/* Recibos do que já foi pago na matrícula: a entrada e/ou o pagamento à vista. */}
+          {matriculaNova.parcelas
+            .filter((p) => p.pagoEm && (p.numero === 0 || matriculaNova.formaPagamento !== "carne"))
+            .map((p) => (
+              <BotaoLink key={p.id} href={`/imprimir/recibo/${p.id}`} target="_blank" tamanho="pequeno" icone={Printer}>
+                {p.numero === 0 ? "Recibo da entrada" : "Imprimir recibo"}
+              </BotaoLink>
+            ))}
         </Aviso>
       )}
       {Number(agendadas) > 0 && (
@@ -238,7 +236,7 @@ export default async function FichaAlunoPage({
                     {m.cursoTeorico === "autoescola"
                       ? `${m.qtdTeoricas} aulas teóricas`
                       : `curso teórico: ${CURSOS_TEORICOS[m.cursoTeorico]?.titulo.toLowerCase() ?? m.cursoTeorico}`}{" "}
-                    · {FORMAS_MATRICULA[m.formaPagamento]?.titulo ?? m.formaPagamento}
+                    · {descricaoPagamento(m, formatarMoeda)}
                   </div>
                 </div>
                 <div className="flex flex-wrap gap-2">
@@ -265,7 +263,7 @@ export default async function FichaAlunoPage({
                       Contrato
                     </BotaoDownload>
                   )}
-                  {m.formaPagamento === "carne" && m.parcelas.length > 0 && (
+                  {m.formaPagamento === "carne" && totalDeParcelas(m.parcelas) > 0 && (
                     <BotaoLink
                       href={`/imprimir/carne/${m.id}`}
                       target="_blank"
@@ -413,9 +411,7 @@ export default async function FichaAlunoPage({
                     const situacao = situacaoParcela(p);
                     return (
                       <tr key={p.id}>
-                        <td className="px-4 py-2.5">
-                          {p.numero}/{m.parcelas.length}
-                        </td>
+                        <td className="px-4 py-2.5">{rotuloParcela(p.numero, totalDeParcelas(m.parcelas))}</td>
                         <td className="px-4 py-2.5">{formatarData(p.vencimento)}</td>
                         <td className="px-4 py-2.5 font-semibold">{formatarMoeda(p.valorCentavos)}</td>
                         <td className="px-4 py-2.5">

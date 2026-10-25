@@ -3,6 +3,7 @@ import { obterConfig } from "@/lib/config";
 import { db } from "@/lib/db";
 import { FORMAS_PAGAMENTO, formatarData, formatarMoeda, hojeISO } from "@/lib/format";
 import { somarDias } from "@/lib/aulas";
+import { SO_PARCELAS, rotuloParcela } from "@/lib/pagamentos";
 import { situacaoDespesa, tituloCategoria } from "@/lib/despesas";
 import { lancamentosDoPeriodo, resumir } from "@/lib/financeiro";
 import { CabecalhoDocumento } from "../cabecalho-documento";
@@ -34,12 +35,12 @@ export default async function RelatorioFinanceiroPage({
     db.parcela.findMany({
       where: { pagoEm: { gte: inicio, lt: fim } },
       orderBy: { pagoEm: "asc" },
-      include: { matricula: { include: { aluno: true, _count: { select: { parcelas: true } } } } },
+      include: { matricula: { include: { aluno: true, _count: { select: { parcelas: { where: SO_PARCELAS } } } } } },
     }),
     db.parcela.findMany({
       where: { pagoEm: null, vencimento: { lt: new Date(`${hoje}T00:00:00Z`) } },
       orderBy: { vencimento: "asc" },
-      include: { matricula: { include: { aluno: true, _count: { select: { parcelas: true } } } } },
+      include: { matricula: { include: { aluno: true, _count: { select: { parcelas: { where: SO_PARCELAS } } } } } },
     }),
     admin ? lancamentosDoPeriodo(inicio, fim) : null,
     // Contas a pagar em aberto que vencem até o fim do período (inclui as atrasadas).
@@ -118,9 +119,13 @@ export default async function RelatorioFinanceiroPage({
                 <td className="py-1">{formatarData(p.pagoEm)}</td>
                 <td className="py-1">{p.matricula.aluno.nome}</td>
                 <td className="py-1">
-                  {p.matricula.formaPagamento === "carne"
-                    ? `Parcela ${p.numero}/${p.matricula._count.parcelas}`
-                    : "Matrícula à vista"}
+                  {p.numero === 0
+                    ? "Entrada"
+                    : p.matricula.formaPagamento === "carne"
+                      ? `Parcela ${p.numero}/${p.matricula._count.parcelas}`
+                      : p.matricula.entradaCentavos > 0
+                        ? "Restante da matrícula"
+                        : "Matrícula à vista"}
                 </td>
                 <td className="py-1">{FORMAS_PAGAMENTO[p.forma ?? ""] ?? p.forma}</td>
                 <td className="py-1 text-right">{formatarMoeda(p.valorPagoCentavos ?? 0)}</td>
@@ -185,9 +190,7 @@ export default async function RelatorioFinanceiroPage({
                 <td className="py-1">{formatarData(p.vencimento)}</td>
                 <td className="py-1">{p.matricula.aluno.nome}</td>
                 <td className="py-1">{p.matricula.aluno.telefone ?? "—"}</td>
-                <td className="py-1">
-                  {p.numero}/{p.matricula._count.parcelas}
-                </td>
+                <td className="py-1">{rotuloParcela(p.numero, p.matricula._count.parcelas)}</td>
                 <td className="py-1 text-right">{formatarMoeda(p.valorCentavos)}</td>
               </tr>
             ))}

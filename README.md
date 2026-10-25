@@ -28,6 +28,8 @@ presença e pagamentos.
   - *Parcelado pela autoescola*: gera as parcelas (com juros ao mês opcional) e o
     **carnê para imprimir** (4 parcelas por folha A4, para recortar)
   - *Cartão*, *Pix* ou *dinheiro* à vista: a matrícula já fica quitada
+  - **Entrada** opcional (dinheiro, Pix ou cartão, até em vezes) e o restante no carnê, no cartão,
+    no Pix ou em dinheiro. A entrada sai no recibo como "entrada da matrícula" e não entra no carnê
 - **Guia do aluno** gerado na matrícula (imprimir ou salvar em PDF): dados, pagamento,
   **cronograma** com um quadro por aula contratada (preenchido com as aulas agendadas
   ou em branco para anotar data e horário), orientações e assinaturas; botão para
@@ -47,6 +49,10 @@ presença e pagamentos.
   - "Repetir todo mês" para salário, aluguel e contas fixas
   - Avisos na tela inicial de contas atrasadas ou que vencem nos próximos 3 dias
   - As manutenções com valor, lançadas em Veículos, também contam como despesa nos relatórios
+- **Licenciamento dos veículos**: o vencimento é calculado pelo final da placa (calendário de SP,
+  com um para carros/motos/ônibus e outro para caminhões e tratores; editável em
+  Configurações > Licenciamento para outros estados). Aviso na tela inicial 30 dias antes e botão
+  "Já paguei"
 - **Veículos** com histórico de manutenção e **lembretes** ("me lembrar no dia...")
   que aparecem na tela inicial 7 dias antes
 - **Relatórios** para imprimir ou salvar em PDF: do aluno (aulas, presenças,

@@ -6,7 +6,7 @@ import { CURSOS_TEORICOS, TIPOS_PROCESSO } from "@/lib/etapas";
 import { BotaoLink, Cabecalho, Campo, Cartao, Input, Select } from "@/components/ui";
 import { db } from "@/lib/db";
 import { CATEGORIAS, hojeISO, moedaParaInput } from "@/lib/format";
-import { FORMAS_MATRICULA } from "@/lib/pagamentos";
+import { FORMAS_MATRICULA, SO_PARCELAS } from "@/lib/pagamentos";
 import { adicionarParcela } from "@/app/(app)/pagamentos/actions";
 import { editarMatricula } from "../../actions";
 
@@ -16,7 +16,7 @@ export default async function EditarMatriculaPage({ params }: { params: Promise<
   const { id, mid } = await params;
   const matricula = await db.matricula.findUnique({
     where: { id: Number(mid) || 0 },
-    include: { aluno: true, _count: { select: { parcelas: true } } },
+    include: { aluno: true, _count: { select: { parcelas: { where: SO_PARCELAS } } } },
   });
   if (!matricula || matricula.alunoId !== Number(id)) notFound();
   const voltar = `/alunos/${matricula.alunoId}`;

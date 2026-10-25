@@ -99,17 +99,21 @@ model Instrutor {
 }
 
 model Veiculo {
-  id           Int          @id @default(autoincrement())
-  autoescolaId Int
-  autoescola   Autoescola   @relation(fields: [autoescolaId], references: [id])
-  placa        String
-  modelo       String
-  categoria    String
-  ativo        Boolean      @default(true)
-  criadoEm     DateTime     @default(now())
-  aulas        Aula[]
-  manutencoes  Manutencao[]
-  despesas     Despesa[]
+  id                   Int          @id @default(autoincrement())
+  autoescolaId         Int
+  autoescola           Autoescola   @relation(fields: [autoescolaId], references: [id])
+  placa                String
+  modelo               String
+  categoria            String
+  // Calendário do licenciamento: "leve" (carros, motos, ônibus) ou "pesado" (caminhões e tratores).
+  tipoLicenciamento    String       @default("leve")
+  // Último ano em que o licenciamento foi pago (o aviso some até o ano seguinte).
+  licenciamentoPagoAno Int?
+  ativo                Boolean      @default(true)
+  criadoEm             DateTime     @default(now())
+  aulas                Aula[]
+  manutencoes          Manutencao[]
+  despesas             Despesa[]
 
   @@unique([autoescolaId, placa])
 }
@@ -125,8 +129,12 @@ model Matricula {
   valorTotalCentavos Int
   // Juros ao mês em centésimos de ponto percentual (199 = 1,99% a.m.).
   jurosMesBp         Int       @default(0)
-  // "carne" (parcelado pela autoescola) | "cartao" | "pix" | "dinheiro" (à vista, já quitado)
+  // Como o valor (ou o restante, se houve entrada) é pago:
+  // "carne" (parcelado pela autoescola) | "cartao" | "pix" | "dinheiro" (pago na hora, já quitado)
   formaPagamento     String    @default("carne")
+  // Entrada paga na matrícula (fica na parcela de número 0).
+  entradaCentavos    Int       @default(0)
+  entradaForma       String?
   // "primeira" | "adicao" | "mudanca" | "reabilitacao" (ver src/lib/etapas.ts)
   tipoProcesso       String    @default("primeira")
   // Curso teórico: "autoescola" (aulas pagas) | "online" (grátis no app CNH do Brasil) | "dispensado"
@@ -219,39 +227,42 @@ model Manutencao {
 
 // Dados de cada autoescola (id = id da autoescola), usados no menu, recibos e carnês.
 model Configuracao {
-  id               Int        @id
-  autoescola       Autoescola @relation(fields: [id], references: [id])
-  nome             String     @default("Minha Autoescola")
-  razaoSocial      String?
-  cnpj             String?
-  endereco         String?
-  bairro           String?
-  cidade           String?
-  uf               String?
-  cep              String?
-  telefone         String?
-  whatsapp         String?
-  email            String?
-  chavePix         String?
+  id                      Int        @id
+  autoescola              Autoescola @relation(fields: [id], references: [id])
+  nome                    String     @default("Minha Autoescola")
+  razaoSocial             String?
+  cnpj                    String?
+  endereco                String?
+  bairro                  String?
+  cidade                  String?
+  uf                      String?
+  cep                     String?
+  telefone                String?
+  whatsapp                String?
+  email                   String?
+  chavePix                String?
   // Texto impresso no rodapé do carnê (ex.: multa após o vencimento).
-  avisoCarne       String?
+  avisoCarne              String?
   // Orientações impressas no guia do aluno entregue na matrícula.
-  orientacoesAluno String?
+  orientacoesAluno        String?
   // Expediente usado para oferecer os horários de aula (HH:MM) e o intervalo entre eles.
-  horaInicio       String     @default("07:00")
-  horaFim          String     @default("20:00")
-  intervaloMin     Int        @default(60)
+  horaInicio              String     @default("07:00")
+  horaFim                 String     @default("20:00")
+  intervaloMin            Int        @default(60)
   // Logotipo em data URL (imagem já reduzida no navegador).
-  logo             String?
+  logo                    String?
   // Onde saem recibos e carnê: "a4" (impressora comum) ou "termica" (bobina 80 mm).
-  impressoraRecibo String     @default("a4")
+  impressoraRecibo        String     @default("a4")
   // Modelo de contrato (.docx) com marcações {{campo}} preenchidas com os dados do aluno.
-  contratoArquivo  Bytes?
-  contratoNome     String?
-  contratoEm       DateTime?
+  contratoArquivo         Bytes?
+  contratoNome            String?
+  contratoEm              DateTime?
   // Valor e quem paga cada exame/taxa, usados ao criar a matrícula:
   // { [tipo]: { valor: centavos, cobranca: "aluno" | "autoescola" } }
-  taxasPadrao      Json?
+  taxasPadrao             Json?
+  // Mês de vencimento do licenciamento por final de placa (padrão: SP).
+  // { leve: { "1": 7, ... "0": 12 }, pesado: { ... } }
+  calendarioLicenciamento Json?
 }
 
 // Despesas da autoescola: folha, vales, abastecimento, contas, retiradas...

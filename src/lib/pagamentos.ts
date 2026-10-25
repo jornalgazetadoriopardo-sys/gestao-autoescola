@@ -22,12 +22,39 @@ export function valorPorExtenso(centavos: number) {
 }
 
 const UNIDADES = [
-  "zero", "um", "dois", "três", "quatro", "cinco", "seis", "sete", "oito", "nove",
-  "dez", "onze", "doze", "treze", "quatorze", "quinze", "dezesseis", "dezessete", "dezoito", "dezenove",
+  "zero",
+  "um",
+  "dois",
+  "três",
+  "quatro",
+  "cinco",
+  "seis",
+  "sete",
+  "oito",
+  "nove",
+  "dez",
+  "onze",
+  "doze",
+  "treze",
+  "quatorze",
+  "quinze",
+  "dezesseis",
+  "dezessete",
+  "dezoito",
+  "dezenove",
 ];
 const DEZENAS = ["", "", "vinte", "trinta", "quarenta", "cinquenta", "sessenta", "setenta", "oitenta", "noventa"];
 const CENTENAS = [
-  "", "cento", "duzentos", "trezentos", "quatrocentos", "quinhentos", "seiscentos", "setecentos", "oitocentos", "novecentos",
+  "",
+  "cento",
+  "duzentos",
+  "trezentos",
+  "quatrocentos",
+  "quinhentos",
+  "seiscentos",
+  "setecentos",
+  "oitocentos",
+  "novecentos",
 ];
 
 function ate999(n: number): string {
@@ -61,4 +88,44 @@ function inteiroPorExtenso(n: number): string {
     return `${grupos.slice(0, -1).join(" ")} e ${grupos[grupos.length - 1]}`;
   }
   return grupos.join(" ");
+}
+
+// ---- Entrada -------------------------------------------------------------
+// A entrada paga na matrícula fica na parcela de número 0; o restante segue a
+// forma de pagamento da matrícula (carnê, cartão, Pix ou dinheiro).
+
+export const FORMAS_ENTRADA: Record<string, string> = { dinheiro: "Dinheiro", pix: "Pix", cartao: "Cartão" };
+
+// Filtro do Prisma para contar só as parcelas (sem a entrada).
+export const SO_PARCELAS = { numero: { gt: 0 } };
+
+export function rotuloParcela(numero: number, total: number) {
+  return numero === 0 ? "Entrada" : `${numero}/${total}`;
+}
+
+// Parcelas sem a entrada (para numerar "1/3, 2/3...").
+export function totalDeParcelas(parcelas: { numero: number }[]) {
+  return parcelas.filter((p) => p.numero > 0).length;
+}
+
+// Texto do recibo: "entrada da matrícula", "parcela 2 de 5", "restante da matrícula"...
+export function referenteParcela(
+  p: { numero: number },
+  m: { formaPagamento: string; entradaCentavos: number },
+  total: number,
+) {
+  if (p.numero === 0) return "entrada da matrícula";
+  if (m.formaPagamento === "carne") return `parcela ${p.numero} de ${total}`;
+  return m.entradaCentavos > 0 ? "restante da matrícula" : "matrícula";
+}
+
+// "Entrada de R$ 300,00 (Pix) + Parcelado pela autoescola"
+export function descricaoPagamento(
+  m: { formaPagamento: string; entradaCentavos: number; entradaForma: string | null },
+  formatarMoeda: (c: number) => string,
+) {
+  const forma = FORMAS_MATRICULA[m.formaPagamento]?.titulo ?? m.formaPagamento;
+  if (!m.entradaCentavos) return forma;
+  const comoEntrada = FORMAS_ENTRADA[m.entradaForma ?? ""] ?? m.entradaForma ?? "";
+  return `Entrada de ${formatarMoeda(m.entradaCentavos)}${comoEntrada ? ` (${comoEntrada})` : ""} + restante: ${forma.toLowerCase()}`;
 }

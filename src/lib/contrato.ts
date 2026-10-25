@@ -5,6 +5,7 @@ import type { Aluno, Configuracao, Matricula, Parcela } from "@prisma/client";
 import { enderecoCompleto } from "./config";
 import { CURSOS_TEORICOS, TIPOS_PROCESSO } from "./etapas";
 import {
+  FORMAS_PAGAMENTO,
   formatarCpf,
   formatarData,
   formatarDataLocal,
@@ -12,7 +13,7 @@ import {
   formatarPercentual,
   formatarTelefone,
 } from "./format";
-import { FORMAS_MATRICULA, valorPorExtenso } from "./pagamentos";
+import { descricaoPagamento, rotuloParcela, valorPorExtenso } from "./pagamentos";
 
 // Contrato da autoescola: um arquivo do Word (.docx) com marcações entre chaves
 // duplas, ex.: {{aluno_nome}}. Na hora de gerar, cada marcação é trocada pelo
@@ -49,7 +50,10 @@ export const CAMPOS_CONTRATO: { grupo: string; campos: [chave: string, descricao
       ["aulas_teoricas", "Quantidade de aulas teóricas"],
       ["valor_total", "Valor contratado (R$ 1.500,00)"],
       ["valor_total_extenso", "Valor por extenso"],
-      ["forma_pagamento", "Forma de pagamento"],
+      ["forma_pagamento", "Forma de pagamento (com a entrada, se houver)"],
+      ["valor_entrada", "Valor da entrada"],
+      ["forma_entrada", "Como a entrada foi paga"],
+      ["valor_restante", "Valor restante (depois da entrada)"],
       ["quantidade_parcelas", "Número de parcelas"],
       ["valor_parcela", "Valor da parcela"],
       ["primeiro_vencimento", "Vencimento da 1ª parcela"],
@@ -101,7 +105,9 @@ type MatriculaCompleta = Matricula & { aluno: Aluno; parcelas: Parcela[] };
 
 export function dadosDoContrato(m: MatriculaCompleta, c: Configuracao) {
   const ou = (v: string | null | undefined) => (v && v.trim() ? v : VAZIO);
-  const primeira = m.parcelas[0];
+  const entrada = m.parcelas.find((p) => p.numero === 0);
+  const soParcelas = m.parcelas.filter((p) => p.numero > 0);
+  const primeira = soParcelas[0];
   const hoje = dataPorExtenso();
   return {
     aluno_nome: m.aluno.nome,
@@ -124,8 +130,11 @@ export function dadosDoContrato(m: MatriculaCompleta, c: Configuracao) {
     aulas_teoricas: String(m.qtdTeoricas),
     valor_total: formatarMoeda(m.valorTotalCentavos),
     valor_total_extenso: valorPorExtenso(m.valorTotalCentavos),
-    forma_pagamento: FORMAS_MATRICULA[m.formaPagamento]?.titulo ?? m.formaPagamento,
-    quantidade_parcelas: String(m.parcelas.length),
+    forma_pagamento: descricaoPagamento(m, formatarMoeda),
+    valor_entrada: entrada ? formatarMoeda(entrada.valorCentavos) : "sem entrada",
+    forma_entrada: entrada ? (FORMAS_PAGAMENTO[entrada.forma ?? ""] ?? entrada.forma ?? VAZIO) : "sem entrada",
+    valor_restante: formatarMoeda(m.valorTotalCentavos - (entrada?.valorCentavos ?? 0)),
+    quantidade_parcelas: String(soParcelas.length),
     valor_parcela: primeira ? formatarMoeda(primeira.valorCentavos) : VAZIO,
     primeiro_vencimento: primeira ? formatarData(primeira.vencimento) : VAZIO,
     juros_mes: `${formatarPercentual(m.jurosMesBp)} ao mês`,
@@ -141,7 +150,7 @@ export function dadosDoContrato(m: MatriculaCompleta, c: Configuracao) {
     data_hoje: hoje,
     cidade_data: c.cidade ? `${c.cidade}, ${hoje}` : hoje,
     parcelas: m.parcelas.map((p) => ({
-      numero: `${p.numero}/${m.parcelas.length}`,
+      numero: rotuloParcela(p.numero, soParcelas.length),
       vencimento: formatarData(p.vencimento),
       valor: formatarMoeda(p.valorCentavos),
     })),

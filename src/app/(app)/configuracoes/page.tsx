@@ -1,6 +1,7 @@
 import Link from "next/link";
 import {
   Building2,
+  Car,
   ClipboardCheck,
   Download,
   FileSignature,
@@ -33,7 +34,8 @@ import { CAMPOS_CONTRATO, CAMPOS_PARCELA } from "@/lib/contrato";
 import { formatarDataLocal } from "@/lib/format";
 import { TAXAS_CONFIGURAVEIS, lerTaxasPadrao } from "@/lib/etapas";
 import { moedaParaInput } from "@/lib/format";
-import { salvarTaxas } from "./actions";
+import { salvarCalendario, salvarTaxas } from "./actions";
+import { FINAIS, NOMES_MESES, TIPOS_LICENCIAMENTO, lerCalendario } from "@/lib/licenciamento";
 import { alternarUsuario, criarUsuario, excluirUsuario, removerContrato, salvarContrato, trocarSenha } from "./actions";
 import { ConfigForm } from "./config-form";
 import { CopiarMarcacao } from "./copiar-marcacao";
@@ -45,6 +47,7 @@ const abas = [
   { id: "dados", label: "Dados da autoescola", icone: Building2, soAdmin: true },
   { id: "usuarios", label: "Usuários", icone: Users, soAdmin: true },
   { id: "taxas", label: "Taxas e exames", icone: ClipboardCheck, soAdmin: true },
+  { id: "licenciamento", label: "Licenciamento", icone: Car, soAdmin: true },
   { id: "impressora", label: "Impressora", icone: Printer, soAdmin: true },
   { id: "contrato", label: "Contrato", icone: FileSignature, soAdmin: true },
   { id: "senha", label: "Minha senha", icone: KeyRound, soAdmin: false },
@@ -89,6 +92,7 @@ export default async function ConfiguracoesPage({ searchParams }: { searchParams
       )}
       {aba === "usuarios" && <Usuarios usuarioAtual={sessao.usuarioId} />}
       {aba === "taxas" && <Taxas />}
+      {aba === "licenciamento" && <Licenciamento />}
       {aba === "impressora" && <Impressora />}
       {aba === "contrato" && <Contrato />}
       {aba === "senha" && (
@@ -365,6 +369,66 @@ async function Taxas() {
           ))}
         </div>
       </FormAcao>
+    </Cartao>
+  );
+}
+
+async function Licenciamento() {
+  const config = await obterConfigCompleta();
+  const calendario = lerCalendario(config.calendarioLicenciamento);
+  const meses = NOMES_MESES.map((nome, i) => (
+    <option key={nome} value={i + 1}>
+      {nome}
+    </option>
+  ));
+  return (
+    <Cartao className="max-w-3xl">
+      <h2 className="mb-1 flex items-center gap-2 text-lg font-semibold">
+        <Car className="size-6 text-blue-600" aria-hidden /> Calendário do licenciamento
+      </h2>
+      <p className="mb-5 text-base text-slate-600">
+        Mês em que vence o licenciamento, pelo final da placa (vence no último dia do mês). Já vem com o calendário de
+        São Paulo; se a autoescola for de outro estado, ajuste conforme o Detran local.
+      </p>
+      <FormAcao acao={salvarCalendario} textoBotao="Salvar calendário">
+        <div className="overflow-x-auto rounded-xl border border-slate-200">
+          <table className="w-full text-left text-base">
+            <thead className="bg-slate-50 text-sm text-slate-600">
+              <tr>
+                <th className="px-3 py-2">Final da placa</th>
+                <th className="px-3 py-2">{TIPOS_LICENCIAMENTO.leve.titulo}</th>
+                <th className="px-3 py-2">{TIPOS_LICENCIAMENTO.pesado.titulo}</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {FINAIS.map((f) => (
+                <tr key={f}>
+                  <td className="px-3 py-2 text-lg font-bold">{f}</td>
+                  <td className="px-3 py-2">
+                    <Select name={`leve_${f}`} defaultValue={calendario.leve[f]} aria-label={`Final ${f}, carros`}>
+                      {meses}
+                    </Select>
+                  </td>
+                  <td className="px-3 py-2">
+                    <Select
+                      name={`pesado_${f}`}
+                      defaultValue={calendario.pesado[f]}
+                      aria-label={`Final ${f}, caminhões`}
+                    >
+                      {meses}
+                    </Select>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </FormAcao>
+      <div className="mt-4 border-t border-slate-200 pt-4">
+        <FormAcao acao={salvarCalendario} textoBotao="Voltar ao calendário de SP">
+          <input type="hidden" name="acao" value="padrao" />
+        </FormAcao>
+      </div>
     </Cartao>
   );
 }

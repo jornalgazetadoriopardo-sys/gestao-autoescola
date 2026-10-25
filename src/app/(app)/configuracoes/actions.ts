@@ -9,6 +9,7 @@ import { exigirAdmin, exigirSessao } from "@/lib/auth";
 import { CONTRATO_MAX, conferirModelo } from "@/lib/contrato";
 import { TAXAS_CONFIGURAVEIS, type TaxasPadrao } from "@/lib/etapas";
 import { lerMoeda } from "@/lib/format";
+import { CALENDARIO_SP, FINAIS, lerCalendario } from "@/lib/licenciamento";
 import type { EstadoForm } from "@/components/form-acao";
 
 function texto(dados: FormData, campo: string) {
@@ -242,4 +243,28 @@ export async function salvarTaxas(_: EstadoForm, dados: FormData): Promise<Estad
   });
   revalidatePath("/configuracoes");
   return { ok: "Valores salvos! Eles entram nas próximas matrículas." };
+}
+
+// Calendário do licenciamento por final de placa. "padrao" volta ao de SP.
+export async function salvarCalendario(_: EstadoForm, dados: FormData): Promise<EstadoForm> {
+  const sessao = await exigirAdmin();
+  const restaurar = dados.get("acao") === "padrao";
+  const calendario = restaurar
+    ? CALENDARIO_SP
+    : {
+        leve: Object.fromEntries(FINAIS.map((f) => [f, Number(dados.get(`leve_${f}`))])),
+        pesado: Object.fromEntries(FINAIS.map((f) => [f, Number(dados.get(`pesado_${f}`))])),
+      };
+  const conferido = lerCalendario(calendario);
+  const id = sessao.autoescolaId;
+  const autoescola = await db.autoescola.findFirstOrThrow();
+  await db.configuracao.upsert({
+    where: { id },
+    create: { id, nome: autoescola.nome, calendarioLicenciamento: conferido },
+    update: { calendarioLicenciamento: conferido },
+  });
+  revalidatePath("/configuracoes");
+  revalidatePath("/veiculos");
+  revalidatePath("/");
+  return { ok: restaurar ? "Calendário de SP restaurado." : "Calendário salvo!" };
 }

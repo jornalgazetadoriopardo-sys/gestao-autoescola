@@ -5,6 +5,7 @@ import { obterConfig } from "@/lib/config";
 import { db } from "@/lib/db";
 import { formatarCpf, formatarData, formatarMoeda } from "@/lib/format";
 import { formatoDe } from "@/lib/formato";
+import { SO_PARCELAS } from "@/lib/pagamentos";
 import { CabecalhoCupom, Cupom, LinhaCupom } from "../../cupom";
 
 export const dynamic = "force-dynamic";
@@ -23,7 +24,7 @@ export default async function CarnePage({
   const [matricula, config] = await Promise.all([
     db.matricula.findUnique({
       where: { id: Number((await params).id) || 0 },
-      include: { aluno: true, parcelas: { orderBy: { numero: "asc" } } },
+      include: { aluno: true, parcelas: { where: SO_PARCELAS, orderBy: { numero: "asc" } } },
     }),
     obterConfig(),
   ]);

@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
 import { exigirSessao } from "@/lib/auth";
-import { lerMoeda } from "@/lib/format";
+import { hojeISO, lerMoeda } from "@/lib/format";
 import type { EstadoForm } from "@/components/form-acao";
 
 const CATEGORIAS_VEICULO = ["A", "B", "C", "D", "E"];
@@ -24,7 +24,8 @@ export async function salvarVeiculo(id: number | null, _: EstadoForm, dados: For
   if (!modelo) return { erro: "Informe o modelo do veículo." };
   if (!CATEGORIAS_VEICULO.includes(categoria)) return { erro: "Selecione a categoria." };
 
-  const campos = { placa, modelo, categoria, ativo: dados.get("ativo") === "on" };
+  const tipoLicenciamento = dados.get("tipoLicenciamento") === "pesado" ? "pesado" : "leve";
+  const campos = { placa, modelo, categoria, tipoLicenciamento, ativo: dados.get("ativo") === "on" };
 
   try {
     if (id) await db.veiculo.update({ where: { id }, data: campos });
@@ -124,4 +125,14 @@ export async function excluirVeiculo(veiculoId: number) {
   revalidatePath("/aulas");
   revalidatePath("/");
   redirect("/veiculos");
+}
+
+// Licenciamento do ano atual pago (o aviso some até o ano que vem) ou desfeito.
+export async function marcarLicenciamento(veiculoId: number, pago: boolean) {
+  await exigirSessao();
+  const ano = Number(hojeISO().slice(0, 4));
+  await db.veiculo.update({ where: { id: veiculoId }, data: { licenciamentoPagoAno: pago ? ano : null } });
+  revalidatePath(`/veiculos/${veiculoId}`);
+  revalidatePath("/veiculos");
+  revalidatePath("/");
 }

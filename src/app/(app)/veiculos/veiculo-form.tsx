@@ -1,6 +1,7 @@
 import type { Veiculo } from "@prisma/client";
 import { FormAcao } from "@/components/form-acao";
 import { Campo, Cartao, Input, Select } from "@/components/ui";
+import { TIPOS_LICENCIAMENTO } from "@/lib/licenciamento";
 import { salvarVeiculo } from "./actions";
 
 export function VeiculoForm({ veiculo }: { veiculo?: Veiculo }) {
@@ -20,6 +21,15 @@ export function VeiculoForm({ veiculo }: { veiculo?: Veiculo }) {
             <option value="C">C (caminhão)</option>
             <option value="D">D (ônibus)</option>
             <option value="E">E (carreta)</option>
+          </Select>
+        </Campo>
+        <Campo label="Calendário do licenciamento" ajuda="Define o mês do vencimento pelo final da placa.">
+          <Select name="tipoLicenciamento" defaultValue={veiculo?.tipoLicenciamento ?? "leve"}>
+            {Object.entries(TIPOS_LICENCIAMENTO).map(([id, t]) => (
+              <option key={id} value={id}>
+                {t.titulo}
+              </option>
+            ))}
           </Select>
         </Campo>
         <label className="flex items-center gap-2 text-base">
