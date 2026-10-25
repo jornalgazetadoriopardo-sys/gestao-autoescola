@@ -7,6 +7,7 @@ import {
   ChevronRight,
   CircleCheck,
   HandCoins,
+  Receipt,
   TriangleAlert,
   UserPlus,
   Users,
@@ -41,6 +42,21 @@ export default async function InicioPage() {
   const hoje = new Date(`${hojeTexto}T00:00:00Z`);
   const { inicio, fim } = intervaloDoDia(hojeTexto);
   const inicioMes = new Date(`${hojeTexto.slice(0, 7)}-01T00:00:00Z`);
+
+  // Contas a pagar e despesas do mês: só para o administrador.
+  const admin = sessao.papel === "admin";
+  const em3dias = new Date(`${somarDias(hojeTexto, 3)}T00:00:00Z`);
+  const [contasAtrasadas, contasAVencer, pagoMes] = admin
+    ? await Promise.all([
+        db.despesa.aggregate({ where: { pagoEm: null, vencimento: { lt: hoje } }, _sum: { valorCentavos: true }, _count: true }),
+        db.despesa.aggregate({
+          where: { pagoEm: null, vencimento: { gte: hoje, lte: em3dias } },
+          _sum: { valorCentavos: true },
+          _count: true,
+        }),
+        db.despesa.aggregate({ where: { pagoEm: { gte: inicioMes } }, _sum: { valorCentavos: true } }),
+      ])
+    : [null, null, null];
 
   const [aulasHoje, lembretes, atrasadas, vencemHoje, recebidoMes, alunosAtivos] = await Promise.all([
     db.aula.findMany({
@@ -85,7 +101,11 @@ export default async function InicioPage() {
         ))}
       </div>
 
-      {(lembretes.length > 0 || atrasadas._count > 0 || vencemHoje._count > 0) && (
+      {(lembretes.length > 0 ||
+        atrasadas._count > 0 ||
+        vencemHoje._count > 0 ||
+        Boolean(contasAtrasadas?._count) ||
+        Boolean(contasAVencer?._count)) && (
         <>
           <Secao titulo="Avisos" icone={BellRing} />
           <div className="space-y-3">
@@ -105,6 +125,24 @@ export default async function InicioPage() {
                 titulo={`${vencemHoje._count} ${vencemHoje._count === 1 ? "parcela vence" : "parcelas vencem"} hoje`}
                 texto={`Total de ${formatarMoeda(vencemHoje._sum.valorCentavos ?? 0)}.`}
                 acao={<LinkAcao href="/pagamentos?aba=avencer">Ver parcelas</LinkAcao>}
+              />
+            )}
+            {contasAtrasadas && contasAtrasadas._count > 0 && (
+              <AvisoLinha
+                cor="vermelho"
+                icone={Receipt}
+                titulo={`${contasAtrasadas._count} ${contasAtrasadas._count === 1 ? "conta a pagar atrasada" : "contas a pagar atrasadas"}`}
+                texto={`Total de ${formatarMoeda(contasAtrasadas._sum.valorCentavos ?? 0)}.`}
+                acao={<LinkAcao href="/despesas?ver=atrasadas">Ver contas</LinkAcao>}
+              />
+            )}
+            {contasAVencer && contasAVencer._count > 0 && (
+              <AvisoLinha
+                cor="amarelo"
+                icone={Receipt}
+                titulo={`${contasAVencer._count} ${contasAVencer._count === 1 ? "conta vence" : "contas vencem"} nos próximos 3 dias`}
+                texto={`Total de ${formatarMoeda(contasAVencer._sum.valorCentavos ?? 0)}.`}
+                acao={<LinkAcao href="/despesas?ver=apagar">Ver contas</LinkAcao>}
               />
             )}
             {lembretes.map((m) => {
@@ -167,7 +205,7 @@ export default async function InicioPage() {
       )}
 
       <Secao titulo="Resumo" icone={CircleCheck} />
-      <div className="grid gap-4 sm:grid-cols-3">
+      <div className={`grid gap-4 sm:grid-cols-2 ${pagoMes ? "xl:grid-cols-4" : "lg:grid-cols-3"}`}>
         <Indicador icone={Users} cor="azul" rotulo="Alunos ativos" valor={String(alunosAtivos)} href="/alunos" />
         <Indicador icone={CalendarDays} cor="roxo" rotulo="Aulas hoje" valor={String(aulasHoje.length)} href="/aulas" />
         <Indicador
@@ -177,6 +215,15 @@ export default async function InicioPage() {
           valor={formatarMoeda(recebidoMes._sum.valorPagoCentavos ?? 0)}
           href="/pagamentos?aba=pagas"
         />
+        {pagoMes && (
+          <Indicador
+            icone={Receipt}
+            cor="vermelho"
+            rotulo="Despesas pagas este mês"
+            valor={formatarMoeda(pagoMes._sum.valorCentavos ?? 0)}
+            href="/despesas?ver=pagas"
+          />
+        )}
       </div>
     </>
   );

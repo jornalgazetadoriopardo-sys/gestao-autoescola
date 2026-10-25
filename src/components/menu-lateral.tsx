@@ -10,6 +10,7 @@ import {
   House,
   LogOut,
   Menu,
+  Receipt,
   Settings,
   ShieldCheck,
   UserRound,
@@ -18,11 +19,12 @@ import {
   X,
 } from "lucide-react";
 
-const itens = [
+const itens: { href: string; label: string; icone: typeof House; soAdmin?: boolean }[] = [
   { href: "/", label: "Início", icone: House },
   { href: "/aulas", label: "Agenda", icone: CalendarDays },
   { href: "/alunos", label: "Alunos", icone: Users },
   { href: "/pagamentos", label: "Pagamentos", icone: Wallet },
+  { href: "/despesas", label: "Despesas", icone: Receipt, soAdmin: true },
   { href: "/veiculos", label: "Veículos", icone: Car },
   { href: "/instrutores", label: "Instrutores", icone: UserRound },
   { href: "/relatorios", label: "Relatórios", icone: FileText },
@@ -33,12 +35,14 @@ export function MenuLateral({
   nome,
   autoescola,
   logo,
+  admin,
   superadmin,
   sair,
 }: {
   nome: string;
   autoescola: string;
   logo: string | null;
+  admin: boolean;
   superadmin: boolean;
   sair: () => Promise<void>;
 }) {
@@ -71,7 +75,10 @@ export function MenuLateral({
 
       <div className={`${aberto ? "flex" : "hidden"} flex-1 flex-col md:flex`}>
         <nav className="flex flex-col gap-1 px-3">
-          {(superadmin ? [...itens, { href: "/plataforma", label: "Plataforma", icone: ShieldCheck }] : itens).map(({ href, label, icone: Icone }) => (
+          {[
+            ...itens.filter((i) => admin || !i.soAdmin),
+            ...(superadmin ? [{ href: "/plataforma", label: "Plataforma", icone: ShieldCheck }] : []),
+          ].map(({ href, label, icone: Icone }) => (
             <Link
               key={href}
               href={href}

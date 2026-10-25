@@ -13,7 +13,7 @@ export async function exportarAutoescola(autoescolaId: number) {
   const autoescola = await dbGlobal.autoescola.findUnique({ where: { id: autoescolaId } });
   if (!autoescola) return null;
   const doAluno = { aluno: { autoescolaId } };
-  const [configuracao, usuarios, alunos, instrutores, veiculos, manutencoes, matriculas, parcelas, aulas] =
+  const [configuracao, usuarios, alunos, instrutores, veiculos, manutencoes, matriculas, parcelas, aulas, despesas] =
     await Promise.all([
       dbGlobal.configuracao.findUnique({ where: { id: autoescolaId }, omit: { id: true } }),
       dbGlobal.usuario.findMany({
@@ -28,6 +28,7 @@ export async function exportarAutoescola(autoescolaId: number) {
       dbGlobal.matricula.findMany({ orderBy: { id: "asc" }, where: doAluno }),
       dbGlobal.parcela.findMany({ orderBy: { id: "asc" }, where: { matricula: doAluno } }),
       dbGlobal.aula.findMany({ orderBy: { id: "asc" }, where: { matricula: doAluno } }),
+      dbGlobal.despesa.findMany({ orderBy: { id: "asc" }, where: { autoescolaId }, omit: { autoescolaId: true } }),
     ]);
   return {
     formato: FORMATO,
@@ -43,6 +44,7 @@ export async function exportarAutoescola(autoescolaId: number) {
     matriculas,
     parcelas,
     aulas,
+    despesas,
   };
 }
 
@@ -136,6 +138,8 @@ export async function importarAutoescola(arquivo: unknown) {
   const matriculas = lista(o, "matriculas");
   const parcelas = lista(o, "parcelas");
   const aulas = lista(o, "aulas");
+  // Arquivos exportados antes do módulo de despesas não têm esta lista.
+  const despesas = lista(o, "despesas");
 
   // E-mail de login é único no sistema todo.
   const u = ler("usuários");
@@ -301,10 +305,35 @@ export async function importarAutoescola(arquivo: unknown) {
         })),
       });
 
+      const de = ler("despesas");
+      await tx.despesa.createMany({
+        data: despesas.map((x) => ({
+          autoescolaId,
+          categoria: de.str(x, "categoria"),
+          descricao: de.str(x, "descricao"),
+          favorecido: de.strN(x, "favorecido"),
+          valorCentavos: de.int(x, "valorCentavos"),
+          vencimento: de.data(x, "vencimento"),
+          pagoEm: de.dataN(x, "pagoEm"),
+          forma: de.strN(x, "forma"),
+          veiculoId: opcional(de.intN(x, "veiculoId"), idVeiculo),
+          litrosCent: de.intN(x, "litrosCent"),
+          km: de.intN(x, "km"),
+          obs: de.strN(x, "obs"),
+          criadoEm: de.dataN(x, "criadoEm") ?? undefined,
+        })),
+      });
+
       return {
         id: autoescolaId,
         nome,
-        totais: { usuarios: usuarios.length, alunos: alunos.length, aulas: aulas.length, parcelas: parcelas.length },
+        totais: {
+          usuarios: usuarios.length,
+          alunos: alunos.length,
+          aulas: aulas.length,
+          parcelas: parcelas.length,
+          despesas: despesas.length,
+        },
       };
     },
     { timeout: 60_000, maxWait: 10_000 },

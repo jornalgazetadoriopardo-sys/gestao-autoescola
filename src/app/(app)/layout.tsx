@@ -8,7 +8,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const config = await obterConfig();
   return (
     <div className="flex min-h-screen flex-col md:flex-row">
-      <MenuLateral nome={sessao.nome} autoescola={config.nome} logo={config.logo} superadmin={sessao.superadmin} sair={sair} />
+      <MenuLateral nome={sessao.nome} autoescola={config.nome} logo={config.logo} admin={sessao.papel === "admin"} superadmin={sessao.superadmin} sair={sair} />
       <main className="min-w-0 flex-1 p-4 sm:p-6 lg:p-10">{children}</main>
     </div>
   );

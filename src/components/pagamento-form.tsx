@@ -2,27 +2,33 @@
 
 import { useState } from "react";
 import { Banknote, CreditCard, Landmark, QrCode, type LucideIcon } from "lucide-react";
-import { FormAcao } from "@/components/form-acao";
+import { FormAcao, type AcaoForm } from "@/components/form-acao";
 import { Campo, Input, Textarea } from "@/components/ui";
 import { FORMAS_PAGAMENTO } from "@/lib/format";
-import { receberParcela } from "../../actions";
 
 const ICONES: Record<string, LucideIcon> = { dinheiro: Banknote, pix: QrCode, cartao: CreditCard, boleto: Landmark };
 
-export function ReceberForm({
-  parcelaId,
+// Forma, data e valor de um pagamento: baixa de parcela ou pagamento de despesa.
+export function PagamentoForm({
+  acao,
   valor,
   hoje,
   voltar,
+  rotuloValor = "Valor recebido (R$)",
+  formaInicial = "dinheiro",
+  comObs = true,
 }: {
-  parcelaId: number;
+  acao: AcaoForm;
   valor: string;
   hoje: string;
   voltar: string;
+  rotuloValor?: string;
+  formaInicial?: string;
+  comObs?: boolean;
 }) {
-  const [forma, setForma] = useState("dinheiro");
+  const [forma, setForma] = useState(formaInicial);
   return (
-    <FormAcao acao={receberParcela.bind(null, parcelaId)} textoBotao="Confirmar pagamento" varianteBotao="sucesso">
+    <FormAcao acao={acao} textoBotao="Confirmar pagamento" varianteBotao="sucesso">
       <input type="hidden" name="voltar" value={voltar} />
       <fieldset>
         <legend className="mb-2 text-base font-medium text-slate-800">Forma de pagamento</legend>
@@ -56,12 +62,14 @@ export function ReceberForm({
         <Campo label="Data do pagamento">
           <Input name="data" type="date" required defaultValue={hoje} />
         </Campo>
-        <Campo label="Valor recebido (R$)" ajuda="Altere se houve multa ou desconto.">
+        <Campo label={rotuloValor} ajuda="Altere se houve multa ou desconto.">
           <Input name="valor" inputMode="decimal" required defaultValue={valor} className="text-lg font-semibold" />
         </Campo>
-        <Campo label="Observação (opcional)" className="sm:col-span-2">
-          <Textarea name="obs" rows={2} />
-        </Campo>
+        {comObs && (
+          <Campo label="Observação (opcional)" className="sm:col-span-2">
+            <Textarea name="obs" rows={2} />
+          </Campo>
+        )}
       </div>
     </FormAcao>
   );
