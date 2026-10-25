@@ -1,5 +1,7 @@
 import "server-only";
 import { db } from "./db";
+import { DURACAO_EXAME } from "./disponibilidade";
+import { carregarFeriados } from "./feriados-servidor";
 import { fimDaAula, formatarDataHora, formatarHora, resumoAulas } from "./aulas";
 
 export type NovaAula = {
@@ -77,6 +79,19 @@ export async function verificarAulas(
   // mesmo horário são uma turma. Aula cancelada não ocupa horário.
   if (editando?.status === "cancelada") return null;
 
+  // Feriado: não se marca aula (a autoescola pode deixar de seguir um feriado em Configurações).
+  const diasDasAulas = aulas.map((a) => a.dataHora.toLocaleDateString("en-CA", { timeZone: "America/Sao_Paulo" }));
+  const feriados = await carregarFeriados(
+    diasDasAulas.reduce((m, d) => (d < m ? d : m)),
+    diasDasAulas.reduce((m, d) => (d > m ? d : m)),
+  );
+  for (const dia of diasDasAulas) {
+    const nome = feriados.get(dia);
+    if (nome) {
+      return `${dia.split("-").reverse().join("/")} é feriado (${nome}). Escolha outro dia ou desmarque esse feriado em Configurações > Feriados.`;
+    }
+  }
+
   const inicio = Math.min(...aulas.map((a) => a.dataHora.getTime()));
   const fim = Math.max(...aulas.map((a) => fimDaAula(a).getTime()));
   const existentes = await db.aula.findMany({
@@ -94,17 +109,44 @@ export async function verificarAulas(
   });
 
   type Ocupada = NovaAula & { alunoId: number; alunoNome: string; placa?: string; instrutorNome?: string };
-  const ocupadas: Ocupada[] = existentes.map((e) => ({
-    tipo: e.tipo,
+  // Exames do Detran com horário marcado também ocupam aluno, veículo e instrutor.
+  const exames = await db.etapa.findMany({
+    where: {
+      hora: { not: null },
+      resultado: null,
+      data: { gte: new Date(inicio - 24 * 60 * 60 * 1000), lt: new Date(fim + 24 * 60 * 60 * 1000) },
+      OR: [
+        { instrutorId: { in: ids(aulas.map((a) => a.instrutorId)) } },
+        { veiculoId: { in: ids(aulas.map((a) => a.veiculoId)) } },
+        { matricula: { alunoId: matricula.alunoId } },
+      ],
+    },
+    include: { matricula: { include: { aluno: true } }, instrutor: true, veiculo: true },
+  });
+  const ocupadas: Ocupada[] = exames.map((e) => ({
+    tipo: "exame",
     instrutorId: e.instrutorId ?? 0,
     veiculoId: e.veiculoId,
-    dataHora: e.dataHora,
-    duracaoMin: e.duracaoMin,
+    dataHora: new Date(`${e.data!.toISOString().slice(0, 10)}T${e.hora}:00-03:00`),
+    duracaoMin: DURACAO_EXAME,
     alunoId: e.matricula.alunoId,
-    alunoNome: e.matricula.aluno.nome,
+    alunoNome: `${e.matricula.aluno.nome} (${e.descricao.toLowerCase()})`,
     placa: e.veiculo?.placa,
     instrutorNome: e.instrutor?.nome,
   }));
+  ocupadas.push(
+    ...existentes.map((e) => ({
+      tipo: e.tipo,
+      instrutorId: e.instrutorId ?? 0,
+      veiculoId: e.veiculoId,
+      dataHora: e.dataHora,
+      duracaoMin: e.duracaoMin,
+      alunoId: e.matricula.alunoId,
+      alunoNome: e.matricula.aluno.nome,
+      placa: e.veiculo?.placa,
+      instrutorNome: e.instrutor?.nome,
+    })),
+  );
   const varias = aulas.length > 1;
   const frase = (t: string) => t.charAt(0).toUpperCase() + t.slice(1);
 
@@ -113,13 +155,14 @@ export async function verificarAulas(
     for (const o of ocupadas) {
       if (o.dataHora >= fimDaAula(a) || fimDaAula(o) <= a.dataHora) continue;
       const quando = `às ${formatarHora(o.dataHora)}`;
-      if (o.alunoId === matricula.alunoId) return frase(`${prefixo}o aluno já tem aula ${quando}.`);
+      const oQue = o.tipo === "exame" ? "exame do Detran" : "aula";
+      if (o.alunoId === matricula.alunoId) return frase(`${prefixo}o aluno já tem ${oQue} ${quando}.`);
       if (a.veiculoId && o.veiculoId === a.veiculoId) {
-        return frase(`${prefixo}o veículo ${o.placa ?? ""} já está em aula ${quando} com ${o.alunoNome}.`);
+        return frase(`${prefixo}o veículo ${o.placa ?? ""} já está em ${oQue} ${quando} com ${o.alunoNome}.`);
       }
       if (o.instrutorId === a.instrutorId && !(a.tipo === "teorica" && o.tipo === "teorica")) {
         const nome = instrutores.find((i) => i.id === a.instrutorId)?.nome ?? o.instrutorNome;
-        return frase(`${prefixo}${nome} já tem aula ${quando} com ${o.alunoNome}.`);
+        return frase(`${prefixo}${nome} já tem ${oQue} ${quando} com ${o.alunoNome}.`);
       }
     }
     // As aulas já conferidas do grupo também passam a ocupar o horário.
@@ -131,4 +174,42 @@ export async function verificarAulas(
     });
   }
   return null;
+}
+
+// Exame do Detran com horário: não pode cair em feriado nem bater com aulas do
+// aluno, do veículo ou do instrutor que acompanha. Vários exames no mesmo
+// horário são permitidos (o instrutor leva mais de um aluno para a prova).
+export async function verificarExame(e: {
+  alunoId: number;
+  dia: string;
+  hora: string;
+  veiculoId: number | null;
+  instrutorId: number | null;
+}): Promise<string | null> {
+  const nome = (await carregarFeriados(e.dia, e.dia)).get(e.dia);
+  if (nome) return `${e.dia.split("-").reverse().join("/")} é feriado (${nome}). Confira a data do exame.`;
+
+  const inicio = new Date(`${e.dia}T${e.hora}:00-03:00`);
+  const fim = new Date(inicio.getTime() + DURACAO_EXAME * 60_000);
+  const aulas = await db.aula.findMany({
+    where: {
+      status: { not: "cancelada" },
+      dataHora: { gte: new Date(inicio.getTime() - 4 * 60 * 60 * 1000), lt: fim },
+      OR: [
+        { matricula: { alunoId: e.alunoId } },
+        ...(e.veiculoId ? [{ veiculoId: e.veiculoId }] : []),
+        ...(e.instrutorId ? [{ instrutorId: e.instrutorId }] : []),
+      ],
+    },
+    orderBy: { dataHora: "asc" },
+    include: { matricula: { include: { aluno: true } }, instrutor: true, veiculo: true },
+  });
+  const a = aulas.find((x) => fimDaAula(x) > inicio);
+  if (!a) return null;
+  const quando = `às ${formatarHora(a.dataHora)}`;
+  if (a.matricula.alunoId === e.alunoId) return `O aluno tem aula ${quando} neste dia. Remarque a aula ou o exame.`;
+  if (e.veiculoId && a.veiculoId === e.veiculoId) {
+    return `O veículo ${a.veiculo?.placa ?? ""} está em aula ${quando} com ${a.matricula.aluno.nome}.`;
+  }
+  return `${a.instrutor?.nome ?? "O instrutor"} tem aula ${quando} com ${a.matricula.aluno.nome}.`;
 }

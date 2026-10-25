@@ -7,6 +7,7 @@ import { db } from "@/lib/db";
 import { exigirSessao } from "@/lib/auth";
 import { FORMAS_PAGAMENTO, lerMoeda } from "@/lib/format";
 import { REEXAME, TIPOS_ETAPA, lerTaxasPadrao } from "@/lib/etapas";
+import { verificarExame } from "@/lib/validar-aula";
 import type { EstadoForm } from "@/components/form-acao";
 
 const DIA = /^\d{4}-\d{2}-\d{2}$/;
@@ -81,11 +82,36 @@ export async function salvarEtapa(
     return { erro: "Escolha a forma em que o aluno pagou." };
   }
 
+  // Provas do Detran: horário, local e quem acompanha (só o prático leva veículo).
+  const prova = tipo === "exame_pratico" || tipo === "exame_teorico";
+  const dataTexto = String(dados.get("data") ?? "");
+  const hora = prova ? String(dados.get("hora") ?? "") : "";
+  if (hora && !/^([01]\d|2[0-3]):[0-5]\d$/.test(hora)) return { erro: "Horário inválido. Ex.: 08:30" };
+  if (hora && !DIA.test(dataTexto)) return { erro: "Informe a data do exame junto com o horário." };
+  const veiculoId = tipo === "exame_pratico" ? Number(dados.get("veiculoId")) || null : null;
+  const instrutorId = prova ? Number(dados.get("instrutorId")) || null : null;
+  if (veiculoId && !(await db.veiculo.findUnique({ where: { id: veiculoId } }))) {
+    return { erro: "Veículo não encontrado." };
+  }
+  if (instrutorId && !(await db.instrutor.findUnique({ where: { id: instrutorId } }))) {
+    return { erro: "Instrutor não encontrado." };
+  }
+  if (hora && !resultado) {
+    const m = await db.matricula.findUnique({ where: { id: matriculaId }, select: { alunoId: true } });
+    if (!m) return { erro: "Matrícula não encontrada." };
+    const conflito = await verificarExame({ alunoId: m.alunoId, dia: dataTexto, hora, veiculoId, instrutorId });
+    if (conflito) return { erro: conflito };
+  }
+
   const campos = {
     tipo,
     descricao,
     categoria,
-    data: dia(String(dados.get("data") ?? "")),
+    data: dia(dataTexto),
+    hora: hora || null,
+    local: prova ? String(dados.get("local") ?? "").trim() || null : null,
+    veiculoId,
+    instrutorId,
     resultado,
     valorCentavos,
     cobranca,

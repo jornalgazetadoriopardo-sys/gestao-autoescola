@@ -66,6 +66,7 @@ export function AulasLoteForm({
   matriculaInicial,
   hoje,
   expediente,
+  feriados = {},
 }: {
   matriculas: OpcaoMatricula[];
   instrutores: Opcao[];
@@ -73,6 +74,8 @@ export function AulasLoteForm({
   matriculaInicial?: number;
   hoje: string;
   expediente: Expediente;
+  // Feriados dos próximos meses (AAAA-MM-DD → nome): ficam bloqueados no calendário.
+  feriados?: Record<string, string>;
 }) {
   const [matriculaId, setMatriculaId] = useState(String(matriculaInicial ?? ""));
   const matricula = matriculas.find((m) => String(m.id) === matriculaId);
@@ -134,7 +137,7 @@ export function AulasLoteForm({
     const existentes = new Set(itens.map((i) => `${i.data} ${i.hora}`));
     for (let i = 0; i < 400 && novos.length < qtd; i++) {
       const iso = somarDias(aPartir, i);
-      if (!diasRep.includes(diaDaSemana(iso)) || existentes.has(`${iso} ${horaPadrao}`)) continue;
+      if (!diasRep.includes(diaDaSemana(iso)) || existentes.has(`${iso} ${horaPadrao}`) || feriados[iso]) continue;
       novos.push({
         chave: proximaChave++,
         data: iso,
@@ -399,19 +402,23 @@ export function AulasLoteForm({
               const qtd = itens.filter((i) => i.data === iso).length;
               const passado = iso < hoje;
               const domingo = diaDaSemana(iso) === 0;
+              const feriado = feriados[iso];
               return (
                 <button
                   key={iso}
                   type="button"
-                  disabled={passado}
+                  disabled={passado || (Boolean(feriado) && qtd === 0)}
                   onClick={() => alternarDia(iso)}
                   aria-pressed={qtd > 0}
-                  aria-label={formatarCurto(iso)}
+                  aria-label={feriado ? `${formatarCurto(iso)}, feriado: ${feriado}` : formatarCurto(iso)}
+                  title={feriado ? `Feriado: ${feriado}` : undefined}
                   className={`relative aspect-square rounded-lg border-2 text-base font-semibold transition sm:text-lg ${
                     qtd > 0
                       ? "border-blue-600 bg-blue-600 text-white"
                       : passado
                         ? "cursor-not-allowed border-transparent text-slate-300"
+                        : feriado
+                          ? "cursor-not-allowed border-red-200 bg-red-50 text-red-400 line-through"
                         : `border-slate-200 bg-white hover:border-blue-400 ${domingo ? "text-red-600" : "text-slate-800"}`
                   } ${iso === hoje && qtd === 0 ? "ring-2 ring-amber-400" : ""}`}
                 >
@@ -425,6 +432,16 @@ export function AulasLoteForm({
               );
             })}
           </div>
+
+          {dias.some((d) => feriados[d]) && (
+            <p className="mt-3 text-sm text-red-700">
+              Feriados neste mês (sem aula):{" "}
+              {dias
+                .filter((d) => feriados[d])
+                .map((d) => `${formatarCurto(d)} – ${feriados[d]}`)
+                .join(" · ")}
+            </p>
+          )}
 
           <details className="mt-5 rounded-xl border border-slate-200 bg-slate-50 p-4">
             <summary className="flex cursor-pointer items-center gap-2 text-base font-semibold text-slate-800">

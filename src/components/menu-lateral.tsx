@@ -20,6 +20,7 @@ import {
   Wallet,
   X,
 } from "lucide-react";
+import { SeletorTema } from "./seletor-tema";
 
 const itens: { href: string; label: string; icone: typeof House; soAdmin?: boolean }[] = [
   { href: "/", label: "Início", icone: House },
@@ -58,7 +59,7 @@ export function MenuLateral({
   const ativo = (href: string) => (href === "/" ? caminho === "/" : caminho.startsWith(href));
 
   return (
-    <aside className="w-full shrink-0 bg-slate-900 text-slate-200 md:sticky md:top-0 md:flex md:h-screen md:w-64 md:flex-col">
+    <aside className="sem-tema w-full shrink-0 bg-slate-900 text-slate-200 md:sticky md:top-0 md:flex md:h-screen md:w-64 md:flex-col">
       {indo && <div className="fixed inset-x-0 top-0 z-50 h-1 animate-pulse bg-blue-500" role="progressbar" />}
       <div className="flex items-center justify-between gap-3 px-5 py-4 md:py-6">
         <Link href="/" className="flex min-w-0 items-center gap-3">
@@ -108,6 +109,7 @@ export function MenuLateral({
           ))}
         </nav>
         <div className="mt-4 border-t border-slate-800 px-5 py-4 md:mt-auto">
+          <SeletorTema />
           <div className="mb-2 truncate text-sm text-slate-400">Conectado como {nome}</div>
           <form action={sair}>
             <button className="flex items-center gap-2 text-base text-slate-300 hover:text-white">

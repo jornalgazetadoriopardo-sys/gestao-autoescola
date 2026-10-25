@@ -1,6 +1,15 @@
 import Link from "next/link";
-import { CalendarDays, CalendarPlus, CalendarRange, ChevronLeft, ChevronRight, Search } from "lucide-react";
-import { Botao, BotaoLink, Cabecalho, Etiqueta, Input, Select, Tabela, Vazio } from "@/components/ui";
+import {
+  CalendarDays,
+  CalendarOff,
+  CalendarPlus,
+  CalendarRange,
+  ChevronLeft,
+  ChevronRight,
+  ClipboardCheck,
+  Search,
+} from "lucide-react";
+import { Aviso, Botao, BotaoLink, Cabecalho, Etiqueta, Input, Secao, Select, Tabela, Vazio } from "@/components/ui";
 import { db } from "@/lib/db";
 import { hojeISO } from "@/lib/format";
 import {
@@ -13,6 +22,7 @@ import {
   intervaloDoDia,
   somarDias,
 } from "@/lib/aulas";
+import { carregarFeriados } from "@/lib/feriados-servidor";
 import { AcoesAula } from "./acoes-aula";
 
 export const dynamic = "force-dynamic";
@@ -28,14 +38,26 @@ export default async function AgendaPage({
   const instrutorId = Number(params.instrutor) || null;
   const { inicio, fim } = intervaloDoDia(dia);
 
-  const [aulas, instrutores] = await Promise.all([
+  const [aulas, instrutores, exames, feriados] = await Promise.all([
     db.aula.findMany({
       where: { dataHora: { gte: inicio, lt: fim }, ...(instrutorId ? { instrutorId } : {}) },
       orderBy: { dataHora: "asc" },
       include: { matricula: { include: { aluno: true } }, instrutor: true, veiculo: true },
     }),
     db.instrutor.findMany({ where: { ativo: true }, orderBy: { nome: "asc" } }),
+    // Exames do Detran marcados para o dia (com ou sem horário).
+    db.etapa.findMany({
+      where: {
+        data: new Date(`${dia}T00:00:00Z`),
+        tipo: { in: ["exame_pratico", "exame_teorico"] },
+        ...(instrutorId ? { instrutorId } : {}),
+      },
+      orderBy: [{ hora: "asc" }, { id: "asc" }],
+      include: { matricula: { include: { aluno: true } }, instrutor: true, veiculo: true },
+    }),
+    carregarFeriados(dia, dia),
   ]);
+  const feriado = feriados.get(dia);
 
   const link = (d: string) => `/aulas?dia=${d}${instrutorId ? `&instrutor=${instrutorId}` : ""}`;
   const ativas = aulas.filter((a) => a.status !== "cancelada").length;
@@ -87,6 +109,19 @@ export default async function AgendaPage({
         </BotaoLink>
       </div>
 
+      {feriado && (
+        <Aviso tipo="alerta" icone={CalendarOff}>
+          <span>
+            <strong>Feriado: {feriado}.</strong> Não é possível marcar aulas neste dia. Para trabalhar mesmo assim,
+            desmarque o feriado em{" "}
+            <Link href="/configuracoes?aba=feriados" className="font-medium underline">
+              Configurações › Feriados
+            </Link>
+            .
+          </span>
+        </Aviso>
+      )}
+
       <form className="mb-5 flex flex-wrap items-end gap-3">
         <label className="w-48">
           <span className="mb-1 block text-sm font-medium text-slate-700">Ir para o dia</span>
@@ -110,12 +145,14 @@ export default async function AgendaPage({
 
       {aulas.length === 0 ? (
         <Vazio
-          icone={CalendarDays}
-          titulo="Nenhuma aula neste dia"
+          icone={feriado ? CalendarOff : CalendarDays}
+          titulo={feriado ? `Feriado – ${feriado}` : "Nenhuma aula neste dia"}
           acao={
-            <BotaoLink href={`/aulas/nova?dia=${dia}`} icone={CalendarPlus}>
-              Agendar aula
-            </BotaoLink>
+            !feriado && (
+              <BotaoLink href={`/aulas/nova?dia=${dia}`} icone={CalendarPlus}>
+                Agendar aula
+              </BotaoLink>
+            )
           }
         />
       ) : (
@@ -147,6 +184,47 @@ export default async function AgendaPage({
             </tr>
           ))}
         </Tabela>
+      )}
+
+      {exames.length > 0 && (
+        <>
+          <Secao titulo="Exames do Detran neste dia" icone={ClipboardCheck} />
+          <Tabela cabecalhos={["Horário", "Aluno", "Exame", "Local", "Instrutor", "Veículo", ""]}>
+            {exames.map((e) => (
+              <tr key={e.id}>
+                <td className="px-4 py-3 text-lg font-semibold">{e.hora ?? "—"}</td>
+                <td className="px-4 py-3">
+                  <Link
+                    href={`/alunos/${e.matricula.alunoId}`}
+                    className="font-medium text-blue-700 hover:underline"
+                  >
+                    {e.matricula.aluno.nome}
+                  </Link>
+                </td>
+                <td className="px-4 py-3">
+                  {e.descricao}{" "}
+                  {e.resultado && (
+                    <Etiqueta cor={e.resultado === "ok" ? "verde" : "vermelho"}>
+                      {e.resultado === "ok" ? "Aprovado" : "Reprovado"}
+                    </Etiqueta>
+                  )}
+                </td>
+                <td className="px-4 py-3">{e.local ?? "—"}</td>
+                <td className="px-4 py-3">{e.instrutor?.nome ?? "—"}</td>
+                <td className="px-4 py-3">{e.veiculo ? `${e.veiculo.placa} · ${e.veiculo.modelo}` : "—"}</td>
+                <td className="px-4 py-3">
+                  <BotaoLink
+                    href={`/exames/${e.id}/editar?voltar=${encodeURIComponent(link(dia))}`}
+                    variante="secundario"
+                    tamanho="pequeno"
+                  >
+                    Abrir
+                  </BotaoLink>
+                </td>
+              </tr>
+            ))}
+          </Tabela>
+        </>
       )}
     </>
   );

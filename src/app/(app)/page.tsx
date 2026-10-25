@@ -2,12 +2,14 @@ import Link from "next/link";
 import {
   BellRing,
   CalendarDays,
+  CalendarOff,
   CalendarPlus,
   Check,
   ChevronRight,
   CircleCheck,
   FileBadge,
   ClipboardCheck,
+  Flag,
   HandCoins,
   Receipt,
   TriangleAlert,
@@ -34,6 +36,8 @@ import { diasAte, quandoLembrar } from "@/lib/lembretes";
 import { AcoesAula } from "./aulas/acoes-aula";
 import { concluirLembrete, marcarLicenciamento } from "./veiculos/actions";
 import { textoLicenciamento } from "./veiculos/etiqueta-licenciamento";
+import { carregarFeriados } from "@/lib/feriados-servidor";
+import { prontosParaExamePratico } from "@/lib/prontos-exame";
 import { DIAS_AVISO_LICENCIAMENTO, lerCalendario, situacaoLicenciamento } from "@/lib/licenciamento";
 
 export const dynamic = "force-dynamic";
@@ -94,6 +98,12 @@ export default async function InicioPage() {
     include: { matricula: { select: { aluno: { select: { nome: true } } } } },
   });
 
+  // Alunos que terminaram as aulas práticas e feriados da próxima semana.
+  const [prontos, feriados] = await Promise.all([
+    prontosParaExamePratico(),
+    carregarFeriados(hojeTexto, somarDias(hojeTexto, 7)),
+  ]);
+
   const [aulasHoje, lembretes, atrasadas, vencemHoje, recebidoMes, alunosAtivos] = await Promise.all([
     db.aula.findMany({
       where: { dataHora: { gte: inicio, lt: fim }, status: { not: "cancelada" } },
@@ -145,6 +155,8 @@ export default async function InicioPage() {
         atrasadas._count > 0 ||
         vencemHoje._count > 0 ||
         examesProximos.length > 0 ||
+        prontos.length > 0 ||
+        feriados.size > 0 ||
         licenciamentos.length > 0 ||
         Boolean(contasAtrasadas?._count) ||
         Boolean(contasAVencer?._count)) && (
@@ -195,9 +207,35 @@ export default async function InicioPage() {
                 titulo={`${examesProximos.length} ${examesProximos.length === 1 ? "exame" : "exames"} hoje ou amanhã`}
                 texto={examesProximos
                   .slice(0, 3)
-                  .map((e) => `${e.matricula.aluno.nome} – ${e.descricao} (${formatarData(e.data)})`)
+                  .map(
+                    (e) =>
+                      `${e.matricula.aluno.nome} – ${e.descricao} (${formatarData(e.data)}${e.hora ? ` às ${e.hora}` : ""})`,
+                  )
                   .join(" · ")}
                 acao={<LinkAcao href="/exames">Ver exames</LinkAcao>}
+              />
+            )}
+            {prontos.length > 0 && (
+              <AvisoLinha
+                cor="azul"
+                icone={Flag}
+                titulo={`${prontos.length} ${prontos.length === 1 ? "aluno pronto" : "alunos prontos"} para o exame prático`}
+                texto={`Já fizeram todas as aulas práticas: ${prontos
+                  .slice(0, 3)
+                  .map((p) => p.alunoNome)
+                  .join(", ")}${prontos.length > 3 ? "…" : ""}`}
+                acao={<LinkAcao href="/exames?aba=prontos">Agendar exame</LinkAcao>}
+              />
+            )}
+            {feriados.size > 0 && (
+              <AvisoLinha
+                cor="azul"
+                icone={CalendarOff}
+                titulo={feriados.size === 1 ? "Feriado nos próximos dias" : "Feriados nos próximos dias"}
+                texto={`${[...feriados]
+                  .map(([d, nome]) => `${d.split("-").reverse().slice(0, 2).join("/")} – ${nome}`)
+                  .join(" · ")}. Não é possível marcar aulas nesses dias.`}
+                acao={<LinkAcao href="/configuracoes?aba=feriados">Ver feriados</LinkAcao>}
               />
             )}
             {contasAtrasadas && contasAtrasadas._count > 0 && (
@@ -305,7 +343,7 @@ function AvisoLinha({
   texto,
   acao,
 }: {
-  cor: "vermelho" | "amarelo";
+  cor: "vermelho" | "amarelo" | "azul";
   icone: LucideIcon;
   titulo: string;
   texto: string;
@@ -314,7 +352,11 @@ function AvisoLinha({
   return (
     <div
       className={`flex flex-wrap items-center gap-4 rounded-xl border p-4 ${
-        cor === "vermelho" ? "border-red-200 bg-red-50" : "border-amber-200 bg-amber-50"
+        {
+          vermelho: "border-red-200 bg-red-50",
+          amarelo: "border-amber-200 bg-amber-50",
+          azul: "border-blue-200 bg-blue-50",
+        }[cor]
       }`}
     >
       <IconeRedondo icone={icone} cor={cor} />

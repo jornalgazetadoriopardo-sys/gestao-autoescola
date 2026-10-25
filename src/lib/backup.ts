@@ -25,6 +25,7 @@ export async function exportarAutoescola(autoescolaId: number) {
     aulas,
     despesas,
     etapas,
+    feriados,
   ] = await Promise.all([
     dbGlobal.configuracao.findUnique({ where: { id: autoescolaId }, omit: { id: true, contratoArquivo: false } }),
     dbGlobal.usuario.findMany({
@@ -45,6 +46,7 @@ export async function exportarAutoescola(autoescolaId: number) {
     dbGlobal.aula.findMany({ orderBy: { id: "asc" }, where: { matricula: doAluno } }),
     dbGlobal.despesa.findMany({ orderBy: { id: "asc" }, where: { autoescolaId }, omit: { autoescolaId: true } }),
     dbGlobal.etapa.findMany({ orderBy: { id: "asc" }, where: { matricula: doAluno } }),
+    dbGlobal.feriado.findMany({ orderBy: { id: "asc" }, where: { autoescolaId }, omit: { autoescolaId: true } }),
   ]);
   return {
     formato: FORMATO,
@@ -68,6 +70,7 @@ export async function exportarAutoescola(autoescolaId: number) {
     aulas,
     despesas,
     etapas,
+    feriados,
   };
 }
 
@@ -164,6 +167,7 @@ export async function importarAutoescola(arquivo: unknown) {
   // Arquivos exportados antes do módulo de despesas não têm esta lista.
   const despesas = lista(o, "despesas");
   const etapas = lista(o, "etapas");
+  const feriados = lista(o, "feriados");
 
   // E-mail de login é único no sistema todo.
   const u = ler("usuários");
@@ -216,6 +220,7 @@ export async function importarAutoescola(arquivo: unknown) {
               C.calendarioLicenciamento && typeof C.calendarioLicenciamento === "object"
                 ? (C.calendarioLicenciamento as object)
                 : undefined,
+            feriadosIgnorados: Array.isArray(C.feriadosIgnorados) ? (C.feriadosIgnorados as string[]) : undefined,
           },
         });
       }
@@ -388,6 +393,10 @@ export async function importarAutoescola(arquivo: unknown) {
           categoria: et.strN(x, "categoria"),
           ordem: et.intN(x, "ordem") ?? 0,
           data: et.dataN(x, "data"),
+          hora: et.strN(x, "hora"),
+          local: et.strN(x, "local"),
+          veiculoId: opcional(et.intN(x, "veiculoId"), idVeiculo),
+          instrutorId: opcional(et.intN(x, "instrutorId"), idInstrutor),
           resultado: et.strN(x, "resultado"),
           valorCentavos: et.intN(x, "valorCentavos"),
           cobranca: et.strN(x, "cobranca") === "autoescola" ? "autoescola" : "aluno",
@@ -395,6 +404,17 @@ export async function importarAutoescola(arquivo: unknown) {
           forma: et.strN(x, "forma"),
           obs: et.strN(x, "obs"),
           criadoEm: et.dataN(x, "criadoEm") ?? undefined,
+        })),
+      });
+
+      const fe = ler("feriados");
+      await tx.feriado.createMany({
+        data: feriados.map((x) => ({
+          autoescolaId,
+          data: fe.data(x, "data"),
+          nome: fe.str(x, "nome"),
+          anual: fe.bool(x, "anual"),
+          criadoEm: fe.dataN(x, "criadoEm") ?? undefined,
         })),
       });
 

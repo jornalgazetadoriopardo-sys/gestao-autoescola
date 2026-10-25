@@ -9,6 +9,7 @@ import {
   CircleCheck,
   ClipboardCheck,
   FileSignature,
+  Flag,
   FileText,
   GraduationCap,
   HandCoins,
@@ -22,6 +23,7 @@ import {
 import { BotaoConfirmar } from "@/components/botao-confirmar";
 import { Aviso, BotaoDownload, BotaoLink, Cabecalho, Cartao, Etiqueta, Secao, Tabela, Vazio } from "@/components/ui";
 import { db } from "@/lib/db";
+import { prontosParaExamePratico } from "@/lib/prontos-exame";
 import {
   FORMAS_PAGAMENTO,
   STATUS_ALUNO,
@@ -73,6 +75,7 @@ export default async function FichaAlunoPage({
   });
   if (!aluno) notFound();
 
+  const prontos = aluno.status === "ativo" ? await prontosParaExamePratico(aluno.id) : [];
   const foto = urlFoto(aluno);
   const totalAulas = aluno.matriculas.reduce((s, m) => s + m.aulas.length, 0);
   const totalParcelas = aluno.matriculas.reduce((s, m) => s + m.parcelas.length, 0);
@@ -222,6 +225,7 @@ export default async function FichaAlunoPage({
           const emAberto = m.parcelas.filter((p) => !p.pagoEm).reduce((s, p) => s + p.valorCentavos, 0);
           const totalParcelado = m.parcelas.reduce((s, p) => s + p.valorCentavos, 0);
           const resumo = resumoAulas(m, m.aulas);
+          const pronto = prontos.find((p) => p.matriculaId === m.id);
 
           return (
             <Cartao key={m.id}>
@@ -291,6 +295,21 @@ export default async function FichaAlunoPage({
                   </BotaoConfirmar>
                 </div>
               </div>
+
+              {pronto && (
+                <Aviso tipo="info" icone={Flag}>
+                  <span className="flex-1">
+                    <strong>Pronto para o exame prático!</strong> Fez todas as {pronto.praticas} aulas práticas.
+                  </span>
+                  <BotaoLink
+                    href={`${pronto.agendar}${pronto.agendar.includes("?") ? "&" : "?"}voltar=${encodeURIComponent(`/alunos/${aluno.id}`)}`}
+                    tamanho="pequeno"
+                    icone={CalendarPlus}
+                  >
+                    Agendar exame
+                  </BotaoLink>
+                </Aviso>
+              )}
 
               <div className="mb-3 flex items-center justify-between gap-3">
                 <h3 className="flex items-center gap-2 text-lg font-semibold">

@@ -43,6 +43,15 @@ presença e pagamentos.
   - Os horários **ocupados ficam desabilitados** (aluno, instrutor ou veículo já em aula,
     ou horário que já passou), dentro do expediente definido em Configurações
   - Cada aula pode ser **editada** (data, horário, instrutor, veículo...) ou excluída
+  - **Feriados**: não se marca aula em feriado, e o preenchimento automático pula esses dias.
+    Já vêm os nacionais (inclusive Carnaval, Sexta-feira Santa e Corpus Christi, calculados pela
+    Páscoa) e o estadual da UF da autoescola. Em Configurações > Feriados dá para desmarcar os
+    que a autoescola trabalha e cadastrar os da cidade, recessos e folgas
+- **Exame prático**: aba "Prontos para o exame prático" em Exames (alunos que já fizeram todas
+  as aulas práticas e ainda não têm a prova marcada), aviso na tela inicial e na ficha do aluno.
+  A prova é agendada com data, horário, local, instrutor e veículo, aparece na agenda do dia e
+  bloqueia aulas nesse horário
+- **Modo de cores** claro, escuro ou automático (segue o computador/celular), no menu lateral
 - **Despesas** (só administrador): folha de pagamento, vales, abastecimento (com veículo,
   litros e km), retirada do dono, aluguel, contas, impostos e outras
   - Cada despesa pode estar *paga* ou *a pagar* (com vencimento); botão para pagar depois

@@ -6,7 +6,7 @@ import "./impressao.css";
 export default async function ImprimirLayout({ children }: { children: React.ReactNode }) {
   await exigirSessao();
   return (
-    <div className="impressao min-h-screen bg-slate-200 print:bg-white">
+    <div className="impressao sem-tema min-h-screen bg-slate-200 print:bg-white">
       <BarraImpressao />
       <div className="py-6 print:p-0">{children}</div>
     </div>
