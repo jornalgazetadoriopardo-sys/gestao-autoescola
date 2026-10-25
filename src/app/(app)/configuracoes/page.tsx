@@ -4,7 +4,7 @@ import { BotaoConfirmar } from "@/components/botao-confirmar";
 import { FormAcao } from "@/components/form-acao";
 import { Botao, Cabecalho, Campo, Cartao, Etiqueta, Input, Select, Tabela } from "@/components/ui";
 import { exigirSessao } from "@/lib/auth";
-import { obterConfig } from "@/lib/config";
+import { obterConfigCompleta } from "@/lib/config";
 import { db } from "@/lib/db";
 import { alternarUsuario, criarUsuario, trocarSenha } from "./actions";
 import { ConfigForm } from "./config-form";
@@ -49,7 +49,7 @@ export default async function ConfiguracoesPage({ searchParams }: { searchParams
 
       {aba === "dados" && (
         <Cartao className="max-w-3xl">
-          <ConfigForm config={await obterConfig()} />
+          <ConfigForm config={await obterConfigCompleta()} />
         </Cartao>
       )}
       {aba === "usuarios" && <Usuarios usuarioAtual={sessao.usuarioId} />}

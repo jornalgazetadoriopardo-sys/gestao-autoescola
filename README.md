@@ -129,7 +129,7 @@ Depois de baixar uma versão nova: `npm install` e `npm run db:migrate`.
 - Next.js 15 (App Router, Server Actions) + TypeScript
 - Tailwind CSS
 - Prisma + PostgreSQL (Supabase)
-- Hospedagem na Vercel (região São Paulo)
+- Hospedagem na Vercel, na mesma região do banco (`vercel.json`). Hoje o banco do Supabase fica em West US (Oregon), por isso a região é `pdx1`. Se o banco mudar de região, mude também o `vercel.json`: cada tela faz várias consultas, e o sistema longe do banco fica lento
 
 Comandos úteis: `npm run db:studio` abre uma interface para ver/editar o banco.
 
