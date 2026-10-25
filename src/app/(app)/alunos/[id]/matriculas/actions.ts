@@ -7,6 +7,7 @@ import { exigirSessao } from "@/lib/auth";
 import { CATEGORIAS, hojeISO, lerMoeda, lerPercentual } from "@/lib/format";
 import { gerarParcelas } from "@/lib/parcelas";
 import { FORMAS_MATRICULA } from "@/lib/pagamentos";
+import { CURSOS_TEORICOS, TIPOS_PROCESSO, gerarEtapas, lerTaxasPadrao } from "@/lib/etapas";
 import type { EstadoForm } from "@/components/form-acao";
 
 function inteiro(dados: FormData, campo: string) {
@@ -22,6 +23,10 @@ export async function criarMatricula(alunoId: number, _: EstadoForm, dados: Form
   const qtdTeoricas = inteiro(dados, "qtdTeoricas");
   const valorTotal = lerMoeda(String(dados.get("valorTotal") ?? ""));
   const formaPagamento = String(dados.get("formaPagamento") ?? "");
+  const tipoProcesso = String(dados.get("tipoProcesso") ?? "primeira");
+  const cursoTeorico = String(dados.get("cursoTeorico") ?? "autoescola");
+  if (!(tipoProcesso in TIPOS_PROCESSO)) return { erro: "Escolha o tipo de processo." };
+  if (!(cursoTeorico in CURSOS_TEORICOS)) return { erro: "Escolha como será o curso teórico." };
 
   if (!(CATEGORIAS as readonly string[]).includes(categoria)) return { erro: "Selecione a categoria." };
   if (qtdPraticas === null || qtdTeoricas === null) return { erro: "Informe a quantidade de aulas." };
@@ -79,16 +84,23 @@ export async function criarMatricula(alunoId: number, _: EstadoForm, dados: Form
     ];
   }
 
+  // Exames e taxas do processo, com os valores padrão das configurações.
+  const config = await db.configuracao.findFirst({ select: { taxasPadrao: true } });
+  const etapas = gerarEtapas({ tipoProcesso, categoria, cursoTeorico }, lerTaxasPadrao(config?.taxasPadrao));
+
   const matricula = await db.matricula.create({
     data: {
       alunoId,
       categoria,
       qtdPraticas,
-      qtdTeoricas,
+      qtdTeoricas: cursoTeorico === "autoescola" ? qtdTeoricas : 0,
       valorTotalCentavos: valorTotal,
       jurosMesBp,
       formaPagamento,
+      tipoProcesso,
+      cursoTeorico,
       parcelas: { create: parcelas },
+      etapas: { create: etapas },
     },
   });
 
@@ -104,6 +116,7 @@ export async function excluirMatricula(matriculaId: number) {
   await db.$transaction([
     db.aula.deleteMany({ where: { matriculaId } }),
     db.parcela.deleteMany({ where: { matriculaId } }),
+    db.etapa.deleteMany({ where: { matriculaId } }),
     db.matricula.delete({ where: { id: matriculaId } }),
   ]);
   revalidatePath(`/alunos/${matricula.alunoId}`);
@@ -127,6 +140,10 @@ export async function editarMatricula(matriculaId: number, _: EstadoForm, dados:
   if (valorTotal === null) return { erro: "Valor total inválido. Use o formato 1.500,00." };
   if (!(formaPagamento in FORMAS_MATRICULA)) return { erro: "Escolha a forma de pagamento." };
   if (!/^\d{4}-\d{2}-\d{2}$/.test(data)) return { erro: "Informe a data da matrícula." };
+  const tipoProcesso = String(dados.get("tipoProcesso") ?? "");
+  const cursoTeorico = String(dados.get("cursoTeorico") ?? "");
+  if (!(tipoProcesso in TIPOS_PROCESSO)) return { erro: "Escolha o tipo de processo." };
+  if (!(cursoTeorico in CURSOS_TEORICOS)) return { erro: "Escolha como será o curso teórico." };
 
   const matricula = await db.matricula.findUnique({ where: { id: matriculaId } });
   if (!matricula) return { erro: "Matrícula não encontrada." };
@@ -139,6 +156,8 @@ export async function editarMatricula(matriculaId: number, _: EstadoForm, dados:
       qtdTeoricas,
       valorTotalCentavos: valorTotal,
       formaPagamento,
+      tipoProcesso,
+      cursoTeorico,
       data: new Date(`${data}T12:00:00-03:00`),
     },
   });

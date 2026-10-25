@@ -34,11 +34,30 @@ export function AlunoForm({ aluno }: { aluno?: Aluno }) {
               defaultValue={formatarTelefone(aluno?.telefone)}
             />
           </Campo>
-          <Campo label="E-mail">
+          <Campo label="Outro telefone">
+            <Input
+              name="telefone2"
+              inputMode="tel"
+              placeholder="(00) 00000-0000"
+              defaultValue={formatarTelefone(aluno?.telefone2)}
+            />
+          </Campo>
+          <Campo label="E-mail" className="sm:col-span-2">
             <Input name="email" type="email" defaultValue={aluno?.email ?? ""} />
           </Campo>
-          <Campo label="Endereço" className="sm:col-span-2">
-            <Input name="endereco" defaultValue={aluno?.endereco ?? ""} />
+          <div className="grid gap-4 sm:col-span-2 sm:grid-cols-[1fr_7rem]">
+            <Campo label="Endereço (rua)">
+              <Input name="endereco" defaultValue={aluno?.endereco ?? ""} />
+            </Campo>
+            <Campo label="Nº">
+              <Input name="numero" defaultValue={aluno?.numero ?? ""} />
+            </Campo>
+          </div>
+          <Campo label="Bairro">
+            <Input name="bairro" defaultValue={aluno?.bairro ?? ""} />
+          </Campo>
+          <Campo label="Local de atividade (trabalho)">
+            <Input name="localAtividade" defaultValue={aluno?.localAtividade ?? ""} />
           </Campo>
           <Campo label="Categoria *">
             <Select name="categoria" required defaultValue={aluno?.categoria ?? "B"}>
@@ -58,7 +77,53 @@ export function AlunoForm({ aluno }: { aluno?: Aluno }) {
               ))}
             </Select>
           </Campo>
-          <Campo label="Observações" className="sm:col-span-2">
+        </div>
+
+        <details
+          className="rounded-xl border border-slate-200 p-4"
+          open={Boolean(aluno?.rg || aluno?.renach || aluno?.mae)}
+        >
+          <summary className="cursor-pointer text-base font-semibold text-slate-800">
+            Documentos e filiação (para a ficha do Detran)
+          </summary>
+          <div className="mt-4 grid gap-4 sm:grid-cols-2">
+            <Campo label="Nome da mãe">
+              <Input name="mae" defaultValue={aluno?.mae ?? ""} />
+            </Campo>
+            <Campo label="Nome do pai">
+              <Input name="pai" defaultValue={aluno?.pai ?? ""} />
+            </Campo>
+            <div className="grid gap-4 sm:col-span-2 sm:grid-cols-[1fr_8rem_5rem]">
+              <Campo label="RG">
+                <Input name="rg" defaultValue={aluno?.rg ?? ""} />
+              </Campo>
+              <Campo label="Órgão emissor">
+                <Input name="rgOrgao" placeholder="SSP" defaultValue={aluno?.rgOrgao ?? ""} />
+              </Campo>
+              <Campo label="UF">
+                <Input name="rgUf" maxLength={2} defaultValue={aluno?.rgUf ?? ""} />
+              </Campo>
+            </div>
+            <Campo label="Data de expedição do RG">
+              <Input name="rgExpedicao" type="date" defaultValue={dataParaInput(aluno?.rgExpedicao)} />
+            </Campo>
+            <Campo label="Naturalidade (cidade onde nasceu)">
+              <Input name="naturalidade" defaultValue={aluno?.naturalidade ?? ""} />
+            </Campo>
+            <Campo label="RENACH" ajuda="Número do processo no Detran.">
+              <Input name="renach" defaultValue={aluno?.renach ?? ""} />
+            </Campo>
+            <Campo label="Nº de registro da CNH" ajuda="Para quem já tem CNH (adição/mudança).">
+              <Input name="registroCnh" defaultValue={aluno?.registroCnh ?? ""} />
+            </Campo>
+            <Campo label="Atualização biométrica (data)">
+              <Input name="biometriaEm" type="date" defaultValue={dataParaInput(aluno?.biometriaEm)} />
+            </Campo>
+          </div>
+        </details>
+
+        <div className="grid gap-4">
+          <Campo label="Observações">
             <Textarea name="obs" defaultValue={aluno?.obs ?? ""} />
           </Campo>
         </div>

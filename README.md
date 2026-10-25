@@ -13,6 +13,17 @@ presença e pagamentos.
   parcela (inclusive a baixa já feita) e acrescentar parcela, aula (também com presença; aula
   cancelada pode ser reativada), instrutor, veículo, manutenção, despesa, usuário e, na
   Plataforma, autoescola suspensa (digitando o nome para confirmar)
+- **Processo de habilitação** (regras de 2025/2026): na matrícula, o tipo (1ª habilitação, adição,
+  mudança de categoria ou reabilitação) e o curso teórico (na autoescola, online grátis pelo app
+  CNH do Brasil ou não precisa). A lista de **exames e taxas** do aluno é criada sozinha: exame
+  médico, psicológico, toxicológico (1ª habilitação e categorias C, D, E), biometria, curso online,
+  prova teórica, prova prática de cada categoria e emissão da CNH, com os valores de
+  Configurações > Taxas e exames. Cada item tem data, resultado (aprovado/reprovado, apto/inapto),
+  valor e quem paga (aluno direto ou autoescola cobra, com recebimento e recibo). Reprovou na
+  prova: a nova tentativa entra sozinha com a taxa de reexame. Tela **Exames e taxas** com os
+  exames agendados, os resultados pendentes, o que falta marcar e as taxas a receber
+- **Ficha do aluno** para imprimir (A4), no lugar da ficha de papel: dados, filiação, RG, RENACH,
+  foto, pagamento e andamento dos exames
 - **Matrícula** com forma de pagamento:
   - *Parcelado pela autoescola*: gera as parcelas (com juros ao mês opcional) e o
     **carnê para imprimir** (4 parcelas por folha A4, para recortar)

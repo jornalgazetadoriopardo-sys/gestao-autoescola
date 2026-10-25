@@ -3,6 +3,7 @@ import PizZip from "pizzip";
 import Docxtemplater from "docxtemplater";
 import type { Aluno, Configuracao, Matricula, Parcela } from "@prisma/client";
 import { enderecoCompleto } from "./config";
+import { CURSOS_TEORICOS, TIPOS_PROCESSO } from "./etapas";
 import {
   formatarCpf,
   formatarData,
@@ -30,13 +31,20 @@ export const CAMPOS_CONTRATO: { grupo: string; campos: [chave: string, descricao
       ["aluno_nascimento", "Data de nascimento"],
       ["aluno_telefone", "Telefone"],
       ["aluno_email", "E-mail"],
-      ["aluno_endereco", "Endereço"],
+      ["aluno_endereco", "Endereço (rua, nº e bairro)"],
+      ["aluno_rg", "RG (com órgão emissor)"],
+      ["aluno_mae", "Nome da mãe"],
+      ["aluno_pai", "Nome do pai"],
+      ["aluno_naturalidade", "Naturalidade"],
+      ["aluno_renach", "RENACH"],
     ],
   },
   {
     grupo: "Matrícula",
     campos: [
       ["categoria", "Categoria (A, B, AB...)"],
+      ["tipo_processo", "Tipo de processo (1ª habilitação, adição...)"],
+      ["curso_teorico", "Curso teórico (na autoescola, online grátis...)"],
       ["aulas_praticas", "Quantidade de aulas práticas"],
       ["aulas_teoricas", "Quantidade de aulas teóricas"],
       ["valor_total", "Valor contratado (R$ 1.500,00)"],
@@ -101,7 +109,16 @@ export function dadosDoContrato(m: MatriculaCompleta, c: Configuracao) {
     aluno_nascimento: ou(formatarData(m.aluno.nascimento)),
     aluno_telefone: ou(formatarTelefone(m.aluno.telefone)),
     aluno_email: ou(m.aluno.email),
-    aluno_endereco: ou(m.aluno.endereco),
+    aluno_endereco: ou(
+      [m.aluno.endereco, m.aluno.numero && `nº ${m.aluno.numero}`, m.aluno.bairro].filter(Boolean).join(", "),
+    ),
+    aluno_rg: ou([m.aluno.rg, [m.aluno.rgOrgao, m.aluno.rgUf].filter(Boolean).join("/")].filter(Boolean).join(" ")),
+    aluno_mae: ou(m.aluno.mae),
+    aluno_pai: ou(m.aluno.pai),
+    aluno_naturalidade: ou(m.aluno.naturalidade),
+    aluno_renach: ou(m.aluno.renach),
+    tipo_processo: TIPOS_PROCESSO[m.tipoProcesso]?.titulo ?? m.tipoProcesso,
+    curso_teorico: CURSOS_TEORICOS[m.cursoTeorico]?.titulo ?? m.cursoTeorico,
     categoria: m.categoria,
     aulas_praticas: String(m.qtdPraticas),
     aulas_teoricas: String(m.qtdTeoricas),

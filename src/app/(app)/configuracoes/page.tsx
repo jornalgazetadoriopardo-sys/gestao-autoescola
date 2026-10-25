@@ -1,6 +1,7 @@
 import Link from "next/link";
 import {
   Building2,
+  ClipboardCheck,
   Download,
   FileSignature,
   KeyRound,
@@ -30,6 +31,9 @@ import { obterConfigCompleta } from "@/lib/config";
 import { db } from "@/lib/db";
 import { CAMPOS_CONTRATO, CAMPOS_PARCELA } from "@/lib/contrato";
 import { formatarDataLocal } from "@/lib/format";
+import { TAXAS_CONFIGURAVEIS, lerTaxasPadrao } from "@/lib/etapas";
+import { moedaParaInput } from "@/lib/format";
+import { salvarTaxas } from "./actions";
 import { alternarUsuario, criarUsuario, excluirUsuario, removerContrato, salvarContrato, trocarSenha } from "./actions";
 import { ConfigForm } from "./config-form";
 import { CopiarMarcacao } from "./copiar-marcacao";
@@ -40,6 +44,7 @@ export const dynamic = "force-dynamic";
 const abas = [
   { id: "dados", label: "Dados da autoescola", icone: Building2, soAdmin: true },
   { id: "usuarios", label: "Usuários", icone: Users, soAdmin: true },
+  { id: "taxas", label: "Taxas e exames", icone: ClipboardCheck, soAdmin: true },
   { id: "impressora", label: "Impressora", icone: Printer, soAdmin: true },
   { id: "contrato", label: "Contrato", icone: FileSignature, soAdmin: true },
   { id: "senha", label: "Minha senha", icone: KeyRound, soAdmin: false },
@@ -56,7 +61,9 @@ export default async function ConfiguracoesPage({ searchParams }: { searchParams
     <>
       <Cabecalho
         titulo="Configurações"
-        descricao={admin ? "Dados da autoescola, usuários, impressora, contrato e senha." : "Troque a sua senha de acesso."}
+        descricao={
+          admin ? "Dados da autoescola, usuários, impressora, contrato e senha." : "Troque a sua senha de acesso."
+        }
         icone={Settings}
         cor="cinza"
       />
@@ -81,6 +88,7 @@ export default async function ConfiguracoesPage({ searchParams }: { searchParams
         </Cartao>
       )}
       {aba === "usuarios" && <Usuarios usuarioAtual={sessao.usuarioId} />}
+      {aba === "taxas" && <Taxas />}
       {aba === "impressora" && <Impressora />}
       {aba === "contrato" && <Contrato />}
       {aba === "senha" && (
@@ -322,5 +330,41 @@ async function Contrato() {
         </div>
       </Cartao>
     </div>
+  );
+}
+
+async function Taxas() {
+  const config = await obterConfigCompleta();
+  const taxas = lerTaxasPadrao(config.taxasPadrao);
+  return (
+    <Cartao className="max-w-4xl">
+      <h2 className="mb-1 flex items-center gap-2 text-lg font-semibold">
+        <ClipboardCheck className="size-6 text-purple-600" aria-hidden /> Valores de exames e taxas
+      </h2>
+      <p className="mb-5 text-base text-slate-600">
+        Valores que entram sozinhos na lista do aluno ao fazer a matrícula. Em cada aluno dá para mudar depois. Deixe em
+        branco o que não souber.
+      </p>
+      <FormAcao acao={salvarTaxas} textoBotao="Salvar valores">
+        <div className="divide-y divide-slate-100 rounded-xl border border-slate-200">
+          {TAXAS_CONFIGURAVEIS.map(([tipo, titulo]) => (
+            <div key={tipo} className="grid items-center gap-3 p-3 sm:grid-cols-[1fr_9rem_15rem]">
+              <span className="text-base font-medium">{titulo}</span>
+              <Input
+                name={`valor_${tipo}`}
+                inputMode="decimal"
+                placeholder="R$ 0,00"
+                aria-label={`Valor de ${titulo}`}
+                defaultValue={moedaParaInput(taxas[tipo]?.valor)}
+              />
+              <Select name={`cobranca_${tipo}`} defaultValue={taxas[tipo]?.cobranca ?? "aluno"} aria-label="Quem paga">
+                <option value="aluno">Aluno paga direto</option>
+                <option value="autoescola">Autoescola cobra do aluno</option>
+              </Select>
+            </div>
+          ))}
+        </div>
+      </FormAcao>
+    </Cartao>
   );
 }

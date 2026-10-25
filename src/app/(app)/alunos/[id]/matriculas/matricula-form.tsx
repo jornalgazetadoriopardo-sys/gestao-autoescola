@@ -3,9 +3,11 @@
 import { useState } from "react";
 import { Banknote, BookOpen, CreditCard, QrCode, ScrollText, type LucideIcon } from "lucide-react";
 import { FormAcao } from "@/components/form-acao";
+import { Opcoes } from "@/components/opcoes";
 import { Campo, Cartao, Input, Select } from "@/components/ui";
 import { CATEGORIAS, formatarData, formatarMoeda, lerMoeda, lerPercentual } from "@/lib/format";
 import { FORMAS_MATRICULA } from "@/lib/pagamentos";
+import { CURSOS_TEORICOS, TIPOS_PROCESSO } from "@/lib/etapas";
 import { gerarParcelas } from "@/lib/parcelas";
 import { criarMatricula } from "./actions";
 
@@ -22,6 +24,8 @@ export function MatriculaForm({ alunoId, categoria, hoje }: { alunoId: number; c
   const [qtdParcelas, setQtdParcelas] = useState("1");
   const [vencimento, setVencimento] = useState(hoje);
   const [juros, setJuros] = useState("");
+  const [processo, setProcesso] = useState("primeira");
+  const [curso, setCurso] = useState("online");
 
   // Prévia das parcelas com a mesma regra usada ao salvar.
   const total = lerMoeda(valor);
@@ -40,6 +44,30 @@ export function MatriculaForm({ alunoId, categoria, hoje }: { alunoId: number; c
           <h2 className="flex items-center gap-2 text-lg font-semibold">
             <BookOpen className="size-6 text-blue-600" aria-hidden /> 1. O que foi contratado
           </h2>
+          <Opcoes
+            nome="tipoProcesso"
+            legenda="Tipo de processo"
+            opcoes={TIPOS_PROCESSO}
+            inicial={processo}
+            aoMudar={(v) => {
+              setProcesso(v);
+              if (v === "adicao") setCurso("dispensado");
+            }}
+          />
+          <Opcoes
+            key={processo === "adicao" ? "adicao" : "outro"}
+            nome="cursoTeorico"
+            legenda="Curso teórico"
+            opcoes={CURSOS_TEORICOS}
+            inicial={curso}
+            aoMudar={setCurso}
+            colunas="sm:grid-cols-3"
+          />
+          <p className="rounded-lg bg-blue-50 px-3 py-2 text-sm text-blue-900">
+            Regras novas (Resolução Contran 1.020/2025): o curso teórico pode ser feito grátis no app CNH do Brasil e o
+            mínimo de aulas práticas caiu de 20 para 2. Os exames e taxas do Detran continuam obrigatórios e entram
+            sozinhos na lista do aluno.
+          </p>
           <div className="grid gap-5 sm:grid-cols-3">
             <Campo label="Categoria">
               <Select name="categoria" defaultValue={categoria}>
@@ -53,9 +81,13 @@ export function MatriculaForm({ alunoId, categoria, hoje }: { alunoId: number; c
             <Campo label="Aulas práticas">
               <Input name="qtdPraticas" type="number" min={0} required defaultValue={0} />
             </Campo>
-            <Campo label="Aulas teóricas">
-              <Input name="qtdTeoricas" type="number" min={0} required defaultValue={0} />
-            </Campo>
+            {curso === "autoescola" ? (
+              <Campo label="Aulas teóricas">
+                <Input name="qtdTeoricas" type="number" min={0} required defaultValue={0} />
+              </Campo>
+            ) : (
+              <input type="hidden" name="qtdTeoricas" value="0" />
+            )}
             <Campo label="Valor total (R$)" className="sm:col-span-3">
               <Input
                 name="valorTotal"

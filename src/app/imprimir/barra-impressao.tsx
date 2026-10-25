@@ -5,7 +5,7 @@ import { usePathname, useSearchParams } from "next/navigation";
 import { FileText, Printer, Receipt, X } from "lucide-react";
 
 // Recibo e carnê podem sair em folha A4 ou na impressora térmica (80 mm).
-const COM_TERMICA = ["/imprimir/recibo/", "/imprimir/carne/"];
+const COM_TERMICA = ["/imprimir/recibo/", "/imprimir/recibo-taxa/", "/imprimir/carne/"];
 
 export function BarraImpressao() {
   const caminho = usePathname();
@@ -15,7 +15,7 @@ export function BarraImpressao() {
   useEffect(() => setTermica(Boolean(document.querySelector(".cupom"))), [caminho, params]);
 
   const alternavel = COM_TERMICA.some((c) => caminho.startsWith(c));
-  const recibo = caminho.startsWith("/imprimir/recibo/");
+  const recibo = caminho.startsWith("/imprimir/recibo");
   const link = (mudar: Record<string, string>) => {
     const p = new URLSearchParams(params.toString());
     for (const [k, v] of Object.entries(mudar)) p.set(k, v);

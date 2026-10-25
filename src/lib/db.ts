@@ -49,6 +49,7 @@ const FILTRO: Record<string, (autoescolaId: number) => object> = {
   Matricula: (id) => ({ aluno: { autoescolaId: id } }),
   Aula: (id) => ({ matricula: { aluno: { autoescolaId: id } } }),
   Parcela: (id) => ({ matricula: { aluno: { autoescolaId: id } } }),
+  Etapa: (id) => ({ matricula: { aluno: { autoescolaId: id } } }),
   Manutencao: (id) => ({ veiculo: { autoescolaId: id } }),
   Despesa: (id) => ({ autoescolaId: id }),
 };
@@ -72,6 +73,7 @@ const REFERENCIAS: Record<string, [campo: string, modelo: string][]> = {
     ["veiculoId", "Veiculo"],
   ],
   Parcela: [["matriculaId", "Matricula"]],
+  Etapa: [["matriculaId", "Matricula"]],
   Manutencao: [["veiculoId", "Veiculo"]],
   Despesa: [["veiculoId", "Veiculo"]],
 };
