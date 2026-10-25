@@ -48,6 +48,10 @@ async function configPadrao(): Promise<Configuracao> {
       horaFim: "20:00",
       intervaloMin: 60,
       logo: null,
+      impressoraRecibo: "a4",
+      contratoArquivo: null,
+      contratoNome: null,
+      contratoEm: null,
     }
   );
 }

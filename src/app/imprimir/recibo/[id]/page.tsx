@@ -4,11 +4,19 @@ import { obterConfig } from "@/lib/config";
 import { db } from "@/lib/db";
 import { FORMAS_PAGAMENTO, formatarCpf, formatarData, formatarMoeda } from "@/lib/format";
 import { valorPorExtenso } from "@/lib/pagamentos";
+import { formatoDe } from "@/lib/formato";
 import { CabecalhoDocumento } from "../../cabecalho-documento";
+import { Assinatura, CabecalhoCupom, Cupom, LinhaCupom } from "../../cupom";
 
 export const dynamic = "force-dynamic";
 
-export default async function ReciboPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function ReciboPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<{ formato?: string; vias?: string }>;
+}) {
   const [parcela, config] = await Promise.all([
     db.parcela.findUnique({
       where: { id: Number((await params).id) || 0 },
@@ -18,7 +26,49 @@ export default async function ReciboPage({ params }: { params: Promise<{ id: str
   ]);
   if (!parcela) notFound();
   if (!parcela.pagoEm) {
-    return <p className="p-10 text-center text-lg">Esta parcela ainda não foi paga. O recibo só pode ser emitido após o pagamento.</p>;
+    return (
+      <p className="p-10 text-center text-lg">
+        Esta parcela ainda não foi paga. O recibo só pode ser emitido após o pagamento.
+      </p>
+    );
+  }
+
+  const { formato, vias } = await searchParams;
+  if (formatoDe(formato, config.impressoraRecibo) === "termica") {
+    const nomes = vias === "2" ? ["Via do aluno", "Via da autoescola"] : ["Via do aluno"];
+    const valor = parcela.valorPagoCentavos ?? parcela.valorCentavos;
+    const { aluno } = parcela.matricula;
+    return (
+      <>
+        {nomes.map((nome) => (
+          <Cupom key={nome}>
+            <CabecalhoCupom config={config} titulo="Recibo" />
+            <div className="text-center">Nº {String(parcela.id).padStart(6, "0")}</div>
+            <div className="tracejado" />
+            <LinhaCupom rotulo="Data" valor={formatarData(parcela.pagoEm)} />
+            <div className="mt-1">
+              Aluno: <b>{aluno.nome}</b>
+            </div>
+            <div>CPF: {formatarCpf(aluno.cpf)}</div>
+            <div className="mt-1">
+              Referente:{" "}
+              {parcela.matricula.formaPagamento === "carne"
+                ? `parcela ${parcela.numero}/${parcela.matricula._count.parcelas} (venc. ${formatarData(parcela.vencimento)})`
+                : "matrícula"}{" "}
+              · Categoria {parcela.matricula.categoria}
+            </div>
+            <LinhaCupom rotulo="Forma" valor={FORMAS_PAGAMENTO[parcela.forma ?? ""] ?? parcela.forma} />
+            {parcela.obs && <div>{parcela.obs}</div>}
+            <div className="tracejado" />
+            <LinhaCupom rotulo="VALOR PAGO" valor={formatarMoeda(valor)} forte />
+            <div className="text-[11px]">({valorPorExtenso(valor)})</div>
+            <div className="tracejado" />
+            <Assinatura texto={config.nome} />
+            <div className="mt-2 text-center text-[11px] uppercase">{nome}</div>
+          </Cupom>
+        ))}
+      </>
+    );
   }
 
   const via = (nome: string) => (

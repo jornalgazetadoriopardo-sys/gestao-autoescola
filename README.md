@@ -42,6 +42,12 @@ presença e pagamentos.
   faltas, quanto falta para concluir e pagamentos), financeiro (para o administrador:
   entradas, despesas, lucro, retiradas e sobra no caixa), despesas por tipo e por pessoa,
   resumo do ano mês a mês e aulas por período
+- **Impressora térmica** (ex.: Elgin i9, bobina 80 mm): recibo (1 ou 2 vias) e carnê (um cupom
+  por parcela) saem em cupom; escolha o padrão em Configurações > Impressora e troque entre A4 e
+  térmica na própria tela de impressão. Guia do aluno, relatórios e contrato continuam em A4
+- **Contrato**: cada autoescola envia o seu contrato em Word (.docx) com marcações como
+  `{{aluno_nome}}`; na ficha do aluno, o botão Contrato baixa o arquivo preenchido (lista de
+  marcações e um exemplo em Configurações > Contrato)
 - **Configurações**: dados e logotipo da autoescola (usados no menu, carnê, recibos
   e relatórios), usuários (administrador ou secretaria) e troca de senha
 - **Várias autoescolas** no mesmo sistema: cada usuário pertence a uma autoescola e

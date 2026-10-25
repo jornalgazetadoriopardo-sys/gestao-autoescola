@@ -7,6 +7,7 @@ import {
   CalendarPlus,
   CalendarRange,
   CircleCheck,
+  FileSignature,
   FileText,
   GraduationCap,
   HandCoins,
@@ -17,7 +18,7 @@ import {
   Wallet,
 } from "lucide-react";
 import { BotaoConfirmar } from "@/components/botao-confirmar";
-import { Aviso, BotaoLink, Cabecalho, Cartao, Etiqueta, Secao, Tabela, Vazio } from "@/components/ui";
+import { Aviso, BotaoDownload, BotaoLink, Cabecalho, Cartao, Etiqueta, Secao, Tabela, Vazio } from "@/components/ui";
 import { db } from "@/lib/db";
 import {
   FORMAS_PAGAMENTO,
@@ -51,6 +52,7 @@ export default async function FichaAlunoPage({
   searchParams: Promise<{ nova?: string; recebido?: string; agendadas?: string }>;
 }) {
   const { nova, recebido, agendadas } = await searchParams;
+  const temContrato = Boolean((await db.configuracao.findFirst({ select: { contratoNome: true } }))?.contratoNome);
   const aluno = await db.aluno.findUnique({
     where: { id: Number((await params).id) || 0 },
     include: {
@@ -124,6 +126,16 @@ export default async function FichaAlunoPage({
           >
             Guia do aluno
           </BotaoLink>
+          {temContrato && (
+            <BotaoDownload
+              href={`/contrato/${matriculaNova.id}`}
+              variante="primario"
+              tamanho="pequeno"
+              icone={FileSignature}
+            >
+              Contrato
+            </BotaoDownload>
+          )}
           {matriculaNova.formaPagamento === "carne" && matriculaNova.parcelas.length > 0 && (
             <BotaoLink href={`/imprimir/carne/${matriculaNova.id}`} target="_blank" tamanho="pequeno" icone={Printer}>
               Imprimir carnê
@@ -228,6 +240,11 @@ export default async function FichaAlunoPage({
                   >
                     Guia do aluno
                   </BotaoLink>
+                  {temContrato && (
+                    <BotaoDownload href={`/contrato/${m.id}`} tamanho="pequeno" icone={FileSignature}>
+                      Contrato
+                    </BotaoDownload>
+                  )}
                   {m.formaPagamento === "carne" && m.parcelas.length > 0 && (
                     <BotaoLink
                       href={`/imprimir/carne/${m.id}`}

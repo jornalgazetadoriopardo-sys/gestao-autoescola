@@ -195,6 +195,12 @@ model Configuracao {
   intervaloMin     Int        @default(60)
   // Logotipo em data URL (imagem já reduzida no navegador).
   logo             String?
+  // Onde saem recibos e carnê: "a4" (impressora comum) ou "termica" (bobina 80 mm).
+  impressoraRecibo String     @default("a4")
+  // Modelo de contrato (.docx) com marcações {{campo}} preenchidas com os dados do aluno.
+  contratoArquivo  Bytes?
+  contratoNome     String?
+  contratoEm       DateTime?
 }
 
 // Despesas da autoescola: folha, vales, abastecimento, contas, retiradas...

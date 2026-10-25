@@ -2,8 +2,20 @@ import type { Configuracao } from "@prisma/client";
 import { enderecoCompleto } from "@/lib/config";
 
 // Logotipo e dados da autoescola no topo de recibos e relatórios.
-export function CabecalhoDocumento({ config, titulo, compacto }: { config: Configuracao; titulo?: string; compacto?: boolean }) {
-  const contato = [config.telefone && `Tel.: ${config.telefone}`, config.whatsapp && `WhatsApp: ${config.whatsapp}`, config.email]
+export function CabecalhoDocumento({
+  config,
+  titulo,
+  compacto,
+}: {
+  config: Configuracao;
+  titulo?: string;
+  compacto?: boolean;
+}) {
+  const contato = [
+    config.telefone && `Tel.: ${config.telefone}`,
+    config.whatsapp && `WhatsApp: ${config.whatsapp}`,
+    config.email,
+  ]
     .filter(Boolean)
     .join(" · ");
   return (
@@ -20,7 +32,9 @@ export function CabecalhoDocumento({ config, titulo, compacto }: { config: Confi
         </div>
         {contato && <div className="text-xs text-slate-700">{contato}</div>}
       </div>
-      {titulo && <div className={`text-right font-bold uppercase ${compacto ? "text-base" : "text-2xl"}`}>{titulo}</div>}
+      {titulo && (
+        <div className={`text-right font-bold uppercase ${compacto ? "text-base" : "text-2xl"}`}>{titulo}</div>
+      )}
     </div>
   );
 }

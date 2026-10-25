@@ -78,10 +78,7 @@ export function Botao({
   ...props
 }: ComponentProps<"button"> & ExtrasBotao) {
   return (
-    <button
-      {...props}
-      className={`${botaoBase} ${tamanhos[tamanho]} ${variantes[variante]} ${props.className ?? ""}`}
-    >
+    <button {...props} className={`${botaoBase} ${tamanhos[tamanho]} ${variantes[variante]} ${props.className ?? ""}`}>
       {conteudoBotao(icone, tamanho, children)}
     </button>
   );
@@ -95,20 +92,30 @@ export function BotaoLink({
   ...props
 }: ComponentProps<typeof Link> & ExtrasBotao) {
   return (
-    <Link
-      {...props}
-      className={`${botaoBase} ${tamanhos[tamanho]} ${variantes[variante]} ${props.className ?? ""}`}
-    >
+    <Link {...props} className={`${botaoBase} ${tamanhos[tamanho]} ${variantes[variante]} ${props.className ?? ""}`}>
       {conteudoBotao(icone, tamanho, children)}
     </Link>
   );
 }
 
+// Link para baixar um arquivo (contrato, modelo...): <a> comum, com cara de botão.
+export function BotaoDownload({
+  variante = "secundario",
+  tamanho = "normal",
+  icone,
+  children,
+  ...props
+}: ComponentProps<"a"> & ExtrasBotao) {
+  return (
+    <a {...props} className={`${botaoBase} ${tamanhos[tamanho]} ${variantes[variante]} ${props.className ?? ""}`}>
+      {conteudoBotao(icone, tamanho, children)}
+    </a>
+  );
+}
+
 export function Cartao({ children, className = "" }: { children: ReactNode; className?: string }) {
   return (
-    <div className={`rounded-xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6 ${className}`}>
-      {children}
-    </div>
+    <div className={`rounded-xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6 ${className}`}>{children}</div>
   );
 }
 

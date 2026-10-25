@@ -48,7 +48,8 @@ export default async function RelatorioAulasPage({
     <div className="folha text-sm">
       <CabecalhoDocumento config={config} titulo="Relatório de aulas" />
       <p className="mt-3 text-base">
-        Período: <b>{formatarData(new Date(`${de}T00:00:00Z`))}</b> a <b>{formatarData(new Date(`${ate}T00:00:00Z`))}</b>
+        Período: <b>{formatarData(new Date(`${de}T00:00:00Z`))}</b> a{" "}
+        <b>{formatarData(new Date(`${ate}T00:00:00Z`))}</b>
         {instrutor && (
           <>
             {" "}

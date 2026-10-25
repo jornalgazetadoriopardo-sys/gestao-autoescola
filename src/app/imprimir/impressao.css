@@ -35,3 +35,40 @@
     print-color-adjust: exact;
   }
 }
+
+/* Impressora térmica (bobina 80 mm, área de impressão de 72 mm).
+   A página "termica" usa o papel escolhido no driver da impressora. */
+@page termica {
+  size: auto;
+  margin: 0;
+}
+
+.cupom {
+  page: termica;
+  width: 72mm;
+  margin: 0 auto 6mm;
+  padding: 4mm 3mm;
+  background: white;
+  box-shadow: 0 2px 12px rgb(0 0 0 / 0.15);
+  color: #000;
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.cupom .tracejado {
+  border-top: 1px dashed #000;
+  margin: 2mm 0;
+}
+
+@media print {
+  .cupom {
+    margin: 0 auto;
+    padding: 0 0 6mm;
+    box-shadow: none;
+    /* Um cupom por página: o driver corta o papel entre eles. */
+    break-after: page;
+  }
+  .cupom:last-child {
+    break-after: auto;
+  }
+}

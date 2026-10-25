@@ -6,6 +6,7 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
 import { exigirAdmin, exigirSessao } from "@/lib/auth";
+import { CONTRATO_MAX, conferirModelo } from "@/lib/contrato";
 import type { EstadoForm } from "@/components/form-acao";
 
 function texto(dados: FormData, campo: string) {
@@ -154,4 +155,68 @@ export async function excluirUsuario(usuarioId: number) {
   if (!usuario || usuario.superadmin) return;
   await db.usuario.delete({ where: { id: usuarioId } });
   revalidatePath("/configuracoes");
+}
+
+// Recebe o modelo de contrato (.docx) da autoescola.
+export async function salvarContrato(_: EstadoForm, dados: FormData): Promise<EstadoForm> {
+  const sessao = await exigirAdmin();
+  const arquivo = dados.get("arquivo");
+  if (!(arquivo instanceof File) || arquivo.size === 0) return { erro: "Escolha o arquivo do contrato (.docx)." };
+  if (!/\.docx$/i.test(arquivo.name)) {
+    return {
+      erro: "Use um arquivo do Word no formato .docx. No Word: Arquivo > Salvar como > Documento do Word (.docx).",
+    };
+  }
+  if (arquivo.size > CONTRATO_MAX)
+    return { erro: "Arquivo grande demais (máximo 3 MB). Tire imagens pesadas do documento." };
+
+  const bytes = new Uint8Array(await arquivo.arrayBuffer());
+  const conferido = conferirModelo(bytes);
+  if ("erro" in conferido) return conferido;
+
+  const id = sessao.autoescolaId;
+  const campos = { contratoArquivo: bytes, contratoNome: arquivo.name, contratoEm: new Date() };
+  const config = await db.configuracao.findFirst({ select: { id: true } });
+  if (config) await db.configuracao.update({ where: { id }, data: campos });
+  else {
+    const autoescola = await db.autoescola.findFirstOrThrow();
+    await db.configuracao.create({ data: { id, nome: autoescola.nome, ...campos } });
+  }
+  revalidatePath("/configuracoes");
+  const aviso = conferido.desconhecidas.length
+    ? ` Atenção: estas marcações não são reconhecidas e vão sair em branco: ${conferido.desconhecidas.map((t) => `{{${t}}}`).join(", ")}.`
+    : "";
+  return { ok: `Contrato salvo! Ele já pode ser gerado na ficha de cada aluno.${aviso}` };
+}
+
+export async function removerContrato() {
+  await exigirAdmin();
+  const config = await db.configuracao.findFirst({ select: { id: true } });
+  if (config) {
+    await db.configuracao.update({
+      where: { id: config.id },
+      data: { contratoArquivo: null, contratoNome: null, contratoEm: null },
+    });
+  }
+  revalidatePath("/configuracoes");
+}
+
+// Onde saem recibos e carnê por padrão: impressora comum (A4) ou térmica (80 mm).
+export async function salvarImpressora(_: EstadoForm, dados: FormData): Promise<EstadoForm> {
+  const sessao = await exigirAdmin();
+  const impressoraRecibo = dados.get("impressoraRecibo") === "termica" ? "termica" : "a4";
+  const id = sessao.autoescolaId;
+  const autoescola = await db.autoescola.findFirstOrThrow();
+  await db.configuracao.upsert({
+    where: { id },
+    create: { id, nome: autoescola.nome, impressoraRecibo },
+    update: { impressoraRecibo },
+  });
+  revalidatePath("/configuracoes");
+  return {
+    ok:
+      impressoraRecibo === "termica"
+        ? "Pronto: recibos e carnê vão sair na térmica."
+        : "Pronto: recibos e carnê vão sair em folha A4.",
+  };
 }
