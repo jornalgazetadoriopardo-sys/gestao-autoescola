@@ -114,6 +114,7 @@ export async function excluirAutoescola(autoescolaId: number, _: EstadoForm, dad
     dbGlobal.matricula.deleteMany({ where: doAluno }),
     dbGlobal.aluno.deleteMany({ where: { autoescolaId } }),
     dbGlobal.despesa.deleteMany({ where: { autoescolaId } }),
+    dbGlobal.feriado.deleteMany({ where: { autoescolaId } }),
     dbGlobal.manutencao.deleteMany({ where: { veiculo: { autoescolaId } } }),
     dbGlobal.veiculo.deleteMany({ where: { autoescolaId } }),
     dbGlobal.instrutor.deleteMany({ where: { autoescolaId } }),

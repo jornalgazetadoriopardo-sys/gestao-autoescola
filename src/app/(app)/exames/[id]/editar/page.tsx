@@ -6,6 +6,7 @@ import { db } from "@/lib/db";
 import { dataParaInput, hojeISO, moedaParaInput } from "@/lib/format";
 import { excluirEtapa } from "../../actions";
 import { EtapaForm } from "../../etapa-form";
+import { opcoesDoExame } from "../../opcoes-exame";
 
 export const dynamic = "force-dynamic";
 
@@ -22,6 +23,7 @@ export default async function EditarEtapaPage({
   });
   if (!etapa) notFound();
   const { voltar = `/alunos/${etapa.matricula.alunoId}` } = await searchParams;
+  const opcoes = await opcoesDoExame(etapa);
 
   return (
     <>
@@ -50,12 +52,17 @@ export default async function EditarEtapaPage({
           matriculaId={etapa.matriculaId}
           hoje={hojeISO()}
           voltar={voltar}
+          {...opcoes}
           inicial={{
             id: etapa.id,
             tipo: etapa.tipo,
             descricao: etapa.descricao,
             categoria: etapa.categoria ?? "",
             data: dataParaInput(etapa.data),
+            hora: etapa.hora ?? "",
+            local: etapa.local ?? "",
+            veiculoId: etapa.veiculoId ? String(etapa.veiculoId) : "",
+            instrutorId: etapa.instrutorId ? String(etapa.instrutorId) : "",
             resultado: etapa.resultado ?? "",
             valor: moedaParaInput(etapa.valorCentavos),
             cobranca: etapa.cobranca,

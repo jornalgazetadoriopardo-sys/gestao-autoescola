@@ -14,7 +14,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
   const { motivo } = await searchParams;
   const aviso = motivo ? MOTIVOS[motivo] : undefined;
   return (
-    <main className="flex min-h-screen items-center justify-center bg-gradient-to-br from-blue-700 to-slate-900 p-4">
+    <main className="sem-tema flex min-h-screen items-center justify-center bg-gradient-to-br from-blue-700 to-slate-900 p-4">
       <Cartao className="w-full max-w-md">
         <div className="mb-6 flex flex-col items-center text-center">
           <span className="mb-3 flex size-20 items-center justify-center rounded-full bg-blue-100">

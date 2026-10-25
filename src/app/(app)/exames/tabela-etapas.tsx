@@ -43,7 +43,11 @@ export function TabelaEtapas({
               <div className="font-medium">{e.descricao}</div>
               {e.obs && <div className="text-sm text-slate-600">{e.obs}</div>}
             </td>
-            <td className="px-4 py-2.5">{formatarData(e.data) || "—"}</td>
+            <td className="px-4 py-2.5">
+              {formatarData(e.data) || "—"}
+              {e.hora && ` às ${e.hora}`}
+              {e.local && <div className="text-sm text-slate-600">{e.local}</div>}
+            </td>
             <td className="px-4 py-2.5">
               <Etiqueta cor={COR_SITUACAO_ETAPA[situacao]}>{textoSituacaoEtapa(e)}</Etiqueta>
             </td>

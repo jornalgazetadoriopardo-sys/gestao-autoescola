@@ -54,6 +54,7 @@ async function configPadrao(): Promise<Configuracao> {
       contratoEm: null,
       taxasPadrao: null,
       calendarioLicenciamento: null,
+      feriadosIgnorados: null,
     }
   );
 }

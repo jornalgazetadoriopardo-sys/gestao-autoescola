@@ -9,6 +9,7 @@ import { exigirAdmin, exigirSessao } from "@/lib/auth";
 import { CONTRATO_MAX, conferirModelo } from "@/lib/contrato";
 import { TAXAS_CONFIGURAVEIS, type TaxasPadrao } from "@/lib/etapas";
 import { lerMoeda } from "@/lib/format";
+import { feriadosAutomaticos } from "@/lib/feriados";
 import { CALENDARIO_SP, FINAIS, lerCalendario } from "@/lib/licenciamento";
 import type { EstadoForm } from "@/components/form-acao";
 
@@ -267,4 +268,53 @@ export async function salvarCalendario(_: EstadoForm, dados: FormData): Promise<
   revalidatePath("/veiculos");
   revalidatePath("/");
   return { ok: restaurar ? "Calendário de SP restaurado." : "Calendário salvo!" };
+}
+
+// Feriados automáticos que a autoescola segue (os desmarcados ficam como dia normal).
+export async function salvarFeriadosIgnorados(_: EstadoForm, dados: FormData): Promise<EstadoForm> {
+  const sessao = await exigirAdmin();
+  const config = await db.configuracao.findFirst({ select: { uf: true } });
+  const ano = new Date().getFullYear();
+  const chaves = new Set([ano, ano + 1].flatMap((a) => feriadosAutomaticos(a, config?.uf ?? null).map((f) => f.chave)));
+  const feriadosIgnorados = [...chaves].filter((c) => dados.get(`feriado_${c}`) !== "on");
+  const id = sessao.autoescolaId;
+  const autoescola = await db.autoescola.findFirstOrThrow();
+  await db.configuracao.upsert({
+    where: { id },
+    create: { id, nome: autoescola.nome, feriadosIgnorados },
+    update: { feriadosIgnorados },
+  });
+  revalidarFeriados();
+  return { ok: "Feriados salvos!" };
+}
+
+// Feriado municipal, recesso ou folga cadastrado à mão.
+export async function adicionarFeriado(_: EstadoForm, dados: FormData): Promise<EstadoForm> {
+  const sessao = await exigirAdmin();
+  const data = String(dados.get("data") ?? "");
+  const nome = texto(dados, "nome");
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(data)) return { erro: "Informe a data." };
+  if (!nome) return { erro: "Informe o nome. Ex.: Aniversário da cidade." };
+  await db.feriado.create({
+    data: {
+      autoescolaId: sessao.autoescolaId,
+      data: new Date(`${data}T00:00:00Z`),
+      nome: nome.slice(0, 80),
+      anual: dados.get("anual") === "on",
+    },
+  });
+  revalidarFeriados();
+  return { ok: `"${nome}" adicionado. Não será possível marcar aulas nesse dia.` };
+}
+
+export async function excluirFeriado(id: number) {
+  await exigirAdmin();
+  await db.feriado.deleteMany({ where: { id } });
+  revalidarFeriados();
+}
+
+function revalidarFeriados() {
+  revalidatePath("/configuracoes");
+  revalidatePath("/aulas");
+  revalidatePath("/");
 }

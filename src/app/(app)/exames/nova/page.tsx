@@ -6,13 +6,14 @@ import { hojeISO } from "@/lib/format";
 import { TIPOS_ETAPA, lerTaxasPadrao } from "@/lib/etapas";
 import { moedaParaInput } from "@/lib/format";
 import { EtapaForm } from "../etapa-form";
+import { opcoesDoExame } from "../opcoes-exame";
 
 export const dynamic = "force-dynamic";
 
 export default async function NovaEtapaPage({
   searchParams,
 }: {
-  searchParams: Promise<{ matricula?: string; tipo?: string }>;
+  searchParams: Promise<{ matricula?: string; tipo?: string; categoria?: string; voltar?: string }>;
 }) {
   const params = await searchParams;
   const matricula = await db.matricula.findUnique({
@@ -21,9 +22,13 @@ export default async function NovaEtapaPage({
   });
   if (!matricula) notFound();
   const tipo = params.tipo && params.tipo in TIPOS_ETAPA ? params.tipo : "outra";
-  const config = await db.configuracao.findFirst({ select: { taxasPadrao: true } });
+  const [config, opcoes] = await Promise.all([
+    db.configuracao.findFirst({ select: { taxasPadrao: true } }),
+    opcoesDoExame(),
+  ]);
   const padrao = lerTaxasPadrao(config?.taxasPadrao)[tipo];
-  const voltar = `/alunos/${matricula.alunoId}`;
+  const voltar =
+    params.voltar?.startsWith("/") && !params.voltar.startsWith("//") ? params.voltar : `/alunos/${matricula.alunoId}`;
 
   return (
     <>
@@ -43,12 +48,17 @@ export default async function NovaEtapaPage({
           matriculaId={matricula.id}
           hoje={hojeISO()}
           voltar={voltar}
+          {...opcoes}
           inicial={{
             id: null,
             tipo,
             descricao: "",
-            categoria: "",
+            categoria: /^[A-E]$/.test(params.categoria ?? "") ? params.categoria! : "",
             data: "",
+            hora: "",
+            local: "",
+            veiculoId: "",
+            instrutorId: "",
             resultado: "",
             valor: moedaParaInput(padrao?.valor),
             cobranca: padrao?.cobranca ?? "aluno",

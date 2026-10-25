@@ -25,6 +25,7 @@ model Autoescola {
   instrutores  Instrutor[]
   veiculos     Veiculo[]
   despesas     Despesa[]
+  feriados     Feriado[]
   configuracao Configuracao?
 }
 
@@ -94,6 +95,7 @@ model Instrutor {
   ativo        Boolean    @default(true)
   criadoEm     DateTime   @default(now())
   aulas        Aula[]
+  etapas       Etapa[]
 
   @@index([autoescolaId])
 }
@@ -114,6 +116,7 @@ model Veiculo {
   aulas                Aula[]
   manutencoes          Manutencao[]
   despesas             Despesa[]
+  etapas               Etapa[]
 
   @@unique([autoescolaId, placa])
 }
@@ -149,25 +152,33 @@ model Matricula {
 // toxicológico, provas do Detran, emissão da CNH...). Cada item pode ser pago
 // direto pelo aluno ("aluno") ou cobrado pela autoescola ("autoescola").
 model Etapa {
-  id            Int       @id @default(autoincrement())
+  id            Int        @id @default(autoincrement())
   matriculaId   Int
-  matricula     Matricula @relation(fields: [matriculaId], references: [id])
+  matricula     Matricula  @relation(fields: [matriculaId], references: [id])
   // Ver TIPOS_ETAPA em src/lib/etapas.ts
   tipo          String
   descricao     String
   // Categoria do exame prático (A, B, C, D ou E).
   categoria     String?
-  ordem         Int       @default(0)
+  ordem         Int        @default(0)
   // Dia agendado ou realizado.
   data          DateTime?
+  // Exame do Detran: horário, local e, no prático, o veículo e o instrutor que
+  // acompanha (ficam ocupados na agenda nesse horário).
+  hora          String?
+  local         String?
+  veiculoId     Int?
+  veiculo       Veiculo?   @relation(fields: [veiculoId], references: [id])
+  instrutorId   Int?
+  instrutor     Instrutor? @relation(fields: [instrutorId], references: [id])
   // "ok" (aprovado/apto/concluído) | "falhou" (reprovado/inapto) | null (ainda não)
   resultado     String?
   valorCentavos Int?
-  cobranca      String    @default("aluno")
+  cobranca      String     @default("aluno")
   pagoEm        DateTime?
   forma         String?
   obs           String?
-  criadoEm      DateTime  @default(now())
+  criadoEm      DateTime   @default(now())
 
   @@index([matriculaId])
   @@index([data])
@@ -263,6 +274,8 @@ model Configuracao {
   // Mês de vencimento do licenciamento por final de placa (padrão: SP).
   // { leve: { "1": 7, ... "0": 12 }, pesado: { ... } }
   calendarioLicenciamento Json?
+  // Feriados automáticos (nacionais/estaduais) que a autoescola não segue: lista de chaves.
+  feriadosIgnorados       Json?
 }
 
 // Despesas da autoescola: folha, vales, abastecimento, contas, retiradas...
@@ -290,4 +303,18 @@ model Despesa {
 
   @@index([autoescolaId, vencimento])
   @@index([autoescolaId, pagoEm])
+}
+
+// Feriados cadastrados pela autoescola (municipais, recessos...). `anual`: repete
+// todo ano no mesmo dia e mês. Os nacionais e estaduais são calculados no código.
+model Feriado {
+  id           Int        @id @default(autoincrement())
+  autoescolaId Int
+  autoescola   Autoescola @relation(fields: [autoescolaId], references: [id])
+  data         DateTime
+  nome         String
+  anual        Boolean    @default(true)
+  criadoEm     DateTime   @default(now())
+
+  @@index([autoescolaId])
 }

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import {
   Building2,
+  CalendarOff,
   Car,
   ClipboardCheck,
   Download,
@@ -31,10 +32,11 @@ import { exigirSessao } from "@/lib/auth";
 import { obterConfigCompleta } from "@/lib/config";
 import { db } from "@/lib/db";
 import { CAMPOS_CONTRATO, CAMPOS_PARCELA } from "@/lib/contrato";
-import { formatarDataLocal } from "@/lib/format";
+import { formatarData, formatarDataLocal } from "@/lib/format";
 import { TAXAS_CONFIGURAVEIS, lerTaxasPadrao } from "@/lib/etapas";
 import { moedaParaInput } from "@/lib/format";
-import { salvarCalendario, salvarTaxas } from "./actions";
+import { adicionarFeriado, excluirFeriado, salvarCalendario, salvarFeriadosIgnorados, salvarTaxas } from "./actions";
+import { ESTADUAIS, feriadosAutomaticos, lerIgnorados } from "@/lib/feriados";
 import { FINAIS, NOMES_MESES, TIPOS_LICENCIAMENTO, lerCalendario } from "@/lib/licenciamento";
 import { alternarUsuario, criarUsuario, excluirUsuario, removerContrato, salvarContrato, trocarSenha } from "./actions";
 import { ConfigForm } from "./config-form";
@@ -48,6 +50,7 @@ const abas = [
   { id: "usuarios", label: "Usuários", icone: Users, soAdmin: true },
   { id: "taxas", label: "Taxas e exames", icone: ClipboardCheck, soAdmin: true },
   { id: "licenciamento", label: "Licenciamento", icone: Car, soAdmin: true },
+  { id: "feriados", label: "Feriados", icone: CalendarOff, soAdmin: true },
   { id: "impressora", label: "Impressora", icone: Printer, soAdmin: true },
   { id: "contrato", label: "Contrato", icone: FileSignature, soAdmin: true },
   { id: "senha", label: "Minha senha", icone: KeyRound, soAdmin: false },
@@ -93,6 +96,7 @@ export default async function ConfiguracoesPage({ searchParams }: { searchParams
       {aba === "usuarios" && <Usuarios usuarioAtual={sessao.usuarioId} />}
       {aba === "taxas" && <Taxas />}
       {aba === "licenciamento" && <Licenciamento />}
+      {aba === "feriados" && <Feriados />}
       {aba === "impressora" && <Impressora />}
       {aba === "contrato" && <Contrato />}
       {aba === "senha" && (
@@ -370,6 +374,111 @@ async function Taxas() {
         </div>
       </FormAcao>
     </Cartao>
+  );
+}
+
+async function Feriados() {
+  const [config, manuais] = await Promise.all([
+    obterConfigCompleta(),
+    db.feriado.findMany({ orderBy: [{ anual: "desc" }, { data: "asc" }] }),
+  ]);
+  const ano = new Date().getFullYear();
+  const ignorados = lerIgnorados(config.feriadosIgnorados);
+  const uf = config.uf?.toUpperCase() ?? null;
+  const proximo = new Map(feriadosAutomaticos(ano + 1, uf).map((f) => [f.chave, f.data]));
+  const diaMes = (iso?: string) => (iso ? iso.split("-").reverse().slice(0, 2).join("/") : "—");
+  return (
+    <div className="space-y-6">
+      <Cartao className="max-w-3xl">
+        <h2 className="mb-1 flex items-center gap-2 text-lg font-semibold">
+          <CalendarOff className="size-6 text-red-600" aria-hidden /> Feriados nacionais e estaduais
+        </h2>
+        <p className="mb-5 text-base text-slate-600">
+          Nos dias marcados não é possível agendar aulas, e o agendamento de várias aulas pula esses dias sozinho.
+          Desmarque os feriados em que a autoescola trabalha normalmente.{" "}
+          {uf && ESTADUAIS[uf]
+            ? `Os feriados estaduais seguem o estado cadastrado em Dados da autoescola (${uf}).`
+            : "Para incluir o feriado do seu estado, preencha a UF em Dados da autoescola (ou cadastre abaixo)."}
+        </p>
+        <FormAcao acao={salvarFeriadosIgnorados} textoBotao="Salvar feriados">
+          <div className="overflow-x-auto rounded-xl border border-slate-200">
+            <table className="w-full text-left text-base">
+              <thead className="bg-slate-50 text-sm text-slate-600">
+                <tr>
+                  <th className="px-3 py-2">Sem aula?</th>
+                  <th className="px-3 py-2">Feriado</th>
+                  <th className="px-3 py-2">{ano}</th>
+                  <th className="px-3 py-2">{ano + 1}</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {feriadosAutomaticos(ano, uf).map((f) => (
+                  <tr key={f.chave}>
+                    <td className="px-3 py-2">
+                      <input
+                        type="checkbox"
+                        name={`feriado_${f.chave}`}
+                        defaultChecked={!ignorados.includes(f.chave)}
+                        className="size-5"
+                        aria-label={f.nome}
+                      />
+                    </td>
+                    <td className="px-3 py-2 font-medium">{f.nome}</td>
+                    <td className="px-3 py-2">{diaMes(f.data)}</td>
+                    <td className="px-3 py-2">{diaMes(proximo.get(f.chave))}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </FormAcao>
+      </Cartao>
+
+      <Cartao className="max-w-3xl">
+        <h2 className="mb-1 text-lg font-semibold">Feriados da cidade e outros dias sem aula</h2>
+        <p className="mb-5 text-base text-slate-600">
+          Cadastre o aniversário da cidade, o padroeiro, recesso de fim de ano ou qualquer dia em que a autoescola não
+          abre.
+        </p>
+        <FormAcao acao={adicionarFeriado} textoBotao="Adicionar" limparAoSalvar>
+          <div className="grid gap-4 sm:grid-cols-[11rem_1fr]">
+            <Campo label="Data">
+              <Input name="data" type="date" required />
+            </Campo>
+            <Campo label="Nome">
+              <Input name="nome" required maxLength={80} placeholder="Ex.: Aniversário da cidade" />
+            </Campo>
+          </div>
+          <label className="flex items-center gap-3 text-base font-medium">
+            <input type="checkbox" name="anual" defaultChecked className="size-5" />
+            Repete todo ano nesta data
+          </label>
+        </FormAcao>
+        {manuais.length > 0 && (
+          <div className="mt-6">
+            <Tabela cabecalhos={["Data", "Nome", ""]}>
+              {manuais.map((f) => (
+                <tr key={f.id}>
+                  <td className="px-4 py-3">
+                    {f.anual ? `${diaMes(f.data.toISOString().slice(0, 10))} (todo ano)` : formatarData(f.data)}
+                  </td>
+                  <td className="px-4 py-3 font-medium">{f.nome}</td>
+                  <td className="px-4 py-3">
+                    <BotaoConfirmar
+                      acao={excluirFeriado.bind(null, f.id)}
+                      mensagem={`Excluir o feriado "${f.nome}"?`}
+                      icone="excluir"
+                    >
+                      Excluir
+                    </BotaoConfirmar>
+                  </td>
+                </tr>
+              ))}
+            </Tabela>
+          </div>
+        )}
+      </Cartao>
+    </div>
   );
 }
 

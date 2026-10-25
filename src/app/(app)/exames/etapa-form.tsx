@@ -14,6 +14,10 @@ export type EtapaInicial = {
   descricao: string;
   categoria: string;
   data: string;
+  hora: string;
+  local: string;
+  veiculoId: string;
+  instrutorId: string;
   resultado: string;
   valor: string;
   cobranca: string;
@@ -21,6 +25,8 @@ export type EtapaInicial = {
   forma: string;
   obs: string;
 };
+
+export type OpcaoSimples = { id: number; nome: string };
 
 const COBRANCA = {
   aluno: { titulo: "Aluno paga direto", descricao: "Na clínica, no laboratório ou na guia do Detran" },
@@ -32,11 +38,15 @@ export function EtapaForm({
   inicial,
   hoje,
   voltar,
+  veiculos,
+  instrutores,
 }: {
   matriculaId: number;
   inicial: EtapaInicial;
   hoje: string;
   voltar: string;
+  veiculos: OpcaoSimples[];
+  instrutores: OpcaoSimples[];
 }) {
   const [tipo, setTipo] = useState(inicial.tipo);
   const [cobranca, setCobranca] = useState(inicial.cobranca);
@@ -84,6 +94,40 @@ export function EtapaForm({
           <Input name="data" type="date" defaultValue={inicial.data} />
         </Campo>
       </div>
+
+      {(tipo === "exame_pratico" || tipo === "exame_teorico") && (
+        <fieldset className="grid gap-5 rounded-xl border border-violet-200 bg-violet-50/50 p-4 sm:grid-cols-2">
+          <legend className="px-1 text-base font-semibold text-violet-900">Agendamento da prova</legend>
+          <Campo label="Horário" ajuda="Com horário, a prova aparece na agenda e bloqueia aulas nesse horário.">
+            <Input name="hora" type="time" defaultValue={inicial.hora} />
+          </Campo>
+          <Campo label="Local (opcional)">
+            <Input name="local" defaultValue={inicial.local} placeholder="Ex.: Pátio do Detran, Ciretran" />
+          </Campo>
+          <Campo label="Instrutor que acompanha">
+            <Select name="instrutorId" defaultValue={inicial.instrutorId}>
+              <option value="">Nenhum</option>
+              {instrutores.map((i) => (
+                <option key={i.id} value={i.id}>
+                  {i.nome}
+                </option>
+              ))}
+            </Select>
+          </Campo>
+          {tipo === "exame_pratico" && (
+            <Campo label="Veículo da prova">
+              <Select name="veiculoId" defaultValue={inicial.veiculoId}>
+                <option value="">Nenhum</option>
+                {veiculos.map((v) => (
+                  <option key={v.id} value={v.id}>
+                    {v.nome}
+                  </option>
+                ))}
+              </Select>
+            </Campo>
+          )}
+        </fieldset>
+      )}
 
       <Opcoes
         key={tipo}
