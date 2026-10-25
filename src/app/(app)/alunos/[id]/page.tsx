@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import {
   ArrowLeft,
   BookOpen,
+  Camera,
   BookOpenCheck,
   CalendarPlus,
   CalendarRange,
@@ -31,8 +32,10 @@ import {
 } from "@/lib/format";
 import { COR_STATUS_AULA, STATUS_AULA, TIPOS_AULA, formatarDataHora, resumoAulas } from "@/lib/aulas";
 import { FORMAS_MATRICULA } from "@/lib/pagamentos";
+import { urlFoto } from "@/lib/foto";
 import { AcoesAula } from "../../aulas/acoes-aula";
-import { estornarParcela } from "../../pagamentos/actions";
+import { estornarParcela, excluirParcela } from "../../pagamentos/actions";
+import { excluirAluno } from "../actions";
 import { excluirMatricula } from "./matriculas/actions";
 
 export const dynamic = "force-dynamic";
@@ -62,6 +65,9 @@ export default async function FichaAlunoPage({
   });
   if (!aluno) notFound();
 
+  const foto = urlFoto(aluno);
+  const totalAulas = aluno.matriculas.reduce((s, m) => s + m.aulas.length, 0);
+  const totalParcelas = aluno.matriculas.reduce((s, m) => s + m.parcelas.length, 0);
   const matriculaNova = aluno.matriculas.find((m) => String(m.id) === nova);
   const parcelaRecebida = aluno.matriculas.flatMap((m) => m.parcelas).find((p) => String(p.id) === recebido);
 
@@ -87,12 +93,7 @@ export default async function FichaAlunoPage({
             <BotaoLink href="/alunos" variante="secundario" icone={ArrowLeft}>
               Voltar
             </BotaoLink>
-            <BotaoLink
-              href={`/imprimir/aluno/${aluno.id}`}
-              target="_blank"
-              variante="secundario"
-              icone={FileText}
-            >
+            <BotaoLink href={`/imprimir/aluno/${aluno.id}`} target="_blank" variante="secundario" icone={FileText}>
               Relatório
             </BotaoLink>
             <BotaoLink href={`/alunos/${aluno.id}/editar`} variante="secundario" icone={Pencil}>
@@ -101,6 +102,13 @@ export default async function FichaAlunoPage({
             <BotaoLink href={`/alunos/${aluno.id}/matriculas/nova`} icone={Plus}>
               Nova matrícula
             </BotaoLink>
+            <BotaoConfirmar
+              acao={excluirAluno.bind(null, aluno.id)}
+              mensagem={`Excluir ${aluno.nome}?\n\nIsso apaga também ${aluno.matriculas.length} matrícula(s), ${totalAulas} aula(s) e ${totalParcelas} parcela(s), inclusive os pagamentos já recebidos. Não dá para desfazer.`}
+              icone="excluir"
+            >
+              Excluir aluno
+            </BotaoConfirmar>
           </>
         }
       />
@@ -117,12 +125,7 @@ export default async function FichaAlunoPage({
             Guia do aluno
           </BotaoLink>
           {matriculaNova.formaPagamento === "carne" && matriculaNova.parcelas.length > 0 && (
-            <BotaoLink
-              href={`/imprimir/carne/${matriculaNova.id}`}
-              target="_blank"
-              tamanho="pequeno"
-              icone={Printer}
-            >
+            <BotaoLink href={`/imprimir/carne/${matriculaNova.id}`} target="_blank" tamanho="pequeno" icone={Printer}>
               Imprimir carnê
             </BotaoLink>
           )}
@@ -140,39 +143,46 @@ export default async function FichaAlunoPage({
       )}
       {Number(agendadas) > 0 && (
         <Aviso tipo="sucesso" icone={CircleCheck}>
-          {Number(agendadas) === 1 ? "1 aula agendada!" : `${Number(agendadas)} aulas agendadas!`} Veja a
-          lista abaixo. Para mudar uma aula, use o botão Editar.
+          {Number(agendadas) === 1 ? "1 aula agendada!" : `${Number(agendadas)} aulas agendadas!`} Veja a lista abaixo.
+          Para mudar uma aula, use o botão Editar.
         </Aviso>
       )}
       {parcelaRecebida?.pagoEm && (
         <Aviso tipo="sucesso" icone={CircleCheck}>
           <span>Pagamento da parcela {parcelaRecebida.numero} registrado!</span>
-          <BotaoLink
-            href={`/imprimir/recibo/${parcelaRecebida.id}`}
-            target="_blank"
-            tamanho="pequeno"
-            icone={Printer}
-          >
+          <BotaoLink href={`/imprimir/recibo/${parcelaRecebida.id}`} target="_blank" tamanho="pequeno" icone={Printer}>
             Imprimir recibo
           </BotaoLink>
         </Aviso>
       )}
 
-      <Cartao className="max-w-4xl">
-        <dl className="grid gap-x-8 gap-y-4 sm:grid-cols-2 lg:grid-cols-4">
-          {dados.map(([label, valor]) => (
-            <div key={label}>
-              <dt className="text-sm font-medium uppercase text-slate-500">{label}</dt>
-              <dd className="text-base">{valor || "—"}</dd>
+      <Cartao className="flex max-w-4xl flex-wrap items-start gap-6">
+        <div className="flex h-40 w-30 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-slate-200 bg-slate-50">
+          {foto ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={foto} alt={`Foto de ${aluno.nome}`} className="h-full w-full object-cover" />
+          ) : (
+            <BotaoLink href={`/alunos/${aluno.id}/editar`} variante="secundario" tamanho="pequeno" icone={Camera}>
+              Pôr foto
+            </BotaoLink>
+          )}
+        </div>
+        <div className="min-w-0 flex-1">
+          <dl className="grid gap-x-8 gap-y-4 sm:grid-cols-2 lg:grid-cols-3">
+            {dados.map(([label, valor]) => (
+              <div key={label}>
+                <dt className="text-sm font-medium uppercase text-slate-500">{label}</dt>
+                <dd className="text-base">{valor || "—"}</dd>
+              </div>
+            ))}
+          </dl>
+          {aluno.obs && (
+            <div className="mt-4 rounded-lg bg-amber-50 p-3">
+              <div className="text-sm font-medium uppercase text-amber-800">Observações</div>
+              <p className="whitespace-pre-line text-base">{aluno.obs}</p>
             </div>
-          ))}
-        </dl>
-        {aluno.obs && (
-          <div className="mt-4 rounded-lg bg-amber-50 p-3">
-            <div className="text-sm font-medium uppercase text-amber-800">Observações</div>
-            <p className="whitespace-pre-line text-base">{aluno.obs}</p>
-          </div>
-        )}
+          )}
+        </div>
       </Cartao>
 
       <Secao titulo="Matrículas" icone={GraduationCap} />
@@ -194,8 +204,6 @@ export default async function FichaAlunoPage({
           const pago = m.parcelas.reduce((s, p) => s + (p.valorPagoCentavos ?? 0), 0);
           const emAberto = m.parcelas.filter((p) => !p.pagoEm).reduce((s, p) => s + p.valorCentavos, 0);
           const totalParcelado = m.parcelas.reduce((s, p) => s + p.valorCentavos, 0);
-          const pagaNaHora = m.formaPagamento !== "carne";
-          const podeExcluir = m.aulas.length === 0 && (pagaNaHora || m.parcelas.every((p) => !p.pagoEm));
           const resumo = resumoAulas(m, m.aulas);
 
           return (
@@ -231,15 +239,21 @@ export default async function FichaAlunoPage({
                       Imprimir carnê
                     </BotaoLink>
                   )}
-                  {podeExcluir && (
-                    <BotaoConfirmar
-                      acao={excluirMatricula.bind(null, m.id)}
-                      mensagem="Excluir esta matrícula e todas as suas parcelas?"
-                      icone="excluir"
-                    >
-                      Excluir
-                    </BotaoConfirmar>
-                  )}
+                  <BotaoLink
+                    href={`/alunos/${aluno.id}/matriculas/${m.id}/editar`}
+                    variante="secundario"
+                    tamanho="pequeno"
+                    icone={Pencil}
+                  >
+                    Alterar
+                  </BotaoLink>
+                  <BotaoConfirmar
+                    acao={excluirMatricula.bind(null, m.id)}
+                    mensagem={`Excluir esta matrícula?\n\nIsso apaga também ${m.aulas.length} aula(s) e ${m.parcelas.length} parcela(s), inclusive os pagamentos já recebidos. Não dá para desfazer.`}
+                    icone="excluir"
+                  >
+                    Excluir
+                  </BotaoConfirmar>
                 </div>
               </div>
 
@@ -256,11 +270,7 @@ export default async function FichaAlunoPage({
                   >
                     Uma aula
                   </BotaoLink>
-                  <BotaoLink
-                    href={`/aulas/nova?modo=varias&matricula=${m.id}`}
-                    tamanho="pequeno"
-                    icone={CalendarRange}
-                  >
+                  <BotaoLink href={`/aulas/nova?modo=varias&matricula=${m.id}`} tamanho="pequeno" icone={CalendarRange}>
                     Várias aulas
                   </BotaoLink>
                 </div>
@@ -274,9 +284,7 @@ export default async function FichaAlunoPage({
                     return (
                       <div key={tipo} className="rounded-xl bg-slate-50 p-4">
                         <div className="mb-2 flex justify-between text-base">
-                          <span className="font-semibold">
-                            {tipo === "pratica" ? "Práticas" : "Teóricas"}
-                          </span>
+                          <span className="font-semibold">{tipo === "pratica" ? "Práticas" : "Teóricas"}</span>
                           <span>
                             {r.feitas} de {r.contratadas} feitas
                           </span>
@@ -313,9 +321,7 @@ export default async function FichaAlunoPage({
                         <td className="px-4 py-2.5">{a.instrutor?.nome ?? "—"}</td>
                         <td className="px-4 py-2.5">{a.veiculo?.placa ?? "—"}</td>
                         <td className="px-4 py-2.5">
-                          <Etiqueta
-                            cor={COR_STATUS_AULA[a.status as keyof typeof COR_STATUS_AULA] ?? "cinza"}
-                          >
+                          <Etiqueta cor={COR_STATUS_AULA[a.status as keyof typeof COR_STATUS_AULA] ?? "cinza"}>
                             {STATUS_AULA[a.status] ?? a.status}
                           </Etiqueta>
                         </td>
@@ -365,18 +371,18 @@ export default async function FichaAlunoPage({
                             : "—"}
                         </td>
                         <td className="px-4 py-2.5">
-                          {p.pagoEm ? (
-                            <div className="flex items-center gap-2">
-                              <BotaoLink
-                                href={`/imprimir/recibo/${p.id}`}
-                                target="_blank"
-                                variante="secundario"
-                                tamanho="pequeno"
-                                icone={Printer}
-                              >
-                                Recibo
-                              </BotaoLink>
-                              {!pagaNaHora && (
+                          <div className="flex items-center gap-2">
+                            {p.pagoEm ? (
+                              <>
+                                <BotaoLink
+                                  href={`/imprimir/recibo/${p.id}`}
+                                  target="_blank"
+                                  variante="secundario"
+                                  tamanho="pequeno"
+                                  icone={Printer}
+                                >
+                                  Recibo
+                                </BotaoLink>
                                 <BotaoConfirmar
                                   acao={estornarParcela.bind(null, p.id)}
                                   mensagem="Desfazer este pagamento? A parcela volta a ficar em aberto."
@@ -384,18 +390,33 @@ export default async function FichaAlunoPage({
                                 >
                                   Desfazer
                                 </BotaoConfirmar>
-                              )}
-                            </div>
-                          ) : (
+                              </>
+                            ) : (
+                              <BotaoLink
+                                href={`/pagamentos/${p.id}/receber?voltar=/alunos/${aluno.id}`}
+                                variante="sucesso"
+                                tamanho="pequeno"
+                                icone={HandCoins}
+                              >
+                                Receber
+                              </BotaoLink>
+                            )}
                             <BotaoLink
-                              href={`/pagamentos/${p.id}/receber?voltar=/alunos/${aluno.id}`}
-                              variante="sucesso"
+                              href={`/pagamentos/${p.id}/editar?voltar=/alunos/${aluno.id}`}
+                              variante="secundario"
                               tamanho="pequeno"
-                              icone={HandCoins}
+                              icone={Pencil}
                             >
-                              Receber
+                              Alterar
                             </BotaoLink>
-                          )}
+                            <BotaoConfirmar
+                              acao={excluirParcela.bind(null, p.id)}
+                              mensagem={`Excluir a parcela ${p.numero}?${p.pagoEm ? " O pagamento registrado nela também será apagado." : ""}`}
+                              icone="excluir"
+                            >
+                              Excluir
+                            </BotaoConfirmar>
+                          </div>
                         </td>
                       </tr>
                     );

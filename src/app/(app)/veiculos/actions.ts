@@ -10,14 +10,12 @@ import type { EstadoForm } from "@/components/form-acao";
 
 const CATEGORIAS_VEICULO = ["A", "B", "C", "D", "E"];
 
-export async function salvarVeiculo(
-  id: number | null,
-  _: EstadoForm,
-  dados: FormData,
-): Promise<EstadoForm> {
+export async function salvarVeiculo(id: number | null, _: EstadoForm, dados: FormData): Promise<EstadoForm> {
   const sessao = await exigirSessao();
 
-  const placa = String(dados.get("placa") ?? "").toUpperCase().replace(/[^A-Z0-9]/g, "");
+  const placa = String(dados.get("placa") ?? "")
+    .toUpperCase()
+    .replace(/[^A-Z0-9]/g, "");
   const modelo = String(dados.get("modelo") ?? "").trim();
   const categoria = String(dados.get("categoria") ?? "");
 
@@ -47,8 +45,13 @@ function data(dados: FormData, campo: string) {
   return /^\d{4}-\d{2}-\d{2}$/.test(v) ? new Date(`${v}T00:00:00Z`) : null;
 }
 
-// Registra uma manutenção (feita ou a fazer) e, se informado, o dia do lembrete.
-export async function salvarManutencao(veiculoId: number, _: EstadoForm, dados: FormData): Promise<EstadoForm> {
+// Registra ou altera uma manutenção (feita ou a fazer) e, se informado, o dia do lembrete.
+export async function salvarManutencao(
+  veiculoId: number,
+  manutencaoId: number | null,
+  _: EstadoForm,
+  dados: FormData,
+): Promise<EstadoForm> {
   await exigirSessao();
 
   const descricao = String(dados.get("descricao") ?? "").trim();
@@ -62,17 +65,26 @@ export async function salvarManutencao(veiculoId: number, _: EstadoForm, dados: 
   if (valorTexto && valorCentavos === null) return { erro: "Valor inválido. Ex.: 250,00" };
   if (!realizadaEm && !lembrarEm) return { erro: "Informe a data em que foi feita ou o dia para lembrar." };
 
-  await db.manutencao.create({
-    data: {
-      veiculoId,
-      descricao,
-      data: realizadaEm,
-      km: kmTexto ? Number(kmTexto) : null,
-      valorCentavos,
-      lembrarEm,
-      obs: String(dados.get("obs") ?? "").trim() || null,
-    },
-  });
+  const campos = {
+    descricao,
+    data: realizadaEm,
+    km: kmTexto ? Number(kmTexto) : null,
+    valorCentavos,
+    lembrarEm,
+    obs: String(dados.get("obs") ?? "").trim() || null,
+  };
+  if (manutencaoId) {
+    const atual = await db.manutencao.findUnique({ where: { id: manutencaoId } });
+    if (!atual) return { erro: "Manutenção não encontrada." };
+    // Lembrete com data nova volta a aparecer.
+    const lembreteMudou = atual.lembrarEm?.getTime() !== lembrarEm?.getTime();
+    await db.manutencao.update({
+      where: { id: manutencaoId },
+      data: { ...campos, ...(lembreteMudou ? { lembreteConcluido: false } : {}) },
+    });
+  } else {
+    await db.manutencao.create({ data: { veiculoId, ...campos } });
+  }
 
   revalidatePath(`/veiculos/${veiculoId}`);
   revalidatePath("/veiculos");
@@ -96,4 +108,20 @@ export async function concluirLembrete(manutencaoId: number) {
   revalidatePath(`/veiculos/${m.veiculoId}`);
   revalidatePath("/veiculos");
   revalidatePath("/");
+}
+
+// Exclui o veículo com o histórico de manutenções. As aulas e os abastecimentos
+// continuam registrados, sem veículo.
+export async function excluirVeiculo(veiculoId: number) {
+  await exigirSessao();
+  await db.$transaction([
+    db.aula.updateMany({ where: { veiculoId }, data: { veiculoId: null } }),
+    db.despesa.updateMany({ where: { veiculoId }, data: { veiculoId: null } }),
+    db.manutencao.deleteMany({ where: { veiculoId } }),
+    db.veiculo.delete({ where: { id: veiculoId } }),
+  ]);
+  revalidatePath("/veiculos");
+  revalidatePath("/aulas");
+  revalidatePath("/");
+  redirect("/veiculos");
 }

@@ -9,11 +9,7 @@ import type { EstadoForm } from "@/components/form-acao";
 
 const CATEGORIAS_INSTRUTOR = ["A", "B", "C", "D", "E"];
 
-export async function salvarInstrutor(
-  id: number | null,
-  _: EstadoForm,
-  dados: FormData,
-): Promise<EstadoForm> {
+export async function salvarInstrutor(id: number | null, _: EstadoForm, dados: FormData): Promise<EstadoForm> {
   const sessao = await exigirSessao();
 
   const nome = String(dados.get("nome") ?? "").trim();
@@ -36,5 +32,17 @@ export async function salvarInstrutor(
   else await db.instrutor.create({ data: { ...campos, autoescolaId: sessao.autoescolaId } });
 
   revalidatePath("/instrutores");
+  redirect("/instrutores");
+}
+
+// Exclui o instrutor. As aulas dele continuam na agenda, sem instrutor.
+export async function excluirInstrutor(instrutorId: number) {
+  await exigirSessao();
+  await db.$transaction([
+    db.aula.updateMany({ where: { instrutorId }, data: { instrutorId: null } }),
+    db.instrutor.delete({ where: { id: instrutorId } }),
+  ]);
+  revalidatePath("/instrutores");
+  revalidatePath("/aulas");
   redirect("/instrutores");
 }

@@ -2,6 +2,7 @@
 
 import bcrypt from "bcryptjs";
 import { Prisma } from "@prisma/client";
+import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
 import { exigirAdmin, exigirSessao } from "@/lib/auth";
@@ -79,7 +80,9 @@ export async function criarUsuario(_: EstadoForm, dados: FormData): Promise<Esta
   if (senha.length < 8) return { erro: "A senha deve ter pelo menos 8 caracteres." };
 
   try {
-    await db.usuario.create({ data: { autoescolaId: sessao.autoescolaId, nome, email, papel, senhaHash: await bcrypt.hash(senha, 10) } });
+    await db.usuario.create({
+      data: { autoescolaId: sessao.autoescolaId, nome, email, papel, senhaHash: await bcrypt.hash(senha, 10) },
+    });
   } catch (e) {
     if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002") {
       return { erro: "Já existe um usuário com este e-mail." };
@@ -106,11 +109,49 @@ export async function trocarSenha(_: EstadoForm, dados: FormData): Promise<Estad
   const confirmacao = String(dados.get("confirmacao") ?? "");
 
   const usuario = await db.usuario.findUnique({ where: { id: sessao.usuarioId } });
-  if (!usuario || !(await bcrypt.compare(atual, usuario.senhaHash)))
-    return { erro: "A senha atual está incorreta." };
+  if (!usuario || !(await bcrypt.compare(atual, usuario.senhaHash))) return { erro: "A senha atual está incorreta." };
   if (nova.length < 8) return { erro: "A nova senha deve ter pelo menos 8 caracteres." };
   if (nova !== confirmacao) return { erro: "A confirmação não é igual à nova senha." };
 
   await db.usuario.update({ where: { id: usuario.id }, data: { senhaHash: await bcrypt.hash(nova, 10) } });
   return { ok: "Senha alterada com sucesso!" };
+}
+
+// Altera nome, e-mail e acesso de um usuário; a senha só muda se for preenchida.
+export async function editarUsuario(usuarioId: number, _: EstadoForm, dados: FormData): Promise<EstadoForm> {
+  const sessao = await exigirAdmin();
+  const nome = texto(dados, "nome");
+  const email = texto(dados, "email")?.toLowerCase();
+  const senha = String(dados.get("senha") ?? "");
+  // Ninguém tira o próprio acesso de administrador (ficaria sem como voltar).
+  const papel = usuarioId === sessao.usuarioId ? "admin" : dados.get("papel") === "admin" ? "admin" : "secretaria";
+
+  if (!nome) return { erro: "Informe o nome." };
+  if (!email || !email.includes("@")) return { erro: "Informe um e-mail válido." };
+  if (senha && senha.length < 8) return { erro: "A nova senha deve ter pelo menos 8 caracteres." };
+
+  const usuario = await db.usuario.findUnique({ where: { id: usuarioId } });
+  if (!usuario) return { erro: "Usuário não encontrado." };
+  try {
+    await db.usuario.update({
+      where: { id: usuarioId },
+      data: { nome, email, papel, ...(senha ? { senhaHash: await bcrypt.hash(senha, 10) } : {}) },
+    });
+  } catch (e) {
+    if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002") {
+      return { erro: "Este e-mail já é usado por outro usuário do sistema." };
+    }
+    throw e;
+  }
+  revalidatePath("/configuracoes");
+  redirect("/configuracoes?aba=usuarios");
+}
+
+export async function excluirUsuario(usuarioId: number) {
+  const sessao = await exigirAdmin();
+  if (usuarioId === sessao.usuarioId) throw new Error("Você não pode excluir o seu próprio usuário.");
+  const usuario = await db.usuario.findUnique({ where: { id: usuarioId } });
+  if (!usuario || usuario.superadmin) return;
+  await db.usuario.delete({ where: { id: usuarioId } });
+  revalidatePath("/configuracoes");
 }

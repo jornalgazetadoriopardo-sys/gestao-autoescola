@@ -13,6 +13,7 @@ import {
 } from "@/lib/format";
 import { STATUS_AULA, TIPOS_AULA, formatarDataHora, resumoAulas } from "@/lib/aulas";
 import { FORMAS_MATRICULA } from "@/lib/pagamentos";
+import { urlFoto } from "@/lib/foto";
 import { CabecalhoDocumento } from "../../cabecalho-documento";
 import { RodapeDocumento } from "../../rodape-documento";
 
@@ -54,13 +55,23 @@ export default async function RelatorioAlunoPage({ params }: { params: Promise<{
     <div className="folha text-sm">
       <CabecalhoDocumento config={config} titulo="Relatório do aluno" />
 
-      <div className="mt-4 grid grid-cols-3 gap-x-6 gap-y-1 rounded border border-slate-300 p-3">
-        <Dado rotulo="Aluno" valor={aluno.nome} />
-        <Dado rotulo="CPF" valor={formatarCpf(aluno.cpf)} />
-        <Dado rotulo="Telefone" valor={formatarTelefone(aluno.telefone) || "—"} />
-        <Dado rotulo="Categoria" valor={aluno.categoria} />
-        <Dado rotulo="Situação" valor={STATUS_ALUNO[aluno.status] ?? aluno.status} />
-        <Dado rotulo="Cadastro" valor={formatarDataLocal(aluno.criadoEm)} />
+      <div className="mt-4 flex gap-4 rounded border border-slate-300 p-3">
+        {urlFoto(aluno) && (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={urlFoto(aluno)!}
+            alt=""
+            className="h-24 w-18 shrink-0 rounded border border-slate-300 object-cover"
+          />
+        )}
+        <div className="grid flex-1 grid-cols-3 gap-x-6 gap-y-1">
+          <Dado rotulo="Aluno" valor={aluno.nome} />
+          <Dado rotulo="CPF" valor={formatarCpf(aluno.cpf)} />
+          <Dado rotulo="Telefone" valor={formatarTelefone(aluno.telefone) || "—"} />
+          <Dado rotulo="Categoria" valor={aluno.categoria} />
+          <Dado rotulo="Situação" valor={STATUS_ALUNO[aluno.status] ?? aluno.status} />
+          <Dado rotulo="Cadastro" valor={formatarDataLocal(aluno.criadoEm)} />
+        </div>
       </div>
 
       {aluno.matriculas.length === 0 && <p className="mt-6">Este aluno não possui matrículas.</p>}
@@ -168,7 +179,9 @@ export default async function RelatorioAlunoPage({ params }: { params: Promise<{
                         </td>
                         <td className="py-1">{formatarData(p.vencimento)}</td>
                         <td className="py-1">{formatarMoeda(p.valorCentavos)}</td>
-                        <td className={`py-1 font-semibold ${s === "atrasado" ? "text-red-700" : s === "pago" ? "text-green-700" : ""}`}>
+                        <td
+                          className={`py-1 font-semibold ${s === "atrasado" ? "text-red-700" : s === "pago" ? "text-green-700" : ""}`}
+                        >
                           {s === "pago"
                             ? `Pago em ${formatarData(p.pagoEm)} (${FORMAS_PAGAMENTO[p.forma ?? ""] ?? p.forma})`
                             : s === "atrasado"

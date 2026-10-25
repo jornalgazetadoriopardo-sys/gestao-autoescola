@@ -96,27 +96,52 @@ export async function criarMatricula(alunoId: number, _: EstadoForm, dados: Form
   redirect(`/alunos/${alunoId}?nova=${matricula.id}`);
 }
 
-// Só permite excluir matrícula lançada por engano: sem aulas e sem parcelas pagas.
-// Matrícula paga na hora (cartão/Pix/dinheiro) também pode ser excluída enquanto não tiver aulas.
+// Exclui a matrícula com todas as suas aulas e parcelas (pagas ou não).
 export async function excluirMatricula(matriculaId: number) {
   await exigirSessao();
-
-  const matricula = await db.matricula.findUnique({
-    where: { id: matriculaId },
-    include: {
-      _count: { select: { aulas: true } },
-      parcelas: { where: { pagoEm: { not: null } }, select: { id: true } },
-    },
-  });
+  const matricula = await db.matricula.findUnique({ where: { id: matriculaId } });
   if (!matricula) return;
-  const pagaNaHora = matricula.formaPagamento !== "carne";
-  if (matricula._count.aulas > 0 || (!pagaNaHora && matricula.parcelas.length > 0)) {
-    throw new Error("Matrícula com aulas ou pagamentos não pode ser excluída.");
-  }
-
   await db.$transaction([
+    db.aula.deleteMany({ where: { matriculaId } }),
     db.parcela.deleteMany({ where: { matriculaId } }),
     db.matricula.delete({ where: { id: matriculaId } }),
   ]);
   revalidatePath(`/alunos/${matricula.alunoId}`);
+  revalidatePath("/pagamentos");
+  revalidatePath("/aulas");
+}
+
+// Corrige os dados da matrícula. As parcelas são alteradas uma a uma.
+export async function editarMatricula(matriculaId: number, _: EstadoForm, dados: FormData): Promise<EstadoForm> {
+  await exigirSessao();
+  const categoria = String(dados.get("categoria") ?? "");
+  const qtdPraticas = inteiro(dados, "qtdPraticas");
+  const qtdTeoricas = inteiro(dados, "qtdTeoricas");
+  const valorTotal = lerMoeda(String(dados.get("valorTotal") ?? ""));
+  const formaPagamento = String(dados.get("formaPagamento") ?? "");
+  const data = String(dados.get("data") ?? "");
+
+  if (!(CATEGORIAS as readonly string[]).includes(categoria)) return { erro: "Selecione a categoria." };
+  if (qtdPraticas === null || qtdTeoricas === null) return { erro: "Informe a quantidade de aulas." };
+  if (qtdPraticas + qtdTeoricas === 0) return { erro: "A matrícula precisa ter ao menos uma aula." };
+  if (valorTotal === null) return { erro: "Valor total inválido. Use o formato 1.500,00." };
+  if (!(formaPagamento in FORMAS_MATRICULA)) return { erro: "Escolha a forma de pagamento." };
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(data)) return { erro: "Informe a data da matrícula." };
+
+  const matricula = await db.matricula.findUnique({ where: { id: matriculaId } });
+  if (!matricula) return { erro: "Matrícula não encontrada." };
+  await db.matricula.update({
+    where: { id: matriculaId },
+    // Meio-dia no horário de Brasília, para a data não mudar com o fuso.
+    data: {
+      categoria,
+      qtdPraticas,
+      qtdTeoricas,
+      valorTotalCentavos: valorTotal,
+      formaPagamento,
+      data: new Date(`${data}T12:00:00-03:00`),
+    },
+  });
+  revalidatePath(`/alunos/${matricula.alunoId}`);
+  redirect(`/alunos/${matricula.alunoId}`);
 }

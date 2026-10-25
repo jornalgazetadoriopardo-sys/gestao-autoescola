@@ -136,7 +136,10 @@ export function MatriculaForm({ alunoId, categoria, hoje }: { alunoId: number; c
 
           {forma === "cartao" && (
             <div className="rounded-xl bg-slate-50 p-4">
-              <Campo label="Parcelado no cartão em" ajuda="Só para registro. A autoescola recebe pela operadora do cartão.">
+              <Campo
+                label="Parcelado no cartão em"
+                ajuda="Só para registro. A autoescola recebe pela operadora do cartão."
+              >
                 <Select name="vezesCartao" defaultValue="1" className="max-w-56">
                   {Array.from({ length: 12 }, (_, i) => i + 1).map((i) => (
                     <option key={i} value={i}>

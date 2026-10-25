@@ -1,12 +1,25 @@
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft, BellRing, Car, Check, Fuel, Pencil, Plus, Wrench } from "lucide-react";
 import { BotaoConfirmar } from "@/components/botao-confirmar";
 import { FormAcao } from "@/components/form-acao";
-import { Botao, BotaoLink, Cabecalho, Campo, Cartao, Etiqueta, Input, Secao, Tabela, Textarea, Vazio } from "@/components/ui";
+import {
+  Botao,
+  BotaoLink,
+  Cabecalho,
+  Campo,
+  Cartao,
+  Etiqueta,
+  Input,
+  Secao,
+  Tabela,
+  Textarea,
+  Vazio,
+} from "@/components/ui";
 import { exigirSessao } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { formatarLitros } from "@/lib/despesas";
-import { formatarData, formatarMoeda, hojeISO } from "@/lib/format";
+import { dataParaInput, formatarData, formatarMoeda, hojeISO, moedaParaInput } from "@/lib/format";
 import { SERVICOS_SUGERIDOS, diasAte, quandoLembrar } from "@/lib/lembretes";
 import { concluirLembrete, excluirManutencao, salvarManutencao } from "../actions";
 
@@ -17,14 +30,16 @@ export default async function VeiculoPage({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ salvo?: string }>;
+  searchParams: Promise<{ salvo?: string; editar?: string }>;
 }) {
   const veiculo = await db.veiculo.findUnique({
     where: { id: Number((await params).id) || 0 },
     include: { manutencoes: { orderBy: [{ data: "desc" }, { lembrarEm: "desc" }] } },
   });
   if (!veiculo) notFound();
-  const { salvo } = await searchParams;
+  const { salvo, editar } = await searchParams;
+  // Manutenção sendo alterada no formulário ao lado (?editar=id).
+  const editando = veiculo.manutencoes.find((m) => String(m.id) === editar);
   // Abastecimentos são despesas: só o administrador vê.
   const admin = (await exigirSessao()).papel === "admin";
   const abastecimentos = admin
@@ -125,13 +140,23 @@ export default async function VeiculoPage({
                     )}
                   </td>
                   <td className="px-4 py-3">
-                    <BotaoConfirmar
-                      acao={excluirManutencao.bind(null, m.id)}
-                      mensagem={`Excluir "${m.descricao}"?`}
-                      icone="excluir"
-                    >
-                      Excluir
-                    </BotaoConfirmar>
+                    <div className="flex items-center gap-2">
+                      <BotaoLink
+                        href={`/veiculos/${veiculo.id}?editar=${m.id}`}
+                        variante="secundario"
+                        tamanho="pequeno"
+                        icone={Pencil}
+                      >
+                        Alterar
+                      </BotaoLink>
+                      <BotaoConfirmar
+                        acao={excluirManutencao.bind(null, m.id)}
+                        mensagem={`Excluir "${m.descricao}"?`}
+                        icone="excluir"
+                      >
+                        Excluir
+                      </BotaoConfirmar>
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -155,7 +180,11 @@ export default async function VeiculoPage({
                 }
               />
               {abastecimentos.length === 0 ? (
-                <Vazio icone={Fuel} titulo="Nenhum abastecimento lançado" texto="Os abastecimentos são lançados em Despesas." />
+                <Vazio
+                  icone={Fuel}
+                  titulo="Nenhum abastecimento lançado"
+                  texto="Os abastecimentos são lançados em Despesas."
+                />
               ) : (
                 <Tabela cabecalhos={["Data", "Combustível", "Litros", "Km", "Valor"]}>
                   {abastecimentos.map((d) => (
@@ -175,11 +204,27 @@ export default async function VeiculoPage({
 
         <Cartao className="h-fit">
           <h2 className="mb-4 flex items-center gap-2 text-lg font-semibold">
-            <Wrench className="size-6 text-blue-600" aria-hidden /> Registrar manutenção
+            <Wrench className="size-6 text-blue-600" aria-hidden />{" "}
+            {editando ? "Alterar manutenção" : "Registrar manutenção"}
           </h2>
-          <FormAcao key={salvo ?? "novo"} acao={salvarManutencao.bind(null, veiculo.id)} textoBotao="Salvar">
+          {editando && (
+            <Link href={`/veiculos/${veiculo.id}`} className="-mt-2 mb-4 block text-base text-blue-700 hover:underline">
+              Cancelar alteração
+            </Link>
+          )}
+          <FormAcao
+            key={editando ? `editar-${editando.id}` : (salvo ?? "novo")}
+            acao={salvarManutencao.bind(null, veiculo.id, editando?.id ?? null)}
+            textoBotao={editando ? "Salvar alterações" : "Salvar"}
+          >
             <Campo label="Serviço" ajuda="Escolha da lista ou escreva.">
-              <Input name="descricao" list="servicos" required placeholder="Ex.: Troca de óleo" />
+              <Input
+                name="descricao"
+                list="servicos"
+                required
+                placeholder="Ex.: Troca de óleo"
+                defaultValue={editando?.descricao}
+              />
               <datalist id="servicos">
                 {SERVICOS_SUGERIDOS.map((s) => (
                   <option key={s} value={s} />
@@ -188,22 +233,27 @@ export default async function VeiculoPage({
             </Campo>
             <div className="grid grid-cols-2 gap-4">
               <Campo label="Feita em" ajuda="Deixe vazio se ainda vai fazer.">
-                <Input name="data" type="date" defaultValue={hojeISO()} />
+                <Input name="data" type="date" defaultValue={editando ? dataParaInput(editando.data) : hojeISO()} />
               </Campo>
               <Campo label="Km do veículo">
-                <Input name="km" inputMode="numeric" placeholder="Ex.: 45000" />
+                <Input name="km" inputMode="numeric" placeholder="Ex.: 45000" defaultValue={editando?.km ?? ""} />
               </Campo>
             </div>
             <Campo label="Valor gasto (R$)">
-              <Input name="valor" inputMode="decimal" placeholder="Ex.: 250,00" />
+              <Input
+                name="valor"
+                inputMode="decimal"
+                placeholder="Ex.: 250,00"
+                defaultValue={moedaParaInput(editando?.valorCentavos)}
+              />
             </Campo>
             <div className="rounded-xl border-2 border-amber-200 bg-amber-50 p-4">
               <Campo label="Me lembrar no dia" ajuda="O aviso aparece na tela inicial alguns dias antes.">
-                <Input name="lembrarEm" type="date" />
+                <Input name="lembrarEm" type="date" defaultValue={dataParaInput(editando?.lembrarEm)} />
               </Campo>
             </div>
             <Campo label="Observação">
-              <Textarea name="obs" rows={2} />
+              <Textarea name="obs" rows={2} defaultValue={editando?.obs ?? ""} />
             </Campo>
           </FormAcao>
         </Cartao>

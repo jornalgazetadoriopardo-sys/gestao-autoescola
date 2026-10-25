@@ -58,13 +58,7 @@ export function ConfigForm({ config }: { config: Configuracao }) {
               {logo ? "Trocar imagem" : "Escolher imagem"}
             </Botao>
             {logo && (
-              <Botao
-                type="button"
-                variante="perigo"
-                tamanho="pequeno"
-                icone={Trash2}
-                onClick={() => setLogo("")}
-              >
+              <Botao type="button" variante="perigo" tamanho="pequeno" icone={Trash2} onClick={() => setLogo("")}>
                 Remover
               </Botao>
             )}
@@ -127,11 +121,7 @@ export function ConfigForm({ config }: { config: Configuracao }) {
         <Campo label="E-mail">
           <Input name="email" type="email" defaultValue={config.email ?? ""} />
         </Campo>
-        <Campo
-          label="Chave Pix"
-          ajuda="Impressa no carnê para o aluno pagar por Pix."
-          className="sm:col-span-2"
-        >
+        <Campo label="Chave Pix" ajuda="Impressa no carnê para o aluno pagar por Pix." className="sm:col-span-2">
           <Input name="chavePix" defaultValue={config.chavePix ?? ""} />
         </Campo>
         <Campo
@@ -144,8 +134,7 @@ export function ConfigForm({ config }: { config: Configuracao }) {
         <fieldset className="rounded-xl border border-slate-200 bg-slate-50 p-4 sm:col-span-2">
           <legend className="px-1 text-base font-semibold text-slate-800">Horários das aulas</legend>
           <p className="mb-3 text-sm text-slate-600">
-            Ao agendar, o sistema oferece os horários dentro do expediente e desabilita os que estiverem
-            ocupados.
+            Ao agendar, o sistema oferece os horários dentro do expediente e desabilita os que estiverem ocupados.
           </p>
           <div className="grid gap-4 sm:grid-cols-3">
             <Campo label="Primeira aula às">
@@ -174,11 +163,7 @@ export function ConfigForm({ config }: { config: Configuracao }) {
           ajuda="Impressas no guia entregue na matrícula. Uma orientação por linha."
           className="sm:col-span-2"
         >
-          <Textarea
-            name="orientacoesAluno"
-            rows={6}
-            defaultValue={config.orientacoesAluno ?? ORIENTACOES_PADRAO}
-          />
+          <Textarea name="orientacoesAluno" rows={6} defaultValue={config.orientacoesAluno ?? ORIENTACOES_PADRAO} />
         </Campo>
       </div>
     </FormAcao>

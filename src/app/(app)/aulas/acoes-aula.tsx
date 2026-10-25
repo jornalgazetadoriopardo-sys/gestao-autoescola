@@ -42,6 +42,15 @@ function Presenca({ aula }: { aula: { id: number; status: string } }) {
       </>
     );
   }
+  if (aula.status === "cancelada") {
+    return (
+      <form action={marcarAula.bind(null, aula.id, "agendada")}>
+        <button className={`${botao} border-slate-300 text-slate-600 hover:bg-slate-50`}>
+          <Undo2 className="size-4" aria-hidden /> Reativar
+        </button>
+      </form>
+    );
+  }
   if (aula.status === "presente" || aula.status === "faltou") {
     return (
       <form action={marcarAula.bind(null, aula.id, "agendada")}>
