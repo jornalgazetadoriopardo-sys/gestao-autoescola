@@ -3,7 +3,8 @@ import { CircleCheck, HandCoins, Printer } from "lucide-react";
 import { Aviso, BotaoLink, Cabecalho, Cartao } from "@/components/ui";
 import { db } from "@/lib/db";
 import { formatarCpf, formatarData, formatarMoeda, hojeISO, moedaParaInput, situacaoParcela } from "@/lib/format";
-import { ReceberForm } from "./receber-form";
+import { receberParcela } from "../../actions";
+import { PagamentoForm } from "@/components/pagamento-form";
 
 export const dynamic = "force-dynamic";
 
@@ -57,8 +58,8 @@ export default async function ReceberPage({
             <Info rotulo="Valor" valor={formatarMoeda(parcela.valorCentavos)} />
           </Cartao>
           <Cartao>
-            <ReceberForm
-              parcelaId={parcela.id}
+            <PagamentoForm
+              acao={receberParcela.bind(null, parcela.id)}
               valor={moedaParaInput(parcela.valorCentavos)}
               hoje={hojeISO()}
               voltar={voltar}

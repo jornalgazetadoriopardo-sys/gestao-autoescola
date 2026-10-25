@@ -44,6 +44,7 @@ const FILTRO: Record<string, (autoescolaId: number) => object> = {
   Aula: (id) => ({ matricula: { aluno: { autoescolaId: id } } }),
   Parcela: (id) => ({ matricula: { aluno: { autoescolaId: id } } }),
   Manutencao: (id) => ({ veiculo: { autoescolaId: id } }),
+  Despesa: (id) => ({ autoescolaId: id }),
 };
 
 // Coluna preenchida automaticamente ao criar.
@@ -52,6 +53,7 @@ const COLUNA: Record<string, string> = {
   Aluno: "autoescolaId",
   Instrutor: "autoescolaId",
   Veiculo: "autoescolaId",
+  Despesa: "autoescolaId",
   Configuracao: "id",
 };
 
@@ -65,6 +67,7 @@ const REFERENCIAS: Record<string, [campo: string, modelo: string][]> = {
   ],
   Parcela: [["matriculaId", "Matricula"]],
   Manutencao: [["veiculoId", "Veiculo"]],
+  Despesa: [["veiculoId", "Veiculo"]],
 };
 
 type Dados = Record<string, unknown>;

@@ -24,6 +24,7 @@ model Autoescola {
   alunos       Aluno[]
   instrutores  Instrutor[]
   veiculos     Veiculo[]
+  despesas     Despesa[]
   configuracao Configuracao?
 }
 
@@ -89,6 +90,7 @@ model Veiculo {
   criadoEm     DateTime     @default(now())
   aulas        Aula[]
   manutencoes  Manutencao[]
+  despesas     Despesa[]
 
   @@unique([autoescolaId, placa])
 }
@@ -189,4 +191,31 @@ model Configuracao {
   intervaloMin     Int        @default(60)
   // Logotipo em data URL (imagem já reduzida no navegador).
   logo             String?
+}
+
+// Despesas da autoescola: folha, vales, abastecimento, contas, retiradas...
+// Fica "a pagar" até receber a data de pagamento.
+model Despesa {
+  id            Int        @id @default(autoincrement())
+  autoescolaId  Int
+  autoescola    Autoescola @relation(fields: [autoescolaId], references: [id])
+  // Ver CATEGORIAS_DESPESA em src/lib/despesas.ts
+  categoria     String
+  descricao     String
+  // Para quem foi pago (funcionário, posto, empresa...).
+  favorecido    String?
+  valorCentavos Int
+  vencimento    DateTime
+  pagoEm        DateTime?
+  forma         String?
+  // Abastecimento: veículo, litros (em centésimos: 3550 = 35,50 L) e km.
+  veiculoId     Int?
+  veiculo       Veiculo?   @relation(fields: [veiculoId], references: [id])
+  litrosCent    Int?
+  km            Int?
+  obs           String?
+  criadoEm      DateTime   @default(now())
+
+  @@index([autoescolaId, vencimento])
+  @@index([autoescolaId, pagoEm])
 }

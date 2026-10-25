@@ -1,9 +1,11 @@
 import { notFound } from "next/navigation";
-import { ArrowLeft, BellRing, Car, Check, Pencil, Wrench } from "lucide-react";
+import { ArrowLeft, BellRing, Car, Check, Fuel, Pencil, Plus, Wrench } from "lucide-react";
 import { BotaoConfirmar } from "@/components/botao-confirmar";
 import { FormAcao } from "@/components/form-acao";
 import { Botao, BotaoLink, Cabecalho, Campo, Cartao, Etiqueta, Input, Secao, Tabela, Textarea, Vazio } from "@/components/ui";
+import { exigirSessao } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { formatarLitros } from "@/lib/despesas";
 import { formatarData, formatarMoeda, hojeISO } from "@/lib/format";
 import { SERVICOS_SUGERIDOS, diasAte, quandoLembrar } from "@/lib/lembretes";
 import { concluirLembrete, excluirManutencao, salvarManutencao } from "../actions";
@@ -23,6 +25,15 @@ export default async function VeiculoPage({
   });
   if (!veiculo) notFound();
   const { salvo } = await searchParams;
+  // Abastecimentos são despesas: só o administrador vê.
+  const admin = (await exigirSessao()).papel === "admin";
+  const abastecimentos = admin
+    ? await db.despesa.findMany({
+        where: { veiculoId: veiculo.id, categoria: "combustivel" },
+        orderBy: [{ vencimento: "desc" }, { id: "desc" }],
+        take: 10,
+      })
+    : [];
 
   const lembretes = veiculo.manutencoes
     .filter((m) => m.lembrarEm && !m.lembreteConcluido)
@@ -125,6 +136,40 @@ export default async function VeiculoPage({
                 </tr>
               ))}
             </Tabela>
+          )}
+
+          {admin && (
+            <>
+              <Secao
+                titulo="Últimos abastecimentos"
+                icone={Fuel}
+                acoes={
+                  <BotaoLink
+                    href={`/despesas/nova?categoria=combustivel&veiculo=${veiculo.id}&voltar=${encodeURIComponent(`/veiculos/${veiculo.id}`)}`}
+                    variante="secundario"
+                    tamanho="pequeno"
+                    icone={Plus}
+                  >
+                    Lançar abastecimento
+                  </BotaoLink>
+                }
+              />
+              {abastecimentos.length === 0 ? (
+                <Vazio icone={Fuel} titulo="Nenhum abastecimento lançado" texto="Os abastecimentos são lançados em Despesas." />
+              ) : (
+                <Tabela cabecalhos={["Data", "Combustível", "Litros", "Km", "Valor"]}>
+                  {abastecimentos.map((d) => (
+                    <tr key={d.id}>
+                      <td className="px-4 py-3">{formatarData(d.pagoEm ?? d.vencimento)}</td>
+                      <td className="px-4 py-3">{d.descricao}</td>
+                      <td className="px-4 py-3">{d.litrosCent ? formatarLitros(d.litrosCent) : "—"}</td>
+                      <td className="px-4 py-3">{d.km ? d.km.toLocaleString("pt-BR") : "—"}</td>
+                      <td className="px-4 py-3 font-semibold">{formatarMoeda(d.valorCentavos)}</td>
+                    </tr>
+                  ))}
+                </Tabela>
+              )}
+            </>
           )}
         </div>
 

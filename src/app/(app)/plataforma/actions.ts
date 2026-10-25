@@ -81,7 +81,7 @@ export async function importarArquivo(_: EstadoForm, dados: FormData): Promise<E
     return {
       ok:
         `Autoescola ${r.nome} importada: ${r.totais.usuarios} usuário(s), ${r.totais.alunos} aluno(s), ` +
-        `${r.totais.aulas} aula(s) e ${r.totais.parcelas} parcela(s). Os usuários entram com as mesmas senhas de antes.`,
+        `${r.totais.aulas} aula(s), ${r.totais.parcelas} parcela(s) e ${r.totais.despesas} despesa(s). Os usuários entram com as mesmas senhas de antes.`,
     };
   } catch (e) {
     if (e instanceof ErroImportacao) return { erro: e.message };

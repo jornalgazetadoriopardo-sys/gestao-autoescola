@@ -25,10 +25,18 @@ presença e pagamentos.
   - Os horários **ocupados ficam desabilitados** (aluno, instrutor ou veículo já em aula,
     ou horário que já passou), dentro do expediente definido em Configurações
   - Cada aula pode ser **editada** (data, horário, instrutor, veículo...) ou excluída
+- **Despesas** (só administrador): folha de pagamento, vales, abastecimento (com veículo,
+  litros e km), retirada do dono, aluguel, contas, impostos e outras
+  - Cada despesa pode estar *paga* ou *a pagar* (com vencimento); botão para pagar depois
+  - "Repetir todo mês" para salário, aluguel e contas fixas
+  - Avisos na tela inicial de contas atrasadas ou que vencem nos próximos 3 dias
+  - As manutenções com valor, lançadas em Veículos, também contam como despesa nos relatórios
 - **Veículos** com histórico de manutenção e **lembretes** ("me lembrar no dia...")
   que aparecem na tela inicial 7 dias antes
 - **Relatórios** para imprimir ou salvar em PDF: do aluno (aulas, presenças,
-  faltas, quanto falta para concluir e pagamentos), financeiro e de aulas por período
+  faltas, quanto falta para concluir e pagamentos), financeiro (para o administrador:
+  entradas, despesas, lucro, retiradas e sobra no caixa), despesas por tipo e por pessoa,
+  resumo do ano mês a mês e aulas por período
 - **Configurações**: dados e logotipo da autoescola (usados no menu, carnê, recibos
   e relatórios), usuários (administrador ou secretaria) e troca de senha
 - **Várias autoescolas** no mesmo sistema: cada usuário pertence a uma autoescola e
