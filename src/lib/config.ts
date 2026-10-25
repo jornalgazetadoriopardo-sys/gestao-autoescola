@@ -1,12 +1,31 @@
 import "server-only";
 import type { Configuracao } from "@prisma/client";
-import { db } from "./db";
+import { cache } from "react";
+import { db, dbGlobal, situacaoDaSessao } from "./db";
 
-// Dados da autoescola de quem está logado. Enquanto nada foi salvo, devolve
-// valores padrão com o nome cadastrado da autoescola.
-export async function obterConfig(): Promise<Configuracao> {
-  const config = await db.configuracao.findFirst();
-  if (config) return config;
+// Dados da autoescola de quem está logado, sem a imagem do logotipo: em
+// `logo` vem o endereço /logo, que o navegador baixa uma vez e guarda.
+// Assim a imagem não vai dentro de cada página (no carnê ela se repete).
+export const obterConfig = cache(async (): Promise<Configuracao> => {
+  const { sessao } = await situacaoDaSessao();
+  const [config, versao] = await Promise.all([
+    db.configuracao.findFirst({ omit: { logo: true } }),
+    // Só a "impressão digital" da imagem: muda quando o logotipo é trocado.
+    sessao
+      ? dbGlobal.$queryRaw<{ v: string | null }[]>`SELECT md5(logo) AS v FROM "Configuracao" WHERE id = ${sessao.autoescolaId}`
+      : [],
+  ]);
+  const v = versao[0]?.v;
+  if (config) return { ...config, logo: v ? `/logo?v=${v.slice(0, 12)}` : null };
+  return configPadrao();
+});
+
+// Com a imagem do logotipo, para a tela de configurações.
+export async function obterConfigCompleta(): Promise<Configuracao> {
+  return (await db.configuracao.findFirst()) ?? configPadrao();
+}
+
+async function configPadrao(): Promise<Configuracao> {
   const autoescola = await db.autoescola.findFirstOrThrow();
   return (
     {
