@@ -43,7 +43,9 @@ export default async function RelatorioFinanceiroPage({
     }),
     admin ? lancamentosDoPeriodo(inicio, fim) : null,
     // Contas a pagar em aberto que vencem até o fim do período (inclui as atrasadas).
-    admin ? db.despesa.findMany({ where: { pagoEm: null, vencimento: { lt: fim } }, orderBy: { vencimento: "asc" } }) : [],
+    admin
+      ? db.despesa.findMany({ where: { pagoEm: null, vencimento: { lt: fim } }, orderBy: { vencimento: "asc" } })
+      : [],
   ]);
   const resumo = movimento && resumir(movimento.entradas, movimento.saidas);
   const totalContas = contas.reduce((s, d) => s + d.valorCentavos, 0);
@@ -68,7 +70,9 @@ export default async function RelatorioFinanceiroPage({
           <QuadroResultado resumo={resumo} />
           <h2 className="mt-5 border-b border-slate-400 pb-1 text-base font-bold">Despesas por tipo</h2>
           <TabelaPorCategoria resumo={resumo} />
-          <h2 className="mt-6 border-b border-slate-400 pb-1 text-base font-bold">Recebimentos por forma de pagamento</h2>
+          <h2 className="mt-6 border-b border-slate-400 pb-1 text-base font-bold">
+            Recebimentos por forma de pagamento
+          </h2>
         </>
       )}
 

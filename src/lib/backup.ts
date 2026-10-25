@@ -15,7 +15,7 @@ export async function exportarAutoescola(autoescolaId: number) {
   const doAluno = { aluno: { autoescolaId } };
   const [configuracao, usuarios, alunos, instrutores, veiculos, manutencoes, matriculas, parcelas, aulas, despesas] =
     await Promise.all([
-      dbGlobal.configuracao.findUnique({ where: { id: autoescolaId }, omit: { id: true } }),
+      dbGlobal.configuracao.findUnique({ where: { id: autoescolaId }, omit: { id: true, contratoArquivo: false } }),
       dbGlobal.usuario.findMany({
         orderBy: { id: "asc" },
         where: { autoescolaId },
@@ -39,7 +39,11 @@ export async function exportarAutoescola(autoescolaId: number) {
     versao: VERSAO,
     exportadoEm: new Date().toISOString(),
     autoescola: { nome: autoescola.nome, criadoEm: autoescola.criadoEm },
-    configuracao,
+    // O arquivo do contrato vai em base64 (texto) dentro do JSON.
+    configuracao: configuracao && {
+      ...configuracao,
+      contratoArquivo: configuracao.contratoArquivo ? Buffer.from(configuracao.contratoArquivo).toString("base64") : null,
+    },
     usuarios,
     alunos,
     instrutores,
@@ -187,6 +191,10 @@ export async function importarAutoescola(arquivo: unknown) {
             horaFim: r.strN(C, "horaFim") ?? undefined,
             intervaloMin: r.intN(C, "intervaloMin") ?? undefined,
             logo: r.strN(C, "logo"),
+            impressoraRecibo: r.strN(C, "impressoraRecibo") === "termica" ? "termica" : "a4",
+            contratoArquivo: r.strN(C, "contratoArquivo") ? Buffer.from(r.strN(C, "contratoArquivo")!, "base64") : null,
+            contratoNome: r.strN(C, "contratoNome"),
+            contratoEm: r.dataN(C, "contratoEm"),
           },
         });
       }

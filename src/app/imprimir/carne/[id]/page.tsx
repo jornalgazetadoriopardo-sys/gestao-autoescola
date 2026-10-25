@@ -4,6 +4,8 @@ import type { Configuracao, Parcela } from "@prisma/client";
 import { obterConfig } from "@/lib/config";
 import { db } from "@/lib/db";
 import { formatarCpf, formatarData, formatarMoeda } from "@/lib/format";
+import { formatoDe } from "@/lib/formato";
+import { CabecalhoCupom, Cupom, LinhaCupom } from "../../cupom";
 
 export const dynamic = "force-dynamic";
 
@@ -11,7 +13,13 @@ const POR_FOLHA = 4;
 
 // Carnê: 4 parcelas por folha A4. Cada parcela tem a via do aluno (fica no
 // carnê) e a via da autoescola (destacada e guardada quando o aluno paga).
-export default async function CarnePage({ params }: { params: Promise<{ id: string }> }) {
+export default async function CarnePage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<{ formato?: string }>;
+}) {
   const [matricula, config] = await Promise.all([
     db.matricula.findUnique({
       where: { id: Number((await params).id) || 0 },
@@ -22,6 +30,44 @@ export default async function CarnePage({ params }: { params: Promise<{ id: stri
   if (!matricula) notFound();
   if (matricula.parcelas.length === 0) {
     return <p className="p-10 text-center text-lg">Esta matrícula não tem parcelas para imprimir.</p>;
+  }
+
+  // Térmica: um cupom por parcela (o aluno guarda e traz no dia de pagar).
+  if (formatoDe((await searchParams).formato, config.impressoraRecibo) === "termica") {
+    const total = matricula.parcelas.length;
+    return (
+      <>
+        {matricula.parcelas.map((p) => (
+          <Cupom key={p.id}>
+            <CabecalhoCupom config={config} titulo={`Parcela ${p.numero}/${total}`} />
+            <div className="tracejado" />
+            <div>
+              Aluno: <b>{matricula.aluno.nome}</b>
+            </div>
+            <div>CPF: {formatarCpf(matricula.aluno.cpf)}</div>
+            <div>Categoria {matricula.categoria}</div>
+            <div className="tracejado" />
+            <LinhaCupom rotulo="VENCIMENTO" valor={formatarData(p.vencimento)} forte />
+            <LinhaCupom rotulo="VALOR" valor={formatarMoeda(p.valorCentavos)} forte />
+            {p.pagoEm && <div className="mt-1 text-center font-bold">PAGA EM {formatarData(p.pagoEm)}</div>}
+            {config.chavePix && (
+              <>
+                <div className="tracejado" />
+                <div>
+                  Pague com Pix: <b className="break-all">{config.chavePix}</b>
+                </div>
+              </>
+            )}
+            {config.avisoCarne && <div className="mt-1 text-[11px]">{config.avisoCarne}</div>}
+            <div className="tracejado" />
+            <div className="mt-5 flex gap-3 text-[11px]">
+              <div className="flex-1 border-t border-black pt-0.5 text-center">Pago em</div>
+              <div className="flex-1 border-t border-black pt-0.5 text-center">Recebido por</div>
+            </div>
+          </Cupom>
+        ))}
+      </>
+    );
   }
 
   const folhas: Parcela[][] = [];
@@ -94,7 +140,11 @@ function Lamina({
           <div className="min-w-0 flex-1">
             <div className="truncate text-sm font-bold">{config.nome}</div>
             <div className="text-[10px] leading-tight text-slate-700">
-              {[config.cnpj && `CNPJ ${config.cnpj}`, config.telefone && `Tel. ${config.telefone}`, config.whatsapp && `WhatsApp ${config.whatsapp}`]
+              {[
+                config.cnpj && `CNPJ ${config.cnpj}`,
+                config.telefone && `Tel. ${config.telefone}`,
+                config.whatsapp && `WhatsApp ${config.whatsapp}`,
+              ]
                 .filter(Boolean)
                 .join(" · ")}
             </div>
