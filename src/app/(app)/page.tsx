@@ -6,6 +6,7 @@ import {
   Check,
   ChevronRight,
   CircleCheck,
+  ClipboardCheck,
   HandCoins,
   Receipt,
   TriangleAlert,
@@ -19,7 +20,15 @@ import { Botao, Cartao, Etiqueta, IconeRedondo, Secao, Tabela, Vazio, type CorIc
 import { exigirSessao } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { formatarData, formatarMoeda, hojeISO } from "@/lib/format";
-import { COR_STATUS_AULA, STATUS_AULA, TIPOS_AULA, formatarDiaSemana, formatarHora, intervaloDoDia, somarDias } from "@/lib/aulas";
+import {
+  COR_STATUS_AULA,
+  STATUS_AULA,
+  TIPOS_AULA,
+  formatarDiaSemana,
+  formatarHora,
+  intervaloDoDia,
+  somarDias,
+} from "@/lib/aulas";
 import { diasAte, quandoLembrar } from "@/lib/lembretes";
 import { AcoesAula } from "./aulas/acoes-aula";
 import { concluirLembrete } from "./veiculos/actions";
@@ -31,7 +40,13 @@ const DIAS_ANTECEDENCIA = 7;
 
 const ATALHOS: { href: string; titulo: string; texto: string; icone: LucideIcon; cor: CorIcone }[] = [
   { href: "/alunos/novo", titulo: "Cadastrar aluno", texto: "Novo aluno na autoescola", icone: UserPlus, cor: "azul" },
-  { href: "/aulas/nova", titulo: "Agendar aula", texto: "Marcar aula prática ou teórica", icone: CalendarPlus, cor: "roxo" },
+  {
+    href: "/aulas/nova",
+    titulo: "Agendar aula",
+    texto: "Marcar aula prática ou teórica",
+    icone: CalendarPlus,
+    cor: "roxo",
+  },
   { href: "/pagamentos", titulo: "Receber pagamento", texto: "Dar baixa numa parcela", icone: HandCoins, cor: "verde" },
   { href: "/aulas", titulo: "Ver agenda", texto: "Aulas do dia e presença", icone: CalendarDays, cor: "amarelo" },
 ];
@@ -48,7 +63,11 @@ export default async function InicioPage() {
   const em3dias = new Date(`${somarDias(hojeTexto, 3)}T00:00:00Z`);
   const [contasAtrasadas, contasAVencer, pagoMes] = admin
     ? await Promise.all([
-        db.despesa.aggregate({ where: { pagoEm: null, vencimento: { lt: hoje } }, _sum: { valorCentavos: true }, _count: true }),
+        db.despesa.aggregate({
+          where: { pagoEm: null, vencimento: { lt: hoje } },
+          _sum: { valorCentavos: true },
+          _count: true,
+        }),
         db.despesa.aggregate({
           where: { pagoEm: null, vencimento: { gte: hoje, lte: em3dias } },
           _sum: { valorCentavos: true },
@@ -57,6 +76,13 @@ export default async function InicioPage() {
         db.despesa.aggregate({ where: { pagoEm: { gte: inicioMes } }, _sum: { valorCentavos: true } }),
       ])
     : [null, null, null];
+
+  // Exames do Detran/clínicas marcados para hoje e amanhã.
+  const examesProximos = await db.etapa.findMany({
+    where: { resultado: null, data: { gte: hoje, lte: new Date(`${somarDias(hojeTexto, 1)}T00:00:00Z`) } },
+    orderBy: { data: "asc" },
+    include: { matricula: { select: { aluno: { select: { nome: true } } } } },
+  });
 
   const [aulasHoje, lembretes, atrasadas, vencemHoje, recebidoMes, alunosAtivos] = await Promise.all([
     db.aula.findMany({
@@ -72,7 +98,11 @@ export default async function InicioPage() {
       orderBy: { lembrarEm: "asc" },
       include: { veiculo: true },
     }),
-    db.parcela.aggregate({ where: { pagoEm: null, vencimento: { lt: hoje } }, _sum: { valorCentavos: true }, _count: true }),
+    db.parcela.aggregate({
+      where: { pagoEm: null, vencimento: { lt: hoje } },
+      _sum: { valorCentavos: true },
+      _count: true,
+    }),
     db.parcela.aggregate({ where: { pagoEm: null, vencimento: hoje }, _sum: { valorCentavos: true }, _count: true }),
     db.parcela.aggregate({ where: { pagoEm: { gte: inicioMes } }, _sum: { valorPagoCentavos: true } }),
     db.aluno.count({ where: { status: "ativo" } }),
@@ -104,6 +134,7 @@ export default async function InicioPage() {
       {(lembretes.length > 0 ||
         atrasadas._count > 0 ||
         vencemHoje._count > 0 ||
+        examesProximos.length > 0 ||
         Boolean(contasAtrasadas?._count) ||
         Boolean(contasAVencer?._count)) && (
         <>
@@ -125,6 +156,18 @@ export default async function InicioPage() {
                 titulo={`${vencemHoje._count} ${vencemHoje._count === 1 ? "parcela vence" : "parcelas vencem"} hoje`}
                 texto={`Total de ${formatarMoeda(vencemHoje._sum.valorCentavos ?? 0)}.`}
                 acao={<LinkAcao href="/pagamentos?aba=avencer">Ver parcelas</LinkAcao>}
+              />
+            )}
+            {examesProximos.length > 0 && (
+              <AvisoLinha
+                cor="amarelo"
+                icone={ClipboardCheck}
+                titulo={`${examesProximos.length} ${examesProximos.length === 1 ? "exame" : "exames"} hoje ou amanhã`}
+                texto={examesProximos
+                  .slice(0, 3)
+                  .map((e) => `${e.matricula.aluno.nome} – ${e.descricao} (${formatarData(e.data)})`)
+                  .join(" · ")}
+                acao={<LinkAcao href="/exames">Ver exames</LinkAcao>}
               />
             )}
             {contasAtrasadas && contasAtrasadas._count > 0 && (
@@ -171,11 +214,7 @@ export default async function InicioPage() {
         </>
       )}
 
-      <Secao
-        titulo="Aulas de hoje"
-        icone={CalendarDays}
-        acoes={<LinkAcao href="/aulas">Abrir agenda</LinkAcao>}
-      />
+      <Secao titulo="Aulas de hoje" icone={CalendarDays} acoes={<LinkAcao href="/aulas">Abrir agenda</LinkAcao>} />
       {aulasHoje.length === 0 ? (
         <Vazio icone={CalendarDays} titulo="Nenhuma aula marcada para hoje" />
       ) : (

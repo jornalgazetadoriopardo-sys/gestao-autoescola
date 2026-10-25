@@ -110,6 +110,7 @@ export async function excluirAutoescola(autoescolaId: number, _: EstadoForm, dad
   await dbGlobal.$transaction([
     dbGlobal.aula.deleteMany({ where: { matricula: doAluno } }),
     dbGlobal.parcela.deleteMany({ where: { matricula: doAluno } }),
+    dbGlobal.etapa.deleteMany({ where: { matricula: doAluno } }),
     dbGlobal.matricula.deleteMany({ where: doAluno }),
     dbGlobal.aluno.deleteMany({ where: { autoescolaId } }),
     dbGlobal.despesa.deleteMany({ where: { autoescolaId } }),

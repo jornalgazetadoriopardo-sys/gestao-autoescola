@@ -29,7 +29,7 @@ export default async function RelatorioFinanceiroPage({
   const inicio = new Date(`${de}T00:00:00Z`);
   const fim = new Date(`${somarDias(ate, 1)}T00:00:00Z`);
 
-  const [config, recebidas, atrasadas, movimento, contas] = await Promise.all([
+  const [config, recebidas, atrasadas, movimento, contas, taxas] = await Promise.all([
     obterConfig(),
     db.parcela.findMany({
       where: { pagoEm: { gte: inicio, lt: fim } },
@@ -46,7 +46,14 @@ export default async function RelatorioFinanceiroPage({
     admin
       ? db.despesa.findMany({ where: { pagoEm: null, vencimento: { lt: fim } }, orderBy: { vencimento: "asc" } })
       : [],
+    // Exames e taxas que a autoescola cobrou do aluno e recebeu no período (repasse).
+    db.etapa.findMany({
+      where: { cobranca: "autoescola", pagoEm: { gte: inicio, lt: fim }, valorCentavos: { gt: 0 } },
+      orderBy: { pagoEm: "asc" },
+      include: { matricula: { include: { aluno: true } } },
+    }),
   ]);
+  const totalTaxas = taxas.reduce((s, e) => s + (e.valorCentavos ?? 0), 0);
   const resumo = movimento && resumir(movimento.entradas, movimento.saidas);
   const totalContas = contas.reduce((s, d) => s + d.valorCentavos, 0);
 
@@ -121,6 +128,39 @@ export default async function RelatorioFinanceiroPage({
             ))}
           </tbody>
         </table>
+      )}
+
+      {taxas.length > 0 && (
+        <>
+          <h2 className="mt-6 border-b border-slate-400 pb-1 text-base font-bold">
+            Taxas e exames cobrados dos alunos ({taxas.length}) — {formatarMoeda(totalTaxas)}
+          </h2>
+          <p className="mt-1 text-slate-600">
+            Valores repassados ao Detran, clínicas e laboratórios. Não entram nas entradas nem no lucro acima.
+          </p>
+          <table className="mt-1 w-full border-collapse">
+            <thead>
+              <tr className="border-b border-slate-400 text-left">
+                <th className="py-1">Data</th>
+                <th className="py-1">Aluno</th>
+                <th className="py-1">Referente</th>
+                <th className="py-1">Forma</th>
+                <th className="py-1 text-right">Valor</th>
+              </tr>
+            </thead>
+            <tbody>
+              {taxas.map((e) => (
+                <tr key={e.id} className="border-b border-slate-200">
+                  <td className="py-1">{formatarData(e.pagoEm)}</td>
+                  <td className="py-1">{e.matricula.aluno.nome}</td>
+                  <td className="py-1">{e.descricao}</td>
+                  <td className="py-1">{FORMAS_PAGAMENTO[e.forma ?? ""] ?? e.forma}</td>
+                  <td className="py-1 text-right">{formatarMoeda(e.valorCentavos ?? 0)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </>
       )}
 
       <h2 className="mt-6 border-b border-slate-400 pb-1 text-base font-bold">

@@ -47,24 +47,39 @@ model Usuario {
 
 // status: "ativo" | "concluido" | "desistente"
 model Aluno {
-  id           Int         @id @default(autoincrement())
-  autoescolaId Int
-  autoescola   Autoescola  @relation(fields: [autoescolaId], references: [id])
-  nome         String
-  cpf          String
-  telefone     String?
-  email        String?
-  nascimento   DateTime?
-  endereco     String?
-  categoria    String
-  status       String      @default("ativo")
-  obs          String?
+  id             Int         @id @default(autoincrement())
+  autoescolaId   Int
+  autoescola     Autoescola  @relation(fields: [autoescolaId], references: [id])
+  nome           String
+  cpf            String
+  telefone       String?
+  telefone2      String?
+  email          String?
+  nascimento     DateTime?
+  endereco       String?
+  // Dados da ficha de cadastro (todos opcionais).
+  numero         String?
+  bairro         String?
+  pai            String?
+  mae            String?
+  rg             String?
+  rgOrgao        String?
+  rgUf           String?
+  rgExpedicao    DateTime?
+  renach         String?
+  registroCnh    String?
+  naturalidade   String?
+  localAtividade String?
+  biometriaEm    DateTime?
+  categoria      String
+  status         String      @default("ativo")
+  obs            String?
   // Foto em data URL (JPEG reduzido no navegador). fotoEm muda a cada troca e
   // serve de versão no endereço da imagem (cache do navegador).
-  foto         String?
-  fotoEm       DateTime?
-  criadoEm     DateTime    @default(now())
-  matriculas   Matricula[]
+  foto           String?
+  fotoEm         DateTime?
+  criadoEm       DateTime    @default(now())
+  matriculas     Matricula[]
 
   @@unique([autoescolaId, cpf])
 }
@@ -112,9 +127,42 @@ model Matricula {
   jurosMesBp         Int       @default(0)
   // "carne" (parcelado pela autoescola) | "cartao" | "pix" | "dinheiro" (à vista, já quitado)
   formaPagamento     String    @default("carne")
+  // "primeira" | "adicao" | "mudanca" | "reabilitacao" (ver src/lib/etapas.ts)
+  tipoProcesso       String    @default("primeira")
+  // Curso teórico: "autoescola" (aulas pagas) | "online" (grátis no app CNH do Brasil) | "dispensado"
+  cursoTeorico       String    @default("autoescola")
   data               DateTime  @default(now())
   aulas              Aula[]
   parcelas           Parcela[]
+  etapas             Etapa[]
+}
+
+// Exames e taxas externas do processo de habilitação (médico, psicológico,
+// toxicológico, provas do Detran, emissão da CNH...). Cada item pode ser pago
+// direto pelo aluno ("aluno") ou cobrado pela autoescola ("autoescola").
+model Etapa {
+  id            Int       @id @default(autoincrement())
+  matriculaId   Int
+  matricula     Matricula @relation(fields: [matriculaId], references: [id])
+  // Ver TIPOS_ETAPA em src/lib/etapas.ts
+  tipo          String
+  descricao     String
+  // Categoria do exame prático (A, B, C, D ou E).
+  categoria     String?
+  ordem         Int       @default(0)
+  // Dia agendado ou realizado.
+  data          DateTime?
+  // "ok" (aprovado/apto/concluído) | "falhou" (reprovado/inapto) | null (ainda não)
+  resultado     String?
+  valorCentavos Int?
+  cobranca      String    @default("aluno")
+  pagoEm        DateTime?
+  forma         String?
+  obs           String?
+  criadoEm      DateTime  @default(now())
+
+  @@index([matriculaId])
+  @@index([data])
 }
 
 // tipo: "pratica" | "teorica"
@@ -201,6 +249,9 @@ model Configuracao {
   contratoArquivo  Bytes?
   contratoNome     String?
   contratoEm       DateTime?
+  // Valor e quem paga cada exame/taxa, usados ao criar a matrícula:
+  // { [tipo]: { valor: centavos, cobranca: "aluno" | "autoescola" } }
+  taxasPadrao      Json?
 }
 
 // Despesas da autoescola: folha, vales, abastecimento, contas, retiradas...

@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import {
   CalendarDays,
+  ClipboardCheck,
   Car,
   FileText,
   House,
@@ -23,6 +24,7 @@ import {
 const itens: { href: string; label: string; icone: typeof House; soAdmin?: boolean }[] = [
   { href: "/", label: "Início", icone: House },
   { href: "/aulas", label: "Agenda", icone: CalendarDays },
+  { href: "/exames", label: "Exames e taxas", icone: ClipboardCheck },
   { href: "/alunos", label: "Alunos", icone: Users },
   { href: "/pagamentos", label: "Pagamentos", icone: Wallet },
   { href: "/despesas", label: "Despesas", icone: Receipt, soAdmin: true },

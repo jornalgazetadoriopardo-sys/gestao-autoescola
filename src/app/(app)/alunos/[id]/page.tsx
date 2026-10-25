@@ -7,10 +7,12 @@ import {
   CalendarPlus,
   CalendarRange,
   CircleCheck,
+  ClipboardCheck,
   FileSignature,
   FileText,
   GraduationCap,
   HandCoins,
+  IdCard,
   Pencil,
   Plus,
   Printer,
@@ -33,6 +35,9 @@ import {
 } from "@/lib/format";
 import { COR_STATUS_AULA, STATUS_AULA, TIPOS_AULA, formatarDataHora, resumoAulas } from "@/lib/aulas";
 import { FORMAS_MATRICULA } from "@/lib/pagamentos";
+import { CURSOS_TEORICOS, TIPOS_PROCESSO } from "@/lib/etapas";
+import { AvisoTaxaRecebida } from "../../exames/aviso-taxa";
+import { TabelaEtapas } from "../../exames/tabela-etapas";
 import { urlFoto } from "@/lib/foto";
 import { AcoesAula } from "../../aulas/acoes-aula";
 import { estornarParcela, excluirParcela } from "../../pagamentos/actions";
@@ -49,9 +54,9 @@ export default async function FichaAlunoPage({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ nova?: string; recebido?: string; agendadas?: string }>;
+  searchParams: Promise<{ nova?: string; recebido?: string; agendadas?: string; taxaRecebida?: string }>;
 }) {
-  const { nova, recebido, agendadas } = await searchParams;
+  const { nova, recebido, agendadas, taxaRecebida } = await searchParams;
   const temContrato = Boolean((await db.configuracao.findFirst({ select: { contratoNome: true } }))?.contratoNome);
   const aluno = await db.aluno.findUnique({
     where: { id: Number((await params).id) || 0 },
@@ -60,6 +65,7 @@ export default async function FichaAlunoPage({
         orderBy: { data: "desc" },
         include: {
           parcelas: { orderBy: { numero: "asc" } },
+          etapas: { orderBy: [{ ordem: "asc" }, { id: "asc" }] },
           aulas: { orderBy: { dataHora: "asc" }, include: { instrutor: true, veiculo: true } },
         },
       },
@@ -115,6 +121,7 @@ export default async function FichaAlunoPage({
         }
       />
 
+      <AvisoTaxaRecebida id={taxaRecebida} />
       {matriculaNova && (
         <Aviso tipo="sucesso" icone={CircleCheck}>
           <span>Matrícula criada com sucesso! Entregue o guia ao aluno:</span>
@@ -223,11 +230,15 @@ export default async function FichaAlunoPage({
               <div className="mb-5 flex flex-wrap items-start justify-between gap-3">
                 <div>
                   <div className="text-lg font-semibold">
-                    Categoria {m.categoria} · matrícula em {formatarDataLocal(m.data)}
+                    {TIPOS_PROCESSO[m.tipoProcesso]?.titulo ?? m.tipoProcesso} · categoria {m.categoria} · matrícula em{" "}
+                    {formatarDataLocal(m.data)}
                   </div>
                   <div className="text-base text-slate-600">
-                    {m.qtdPraticas} aulas práticas · {m.qtdTeoricas} aulas teóricas ·{" "}
-                    {FORMAS_MATRICULA[m.formaPagamento]?.titulo ?? m.formaPagamento}
+                    {m.qtdPraticas} aulas práticas ·{" "}
+                    {m.cursoTeorico === "autoescola"
+                      ? `${m.qtdTeoricas} aulas teóricas`
+                      : `curso teórico: ${CURSOS_TEORICOS[m.cursoTeorico]?.titulo.toLowerCase() ?? m.cursoTeorico}`}{" "}
+                    · {FORMAS_MATRICULA[m.formaPagamento]?.titulo ?? m.formaPagamento}
                   </div>
                 </div>
                 <div className="flex flex-wrap gap-2">
@@ -239,6 +250,15 @@ export default async function FichaAlunoPage({
                     icone={BookOpenCheck}
                   >
                     Guia do aluno
+                  </BotaoLink>
+                  <BotaoLink
+                    href={`/imprimir/ficha/${m.id}`}
+                    target="_blank"
+                    variante="secundario"
+                    tamanho="pequeno"
+                    icone={IdCard}
+                  >
+                    Ficha
                   </BotaoLink>
                   {temContrato && (
                     <BotaoDownload href={`/contrato/${m.id}`} tamanho="pequeno" icone={FileSignature}>
@@ -350,6 +370,25 @@ export default async function FichaAlunoPage({
                   </Tabela>
                 </div>
               )}
+
+              <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+                <h3 className="flex items-center gap-2 text-lg font-semibold">
+                  <ClipboardCheck className="size-5 text-slate-500" aria-hidden /> Exames e taxas
+                  <span className="text-base font-normal text-slate-600">
+                    ({m.etapas.filter((e) => e.resultado === "ok").length} de {m.etapas.length} concluídos)
+                  </span>
+                </h3>
+                <BotaoLink href={`/exames/nova?matricula=${m.id}`} variante="secundario" tamanho="pequeno" icone={Plus}>
+                  Adicionar exame ou taxa
+                </BotaoLink>
+              </div>
+              <div className="mb-6">
+                {m.etapas.length > 0 ? (
+                  <TabelaEtapas etapas={m.etapas} voltar={`/alunos/${aluno.id}`} />
+                ) : (
+                  <p className="text-base text-slate-500">Nenhum exame ou taxa nesta matrícula.</p>
+                )}
+              </div>
 
               <h3 className="mb-3 flex items-center gap-2 text-lg font-semibold">
                 <Wallet className="size-5 text-slate-500" aria-hidden /> Financeiro

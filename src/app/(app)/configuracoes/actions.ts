@@ -7,6 +7,8 @@ import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
 import { exigirAdmin, exigirSessao } from "@/lib/auth";
 import { CONTRATO_MAX, conferirModelo } from "@/lib/contrato";
+import { TAXAS_CONFIGURAVEIS, type TaxasPadrao } from "@/lib/etapas";
+import { lerMoeda } from "@/lib/format";
 import type { EstadoForm } from "@/components/form-acao";
 
 function texto(dados: FormData, campo: string) {
@@ -219,4 +221,25 @@ export async function salvarImpressora(_: EstadoForm, dados: FormData): Promise<
         ? "Pronto: recibos e carnê vão sair na térmica."
         : "Pronto: recibos e carnê vão sair em folha A4.",
   };
+}
+
+// Valor e quem paga cada exame/taxa, usados nas matrículas novas.
+export async function salvarTaxas(_: EstadoForm, dados: FormData): Promise<EstadoForm> {
+  const sessao = await exigirAdmin();
+  const taxas: TaxasPadrao = {};
+  for (const [tipo, titulo] of TAXAS_CONFIGURAVEIS) {
+    const texto = String(dados.get(`valor_${tipo}`) ?? "").trim();
+    const valor = texto ? lerMoeda(texto) : null;
+    if (texto && valor === null) return { erro: `Valor inválido em "${titulo}". Ex.: 120,00` };
+    taxas[tipo] = { valor, cobranca: dados.get(`cobranca_${tipo}`) === "autoescola" ? "autoescola" : "aluno" };
+  }
+  const id = sessao.autoescolaId;
+  const autoescola = await db.autoescola.findFirstOrThrow();
+  await db.configuracao.upsert({
+    where: { id },
+    create: { id, nome: autoescola.nome, taxasPadrao: taxas },
+    update: { taxasPadrao: taxas },
+  });
+  revalidatePath("/configuracoes");
+  return { ok: "Valores salvos! Eles entram nas próximas matrículas." };
 }

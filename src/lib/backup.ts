@@ -13,27 +13,39 @@ export async function exportarAutoescola(autoescolaId: number) {
   const autoescola = await dbGlobal.autoescola.findUnique({ where: { id: autoescolaId } });
   if (!autoescola) return null;
   const doAluno = { aluno: { autoescolaId } };
-  const [configuracao, usuarios, alunos, instrutores, veiculos, manutencoes, matriculas, parcelas, aulas, despesas] =
-    await Promise.all([
-      dbGlobal.configuracao.findUnique({ where: { id: autoescolaId }, omit: { id: true, contratoArquivo: false } }),
-      dbGlobal.usuario.findMany({
-        orderBy: { id: "asc" },
-        where: { autoescolaId },
-        omit: { autoescolaId: true, superadmin: true },
-      }),
-      dbGlobal.aluno.findMany({
-        orderBy: { id: "asc" },
-        where: { autoescolaId },
-        omit: { autoescolaId: true, foto: false },
-      }),
-      dbGlobal.instrutor.findMany({ orderBy: { id: "asc" }, where: { autoescolaId }, omit: { autoescolaId: true } }),
-      dbGlobal.veiculo.findMany({ orderBy: { id: "asc" }, where: { autoescolaId }, omit: { autoescolaId: true } }),
-      dbGlobal.manutencao.findMany({ orderBy: { id: "asc" }, where: { veiculo: { autoescolaId } } }),
-      dbGlobal.matricula.findMany({ orderBy: { id: "asc" }, where: doAluno }),
-      dbGlobal.parcela.findMany({ orderBy: { id: "asc" }, where: { matricula: doAluno } }),
-      dbGlobal.aula.findMany({ orderBy: { id: "asc" }, where: { matricula: doAluno } }),
-      dbGlobal.despesa.findMany({ orderBy: { id: "asc" }, where: { autoescolaId }, omit: { autoescolaId: true } }),
-    ]);
+  const [
+    configuracao,
+    usuarios,
+    alunos,
+    instrutores,
+    veiculos,
+    manutencoes,
+    matriculas,
+    parcelas,
+    aulas,
+    despesas,
+    etapas,
+  ] = await Promise.all([
+    dbGlobal.configuracao.findUnique({ where: { id: autoescolaId }, omit: { id: true, contratoArquivo: false } }),
+    dbGlobal.usuario.findMany({
+      orderBy: { id: "asc" },
+      where: { autoescolaId },
+      omit: { autoescolaId: true, superadmin: true },
+    }),
+    dbGlobal.aluno.findMany({
+      orderBy: { id: "asc" },
+      where: { autoescolaId },
+      omit: { autoescolaId: true, foto: false },
+    }),
+    dbGlobal.instrutor.findMany({ orderBy: { id: "asc" }, where: { autoescolaId }, omit: { autoescolaId: true } }),
+    dbGlobal.veiculo.findMany({ orderBy: { id: "asc" }, where: { autoescolaId }, omit: { autoescolaId: true } }),
+    dbGlobal.manutencao.findMany({ orderBy: { id: "asc" }, where: { veiculo: { autoescolaId } } }),
+    dbGlobal.matricula.findMany({ orderBy: { id: "asc" }, where: doAluno }),
+    dbGlobal.parcela.findMany({ orderBy: { id: "asc" }, where: { matricula: doAluno } }),
+    dbGlobal.aula.findMany({ orderBy: { id: "asc" }, where: { matricula: doAluno } }),
+    dbGlobal.despesa.findMany({ orderBy: { id: "asc" }, where: { autoescolaId }, omit: { autoescolaId: true } }),
+    dbGlobal.etapa.findMany({ orderBy: { id: "asc" }, where: { matricula: doAluno } }),
+  ]);
   return {
     formato: FORMATO,
     versao: VERSAO,
@@ -42,7 +54,9 @@ export async function exportarAutoescola(autoescolaId: number) {
     // O arquivo do contrato vai em base64 (texto) dentro do JSON.
     configuracao: configuracao && {
       ...configuracao,
-      contratoArquivo: configuracao.contratoArquivo ? Buffer.from(configuracao.contratoArquivo).toString("base64") : null,
+      contratoArquivo: configuracao.contratoArquivo
+        ? Buffer.from(configuracao.contratoArquivo).toString("base64")
+        : null,
     },
     usuarios,
     alunos,
@@ -53,6 +67,7 @@ export async function exportarAutoescola(autoescolaId: number) {
     parcelas,
     aulas,
     despesas,
+    etapas,
   };
 }
 
@@ -148,6 +163,7 @@ export async function importarAutoescola(arquivo: unknown) {
   const aulas = lista(o, "aulas");
   // Arquivos exportados antes do módulo de despesas não têm esta lista.
   const despesas = lista(o, "despesas");
+  const etapas = lista(o, "etapas");
 
   // E-mail de login é único no sistema todo.
   const u = ler("usuários");
@@ -195,6 +211,7 @@ export async function importarAutoescola(arquivo: unknown) {
             contratoArquivo: r.strN(C, "contratoArquivo") ? Buffer.from(r.strN(C, "contratoArquivo")!, "base64") : null,
             contratoNome: r.strN(C, "contratoNome"),
             contratoEm: r.dataN(C, "contratoEm"),
+            taxasPadrao: C.taxasPadrao && typeof C.taxasPadrao === "object" ? (C.taxasPadrao as object) : undefined,
           },
         });
       }
@@ -227,6 +244,20 @@ export async function importarAutoescola(arquivo: unknown) {
           status: al.str(x, "status"),
           obs: al.strN(x, "obs"),
           foto: al.strN(x, "foto"),
+          telefone2: al.strN(x, "telefone2"),
+          numero: al.strN(x, "numero"),
+          bairro: al.strN(x, "bairro"),
+          pai: al.strN(x, "pai"),
+          mae: al.strN(x, "mae"),
+          rg: al.strN(x, "rg"),
+          rgOrgao: al.strN(x, "rgOrgao"),
+          rgUf: al.strN(x, "rgUf"),
+          rgExpedicao: al.dataN(x, "rgExpedicao"),
+          renach: al.strN(x, "renach"),
+          registroCnh: al.strN(x, "registroCnh"),
+          naturalidade: al.strN(x, "naturalidade"),
+          localAtividade: al.strN(x, "localAtividade"),
+          biometriaEm: al.dataN(x, "biometriaEm"),
           fotoEm: al.dataN(x, "fotoEm"),
           criadoEm: al.dataN(x, "criadoEm") ?? undefined,
         })),
@@ -287,6 +318,8 @@ export async function importarAutoescola(arquivo: unknown) {
           valorTotalCentavos: mt.int(x, "valorTotalCentavos"),
           jurosMesBp: mt.int(x, "jurosMesBp"),
           formaPagamento: mt.str(x, "formaPagamento"),
+          tipoProcesso: mt.strN(x, "tipoProcesso") ?? "primeira",
+          cursoTeorico: mt.strN(x, "cursoTeorico") ?? "autoescola",
           data: mt.data(x, "data"),
         })),
       });
@@ -335,6 +368,25 @@ export async function importarAutoescola(arquivo: unknown) {
           km: de.intN(x, "km"),
           obs: de.strN(x, "obs"),
           criadoEm: de.dataN(x, "criadoEm") ?? undefined,
+        })),
+      });
+
+      const et = ler("etapas");
+      await tx.etapa.createMany({
+        data: etapas.map((x) => ({
+          matriculaId: idMatricula(et.int(x, "matriculaId")),
+          tipo: et.str(x, "tipo"),
+          descricao: et.str(x, "descricao"),
+          categoria: et.strN(x, "categoria"),
+          ordem: et.intN(x, "ordem") ?? 0,
+          data: et.dataN(x, "data"),
+          resultado: et.strN(x, "resultado"),
+          valorCentavos: et.intN(x, "valorCentavos"),
+          cobranca: et.strN(x, "cobranca") === "autoescola" ? "autoescola" : "aluno",
+          pagoEm: et.dataN(x, "pagoEm"),
+          forma: et.strN(x, "forma"),
+          obs: et.strN(x, "obs"),
+          criadoEm: et.dataN(x, "criadoEm") ?? undefined,
         })),
       });
 

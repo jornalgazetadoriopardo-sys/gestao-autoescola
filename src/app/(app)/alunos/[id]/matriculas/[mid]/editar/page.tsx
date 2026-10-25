@@ -1,6 +1,8 @@
 import { notFound } from "next/navigation";
 import { ArrowLeft, Pencil, Plus } from "lucide-react";
 import { FormAcao } from "@/components/form-acao";
+import { Opcoes } from "@/components/opcoes";
+import { CURSOS_TEORICOS, TIPOS_PROCESSO } from "@/lib/etapas";
 import { BotaoLink, Cabecalho, Campo, Cartao, Input, Select } from "@/components/ui";
 import { db } from "@/lib/db";
 import { CATEGORIAS, hojeISO, moedaParaInput } from "@/lib/format";
@@ -35,6 +37,19 @@ export default async function EditarMatriculaPage({ params }: { params: Promise<
       <div className="grid gap-6 xl:grid-cols-[minmax(0,40rem)_minmax(0,26rem)]">
         <Cartao>
           <FormAcao acao={editarMatricula.bind(null, matricula.id)} textoBotao="Salvar alterações">
+            <Opcoes
+              nome="tipoProcesso"
+              legenda="Tipo de processo"
+              opcoes={TIPOS_PROCESSO}
+              inicial={matricula.tipoProcesso}
+            />
+            <Opcoes
+              nome="cursoTeorico"
+              legenda="Curso teórico"
+              opcoes={CURSOS_TEORICOS}
+              inicial={matricula.cursoTeorico}
+              colunas="sm:grid-cols-3"
+            />
             <div className="grid gap-5 sm:grid-cols-3">
               <Campo label="Categoria">
                 <Select name="categoria" defaultValue={matricula.categoria}>
