@@ -3,7 +3,7 @@ import { Scissors } from "lucide-react";
 import { obterConfig } from "@/lib/config";
 import { db } from "@/lib/db";
 import { FORMAS_PAGAMENTO, formatarCpf, formatarData, formatarMoeda } from "@/lib/format";
-import { valorPorExtenso } from "@/lib/pagamentos";
+import { SO_PARCELAS, referenteParcela, valorPorExtenso } from "@/lib/pagamentos";
 import { formatoDe } from "@/lib/formato";
 import { CabecalhoDocumento } from "../../cabecalho-documento";
 import { Assinatura, CabecalhoCupom, Cupom, LinhaCupom } from "../../cupom";
@@ -20,7 +20,7 @@ export default async function ReciboPage({
   const [parcela, config] = await Promise.all([
     db.parcela.findUnique({
       where: { id: Number((await params).id) || 0 },
-      include: { matricula: { include: { aluno: true, _count: { select: { parcelas: true } } } } },
+      include: { matricula: { include: { aluno: true, _count: { select: { parcelas: { where: SO_PARCELAS } } } } } },
     }),
     obterConfig(),
   ]);
@@ -51,10 +51,10 @@ export default async function ReciboPage({
             </div>
             <div>CPF: {formatarCpf(aluno.cpf)}</div>
             <div className="mt-1">
-              Referente:{" "}
-              {parcela.matricula.formaPagamento === "carne"
-                ? `parcela ${parcela.numero}/${parcela.matricula._count.parcelas} (venc. ${formatarData(parcela.vencimento)})`
-                : "matrícula"}{" "}
+              Referente: {referenteParcela(parcela, parcela.matricula, parcela.matricula._count.parcelas)}
+              {parcela.numero > 0 && parcela.matricula.formaPagamento === "carne"
+                ? ` (venc. ${formatarData(parcela.vencimento)})`
+                : ""}{" "}
               · Categoria {parcela.matricula.categoria}
             </div>
             <LinhaCupom rotulo="Forma" valor={FORMAS_PAGAMENTO[parcela.forma ?? ""] ?? parcela.forma} />
@@ -86,11 +86,12 @@ export default async function ReciboPage({
         Recebemos de <b>{parcela.matricula.aluno.nome}</b>, CPF {formatarCpf(parcela.matricula.aluno.cpf)}, a
         importância de <b>{formatarMoeda(parcela.valorPagoCentavos ?? parcela.valorCentavos)}</b> (
         {valorPorExtenso(parcela.valorPagoCentavos ?? parcela.valorCentavos)}), referente à{" "}
-        {parcela.matricula.formaPagamento === "carne"
-          ? `parcela ${parcela.numero} de ${parcela.matricula._count.parcelas}`
-          : "matrícula"}{" "}
-        do curso de habilitação categoria {parcela.matricula.categoria}
-        {parcela.matricula.formaPagamento === "carne" && `, com vencimento em ${formatarData(parcela.vencimento)}`}.
+        {referenteParcela(parcela, parcela.matricula, parcela.matricula._count.parcelas)} do curso de habilitação
+        categoria {parcela.matricula.categoria}
+        {parcela.numero > 0 &&
+          parcela.matricula.formaPagamento === "carne" &&
+          `, com vencimento em ${formatarData(parcela.vencimento)}`}
+        .
       </p>
       <p className="mt-2 text-sm">
         Forma de pagamento: <b>{FORMAS_PAGAMENTO[parcela.forma ?? ""] ?? parcela.forma}</b>

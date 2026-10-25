@@ -28,6 +28,7 @@ import {
 import { db } from "@/lib/db";
 import { FORMAS_PAGAMENTO, formatarData, formatarMoeda, hojeISO, situacaoParcela } from "@/lib/format";
 import { somarDias } from "@/lib/aulas";
+import { SO_PARCELAS, rotuloParcela } from "@/lib/pagamentos";
 import { estornarParcela } from "./actions";
 
 export const dynamic = "force-dynamic";
@@ -71,20 +72,44 @@ export default async function PagamentosPage({
       where,
       orderBy: aba === "pagas" ? { pagoEm: "desc" } : { vencimento: "asc" },
       take: 300,
-      include: { matricula: { include: { aluno: true, _count: { select: { parcelas: true } } } } },
+      include: { matricula: { include: { aluno: true, _count: { select: { parcelas: { where: SO_PARCELAS } } } } } },
     }),
     db.parcela.aggregate({ where: filtros.atrasadas, _sum: { valorCentavos: true }, _count: true }),
     db.parcela.aggregate({ where: filtros.avencer, _sum: { valorCentavos: true }, _count: true }),
     db.parcela.aggregate({ where: filtros.pagas, _sum: { valorPagoCentavos: true }, _count: true }),
     params.recebido
-      ? db.parcela.findUnique({ where: { id: Number(params.recebido) || 0 }, include: { matricula: { include: { aluno: true } } } })
+      ? db.parcela.findUnique({
+          where: { id: Number(params.recebido) || 0 },
+          include: { matricula: { include: { aluno: true } } },
+        })
       : null,
   ]);
 
   const resumo: { label: string; valor: number; qtd: number; cor: CorIcone; icone: LucideIcon; aba: string }[] = [
-    { label: "Em atraso", valor: atrasado._sum.valorCentavos ?? 0, qtd: atrasado._count, cor: "vermelho", icone: TriangleAlert, aba: "atrasadas" },
-    { label: "A receber em 30 dias", valor: aVencer._sum.valorCentavos ?? 0, qtd: aVencer._count, cor: "amarelo", icone: CalendarClock, aba: "avencer" },
-    { label: "Recebido este mês", valor: recebido._sum.valorPagoCentavos ?? 0, qtd: recebido._count, cor: "verde", icone: CircleCheck, aba: "pagas" },
+    {
+      label: "Em atraso",
+      valor: atrasado._sum.valorCentavos ?? 0,
+      qtd: atrasado._count,
+      cor: "vermelho",
+      icone: TriangleAlert,
+      aba: "atrasadas",
+    },
+    {
+      label: "A receber em 30 dias",
+      valor: aVencer._sum.valorCentavos ?? 0,
+      qtd: aVencer._count,
+      cor: "amarelo",
+      icone: CalendarClock,
+      aba: "avencer",
+    },
+    {
+      label: "Recebido este mês",
+      valor: recebido._sum.valorPagoCentavos ?? 0,
+      qtd: recebido._count,
+      cor: "verde",
+      icone: CircleCheck,
+      aba: "pagas",
+    },
   ];
   const voltar = `/pagamentos?aba=${aba}${busca ? `&q=${encodeURIComponent(busca)}` : ""}`;
 
@@ -111,7 +136,9 @@ export default async function PagamentosPage({
       <div className="mb-6 grid gap-4 sm:grid-cols-3">
         {resumo.map((r) => (
           <Link key={r.label} href={`/pagamentos?aba=${r.aba}`}>
-            <Cartao className={`flex items-center gap-4 hover:border-blue-300 ${aba === r.aba ? "ring-2 ring-blue-500" : ""}`}>
+            <Cartao
+              className={`flex items-center gap-4 hover:border-blue-300 ${aba === r.aba ? "ring-2 ring-blue-500" : ""}`}
+            >
               <IconeRedondo icone={r.icone} cor={r.cor} />
               <div>
                 <div className="text-sm text-slate-600">{r.label}</div>
@@ -163,9 +190,7 @@ export default async function PagamentosPage({
                     {p.matricula.aluno.nome}
                   </Link>
                 </td>
-                <td className="px-4 py-3">
-                  {p.numero}/{p.matricula._count.parcelas}
-                </td>
+                <td className="px-4 py-3">{rotuloParcela(p.numero, p.matricula._count.parcelas)}</td>
                 <td className="px-4 py-3">{formatarData(p.vencimento)}</td>
                 <td className="px-4 py-3 font-semibold">{formatarMoeda(p.valorPagoCentavos ?? p.valorCentavos)}</td>
                 <td className="px-4 py-3">
@@ -179,7 +204,13 @@ export default async function PagamentosPage({
                 <td className="px-4 py-3">
                   {p.pagoEm ? (
                     <div className="flex items-center gap-2">
-                      <BotaoLink href={`/imprimir/recibo/${p.id}`} target="_blank" variante="secundario" tamanho="pequeno" icone={Printer}>
+                      <BotaoLink
+                        href={`/imprimir/recibo/${p.id}`}
+                        target="_blank"
+                        variante="secundario"
+                        tamanho="pequeno"
+                        icone={Printer}
+                      >
                         Recibo
                       </BotaoLink>
                       <BotaoConfirmar

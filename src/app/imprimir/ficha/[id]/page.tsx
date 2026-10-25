@@ -11,7 +11,7 @@ import {
   formatarTelefone,
 } from "@/lib/format";
 import { CURSOS_TEORICOS, TIPOS_PROCESSO, textoSituacaoEtapa } from "@/lib/etapas";
-import { FORMAS_MATRICULA } from "@/lib/pagamentos";
+import { descricaoPagamento } from "@/lib/pagamentos";
 
 export const dynamic = "force-dynamic";
 
@@ -118,7 +118,7 @@ export default async function FichaPage({ params }: { params: Promise<{ id: stri
       <h2 className="mt-5 border-b-2 border-slate-800 pb-1 text-base font-bold uppercase">Pagamento</h2>
       <div className="mt-1 grid grid-cols-2 gap-x-6 gap-y-1">
         <div>
-          Forma: <b>{FORMAS_MATRICULA[matricula.formaPagamento]?.titulo ?? matricula.formaPagamento}</b>
+          Forma: <b>{descricaoPagamento(matricula, formatarMoeda)}</b>
         </div>
         <div>
           Valor: <b>{formatarMoeda(matricula.valorTotalCentavos)}</b>
@@ -149,7 +149,9 @@ export default async function FichaPage({ params }: { params: Promise<{ id: stri
             {matricula.parcelas.map((p) => (
               <tr key={p.id}>
                 <td className="border border-slate-800 px-2 py-1">{formatarData(p.vencimento)}</td>
-                <td className="border border-slate-800 px-2 py-1">{p.numero}ª parcela</td>
+                <td className="border border-slate-800 px-2 py-1">
+                  {p.numero === 0 ? "Entrada" : `${p.numero}ª parcela`}
+                </td>
                 <td className="border border-slate-800 px-2 py-1">{formatarMoeda(p.valorCentavos)}</td>
                 <td className="border border-slate-800 px-2 py-1">
                   {p.pagoEm ? `${formatarData(p.pagoEm)} · ${FORMAS_PAGAMENTO[p.forma ?? ""] ?? p.forma}` : ""}

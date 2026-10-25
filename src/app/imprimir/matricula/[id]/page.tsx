@@ -14,7 +14,7 @@ import {
 } from "@/lib/format";
 import { FUSO, formatarHora } from "@/lib/aulas";
 import { ORIENTACOES_PADRAO } from "@/lib/orientacoes";
-import { FORMAS_MATRICULA } from "@/lib/pagamentos";
+import { descricaoPagamento } from "@/lib/pagamentos";
 import { urlFoto } from "@/lib/foto";
 import { CabecalhoDocumento } from "../../cabecalho-documento";
 import { RodapeDocumento } from "../../rodape-documento";
@@ -56,7 +56,13 @@ export default async function GuiaMatriculaPage({ params }: { params: Promise<{ 
     .map((l) => l.trim())
     .filter(Boolean);
   const pagaNaHora = matricula.formaPagamento !== "carne";
-  const total = matricula.parcelas.reduce((s, p) => s + p.valorCentavos, 0);
+  // A entrada (parcela 0) aparece à parte; "parcelas" são só as do restante.
+  const entrada = matricula.parcelas.find((p) => p.numero === 0);
+  const parcelas = matricula.parcelas.filter((p) => p.numero > 0);
+  const total = parcelas.reduce((s, p) => s + p.valorCentavos, 0);
+  const textoEntrada = entrada
+    ? `entrada de ${formatarMoeda(entrada.valorCentavos)} (${FORMAS_PAGAMENTO[entrada.forma ?? ""] ?? entrada.forma}) paga em ${formatarData(entrada.pagoEm)}`
+    : "";
 
   const mensagem = montarMensagem({
     aluno: aluno.nome,
@@ -65,11 +71,19 @@ export default async function GuiaMatriculaPage({ params }: { params: Promise<{ 
     praticas: matricula.qtdPraticas,
     teoricas: matricula.qtdTeoricas,
     agendadas: matricula.aulas.filter((a) => a.status === "agendada"),
-    pagamento: pagaNaHora
-      ? `pago à vista (${FORMAS_PAGAMENTO[matricula.formaPagamento] ?? matricula.formaPagamento}) — quitado`
-      : matricula.parcelas.length > 0
-        ? `${matricula.parcelas.length}x de ${formatarMoeda(matricula.parcelas[0].valorCentavos)}, 1ª parcela em ${formatarData(matricula.parcelas[0].vencimento)}`
-        : "sem valor a pagar",
+    pagamento:
+      [
+        textoEntrada,
+        pagaNaHora
+          ? parcelas.length > 0
+            ? `${entrada ? "restante " : ""}pago à vista (${FORMAS_PAGAMENTO[matricula.formaPagamento] ?? matricula.formaPagamento}) — quitado`
+            : ""
+          : parcelas.length > 0
+            ? `${entrada ? "restante em " : ""}${parcelas.length}x de ${formatarMoeda(parcelas[0].valorCentavos)}, 1ª parcela em ${formatarData(parcelas[0].vencimento)}`
+            : "",
+      ]
+        .filter(Boolean)
+        .join(" + ") || "sem valor a pagar",
     contato: config.whatsapp ?? config.telefone,
   });
 
@@ -116,26 +130,29 @@ export default async function GuiaMatriculaPage({ params }: { params: Promise<{ 
 
         <Secao titulo="Pagamento">
           <p>
-            <b>{FORMAS_MATRICULA[matricula.formaPagamento]?.titulo ?? matricula.formaPagamento}</b> · Valor:{" "}
+            <b>{descricaoPagamento(matricula, formatarMoeda)}</b> · Valor:{" "}
             <b>{formatarMoeda(matricula.valorTotalCentavos)}</b>
             {matricula.jurosMesBp > 0 &&
               ` · Total parcelado: ${formatarMoeda(total)} (juros de ${formatarPercentual(matricula.jurosMesBp)} ao mês)`}
           </p>
+          {entrada && <p className="mt-1">Entrada: {textoEntrada}.</p>}
           {pagaNaHora ? (
             <p className="mt-1">
-              {matricula.parcelas[0]?.pagoEm
-                ? `Pago em ${formatarData(matricula.parcelas[0].pagoEm)}${matricula.parcelas[0].obs ? ` (${matricula.parcelas[0].obs})` : ""}. Matrícula quitada.`
-                : "Sem valor a pagar."}
+              {parcelas[0]?.pagoEm
+                ? `${entrada ? "Restante pago" : "Pago"} em ${formatarData(parcelas[0].pagoEm)}${parcelas[0].obs ? ` (${parcelas[0].obs})` : ""}. Matrícula quitada.`
+                : entrada
+                  ? ""
+                  : "Sem valor a pagar."}
             </p>
-          ) : matricula.parcelas.length === 0 ? (
+          ) : parcelas.length === 0 ? (
             <p className="mt-1">Sem valor a pagar.</p>
           ) : (
             <>
               <div className="mt-2 grid grid-cols-4 gap-1.5">
-                {matricula.parcelas.map((p) => (
+                {parcelas.map((p) => (
                   <div key={p.id} className="rounded border border-slate-300 px-2 py-1">
                     <div className="text-[11px] text-slate-500">
-                      Parcela {p.numero}/{matricula.parcelas.length}
+                      Parcela {p.numero}/{parcelas.length}
                     </div>
                     <div className="font-semibold">
                       {formatarData(p.vencimento)} · {formatarMoeda(p.valorCentavos)}

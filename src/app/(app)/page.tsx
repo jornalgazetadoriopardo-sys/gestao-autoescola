@@ -6,6 +6,7 @@ import {
   Check,
   ChevronRight,
   CircleCheck,
+  FileBadge,
   ClipboardCheck,
   HandCoins,
   Receipt,
@@ -31,7 +32,9 @@ import {
 } from "@/lib/aulas";
 import { diasAte, quandoLembrar } from "@/lib/lembretes";
 import { AcoesAula } from "./aulas/acoes-aula";
-import { concluirLembrete } from "./veiculos/actions";
+import { concluirLembrete, marcarLicenciamento } from "./veiculos/actions";
+import { textoLicenciamento } from "./veiculos/etiqueta-licenciamento";
+import { DIAS_AVISO_LICENCIAMENTO, lerCalendario, situacaoLicenciamento } from "@/lib/licenciamento";
 
 export const dynamic = "force-dynamic";
 
@@ -76,6 +79,13 @@ export default async function InicioPage() {
         db.despesa.aggregate({ where: { pagoEm: { gte: inicioMes } }, _sum: { valorCentavos: true } }),
       ])
     : [null, null, null];
+
+  // Licenciamento: veículos ativos com o pagamento do ano vencendo em até 30 dias ou vencido.
+  const configLic = await db.configuracao.findFirst({ select: { calendarioLicenciamento: true } });
+  const calendario = lerCalendario(configLic?.calendarioLicenciamento);
+  const licenciamentos = (await db.veiculo.findMany({ where: { ativo: true }, orderBy: { placa: "asc" } }))
+    .map((v) => ({ v, s: situacaoLicenciamento(v, calendario, hojeTexto) }))
+    .filter(({ s }) => !s.pago && s.dias !== null && s.dias <= DIAS_AVISO_LICENCIAMENTO);
 
   // Exames do Detran/clínicas marcados para hoje e amanhã.
   const examesProximos = await db.etapa.findMany({
@@ -135,6 +145,7 @@ export default async function InicioPage() {
         atrasadas._count > 0 ||
         vencemHoje._count > 0 ||
         examesProximos.length > 0 ||
+        licenciamentos.length > 0 ||
         Boolean(contasAtrasadas?._count) ||
         Boolean(contasAVencer?._count)) && (
         <>
@@ -158,6 +169,25 @@ export default async function InicioPage() {
                 acao={<LinkAcao href="/pagamentos?aba=avencer">Ver parcelas</LinkAcao>}
               />
             )}
+            {licenciamentos.map(({ v, s }) => (
+              <AvisoLinha
+                key={`lic-${v.id}`}
+                cor={s.dias! < 0 ? "vermelho" : "amarelo"}
+                icone={FileBadge}
+                titulo={`Licenciamento — ${v.modelo} (${v.placa})`}
+                texto={textoLicenciamento(s).texto}
+                acao={
+                  <div className="flex flex-wrap gap-2">
+                    <LinkAcao href={`/veiculos/${v.id}`}>Ver veículo</LinkAcao>
+                    <form action={marcarLicenciamento.bind(null, v.id, true)}>
+                      <Botao variante="sucesso" tamanho="pequeno" icone={Check}>
+                        Já paguei
+                      </Botao>
+                    </form>
+                  </div>
+                }
+              />
+            ))}
             {examesProximos.length > 0 && (
               <AvisoLinha
                 cor="amarelo"

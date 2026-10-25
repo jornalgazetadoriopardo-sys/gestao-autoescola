@@ -6,7 +6,7 @@ import { FormAcao } from "@/components/form-acao";
 import { Opcoes } from "@/components/opcoes";
 import { Campo, Cartao, Input, Select } from "@/components/ui";
 import { CATEGORIAS, formatarData, formatarMoeda, lerMoeda, lerPercentual } from "@/lib/format";
-import { FORMAS_MATRICULA } from "@/lib/pagamentos";
+import { FORMAS_ENTRADA, FORMAS_MATRICULA } from "@/lib/pagamentos";
 import { CURSOS_TEORICOS, TIPOS_PROCESSO } from "@/lib/etapas";
 import { gerarParcelas } from "@/lib/parcelas";
 import { criarMatricula } from "./actions";
@@ -25,15 +25,21 @@ export function MatriculaForm({ alunoId, categoria, hoje }: { alunoId: number; c
   const [vencimento, setVencimento] = useState(hoje);
   const [juros, setJuros] = useState("");
   const [processo, setProcesso] = useState("primeira");
+  const [temEntrada, setTemEntrada] = useState("nao");
+  const [entradaValor, setEntradaValor] = useState("");
+  const [entradaForma, setEntradaForma] = useState("dinheiro");
   const [curso, setCurso] = useState("online");
 
   // Prévia das parcelas com a mesma regra usada ao salvar.
   const total = lerMoeda(valor);
+  // Entrada paga na hora; o resto (base) é o que vai para o carnê, cartão, Pix ou dinheiro.
+  const entrada = temEntrada === "sim" ? (lerMoeda(entradaValor) ?? 0) : 0;
+  const base = total === null ? null : Math.max(total - entrada, 0);
   const n = Number(qtdParcelas);
   const jurosBp = n > 1 ? lerPercentual(juros) : 0;
   const previa =
-    forma === "carne" && total && jurosBp !== null && n >= 1 && n <= 24 && /^\d{4}-\d{2}-\d{2}$/.test(vencimento)
-      ? gerarParcelas(total, n, new Date(`${vencimento}T00:00:00Z`), jurosBp)
+    forma === "carne" && base && jurosBp !== null && n >= 1 && n <= 24 && /^\d{4}-\d{2}-\d{2}$/.test(vencimento)
+      ? gerarParcelas(base, n, new Date(`${vencimento}T00:00:00Z`), jurosBp)
       : [];
   const totalParcelado = previa.reduce((s, p) => s + p.valorCentavos, 0);
 
@@ -104,6 +110,55 @@ export function MatriculaForm({ alunoId, categoria, hoje }: { alunoId: number; c
           <h2 className="flex items-center gap-2 pt-2 text-lg font-semibold">
             <CreditCard className="size-6 text-blue-600" aria-hidden /> 2. Como o aluno vai pagar?
           </h2>
+          <Opcoes
+            nome="temEntrada"
+            legenda="Vai dar uma entrada?"
+            opcoes={{
+              nao: { titulo: "Não", descricao: "Paga o valor todo de uma forma só" },
+              sim: { titulo: "Sim, dá uma entrada", descricao: "Paga uma parte agora e o restante de outra forma" },
+            }}
+            inicial={temEntrada}
+            aoMudar={setTemEntrada}
+          />
+          {temEntrada === "sim" && (
+            <div className="grid gap-5 rounded-xl bg-slate-50 p-4 sm:grid-cols-3">
+              <Campo label="Valor da entrada (R$)">
+                <Input
+                  name="entradaValor"
+                  inputMode="decimal"
+                  required
+                  placeholder="Ex.: 300,00"
+                  value={entradaValor}
+                  onChange={(e) => setEntradaValor(e.target.value)}
+                />
+              </Campo>
+              <Campo label="Entrada paga em">
+                <Select name="entradaForma" value={entradaForma} onChange={(e) => setEntradaForma(e.target.value)}>
+                  {Object.entries(FORMAS_ENTRADA).map(([id, label]) => (
+                    <option key={id} value={id}>
+                      {label}
+                    </option>
+                  ))}
+                </Select>
+              </Campo>
+              {entradaForma === "cartao" && (
+                <Campo label="No cartão em">
+                  <Select name="entradaVezes" defaultValue="1">
+                    {Array.from({ length: 12 }, (_, i) => i + 1).map((i) => (
+                      <option key={i} value={i}>
+                        {i === 1 ? "À vista / débito" : `${i}x`}
+                      </option>
+                    ))}
+                  </Select>
+                </Campo>
+              )}
+            </div>
+          )}
+          {temEntrada === "sim" && (
+            <p className="text-base font-medium text-slate-800">
+              E o restante{base !== null && entrada > 0 ? ` (${formatarMoeda(base)})` : ""}, como vai ser pago?
+            </p>
+          )}
           <div className="grid gap-3 sm:grid-cols-2">
             {Object.entries(FORMAS_MATRICULA).map(([id, f]) => {
               const Icone = ICONES_FORMA[id];
@@ -187,12 +242,19 @@ export function MatriculaForm({ alunoId, categoria, hoje }: { alunoId: number; c
 
       <Cartao className="h-fit">
         <h2 className="mb-3 text-lg font-semibold">Resumo</h2>
+        {entrada > 0 && (
+          <div className="mb-3 flex justify-between rounded-lg bg-green-50 px-3 py-2 text-base">
+            <span>Entrada ({FORMAS_ENTRADA[entradaForma]}) — paga hoje</span>
+            <span className="font-semibold">{formatarMoeda(entrada)}</span>
+          </div>
+        )}
         {forma !== "carne" ? (
           <p className="text-base text-slate-700">
             {total ? (
               <>
-                <span className="font-semibold">{formatarMoeda(total)}</span> pago por{" "}
-                {FORMAS_MATRICULA[forma].titulo.toLowerCase()}. A matrícula já fica <b>quitada</b>.
+                <span className="font-semibold">{formatarMoeda(base ?? 0)}</span>
+                {entrada > 0 ? " de restante" : ""} pago por {FORMAS_MATRICULA[forma].titulo.toLowerCase()}. A matrícula
+                já fica <b>quitada</b>.
               </>
             ) : (
               "Informe o valor total."
@@ -218,11 +280,11 @@ export function MatriculaForm({ alunoId, categoria, hoje }: { alunoId: number; c
                 </li>
               ))}
             </ul>
-            {total !== null && totalParcelado !== total && (
+            {base !== null && totalParcelado !== base && (
               <div className="mt-3 space-y-1 border-t border-slate-200 pt-3 text-base">
                 <div className="flex justify-between">
                   <span>Juros</span>
-                  <span>{formatarMoeda(totalParcelado - total)}</span>
+                  <span>{formatarMoeda(totalParcelado - (base ?? 0))}</span>
                 </div>
                 <div className="flex justify-between font-semibold">
                   <span>Total a pagar</span>

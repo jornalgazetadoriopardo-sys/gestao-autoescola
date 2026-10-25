@@ -53,6 +53,7 @@ async function configPadrao(): Promise<Configuracao> {
       contratoNome: null,
       contratoEm: null,
       taxasPadrao: null,
+      calendarioLicenciamento: null,
     }
   );
 }
