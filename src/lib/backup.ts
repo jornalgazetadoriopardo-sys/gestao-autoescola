@@ -21,7 +21,11 @@ export async function exportarAutoescola(autoescolaId: number) {
         where: { autoescolaId },
         omit: { autoescolaId: true, superadmin: true },
       }),
-      dbGlobal.aluno.findMany({ orderBy: { id: "asc" }, where: { autoescolaId }, omit: { autoescolaId: true } }),
+      dbGlobal.aluno.findMany({
+        orderBy: { id: "asc" },
+        where: { autoescolaId },
+        omit: { autoescolaId: true, foto: false },
+      }),
       dbGlobal.instrutor.findMany({ orderBy: { id: "asc" }, where: { autoescolaId }, omit: { autoescolaId: true } }),
       dbGlobal.veiculo.findMany({ orderBy: { id: "asc" }, where: { autoescolaId }, omit: { autoescolaId: true } }),
       dbGlobal.manutencao.findMany({ orderBy: { id: "asc" }, where: { veiculo: { autoescolaId } } }),
@@ -214,6 +218,8 @@ export async function importarAutoescola(arquivo: unknown) {
           categoria: al.str(x, "categoria"),
           status: al.str(x, "status"),
           obs: al.strN(x, "obs"),
+          foto: al.strN(x, "foto"),
+          fotoEm: al.dataN(x, "fotoEm"),
           criadoEm: al.dataN(x, "criadoEm") ?? undefined,
         })),
       });

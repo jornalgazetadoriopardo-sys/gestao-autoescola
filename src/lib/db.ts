@@ -5,9 +5,15 @@ import { PrismaClient } from "@prisma/client";
 import { urlDoBanco } from "./url-banco";
 import { sessaoDoCookie } from "./sessao-atual";
 
+// A foto do aluno só é lida quando pedida (omit: { foto: false }), para as
+// listas não carregarem as imagens de todos os alunos.
+function novoCliente() {
+  return new PrismaClient({ datasourceUrl: urlDoBanco(), omit: { aluno: { foto: true } } });
+}
+
 // Reaproveita a conexão entre recarregamentos no modo de desenvolvimento.
-const globalForPrisma = globalThis as unknown as { prisma?: PrismaClient };
-const base = globalForPrisma.prisma ?? new PrismaClient({ datasourceUrl: urlDoBanco() });
+const globalForPrisma = globalThis as unknown as { prisma?: ReturnType<typeof novoCliente> };
+const base = globalForPrisma.prisma ?? novoCliente();
 if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = base;
 
 // Acesso SEM filtro de autoescola. Só para o login, o painel da plataforma e

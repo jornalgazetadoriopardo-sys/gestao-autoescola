@@ -1,8 +1,9 @@
 import Link from "next/link";
 import type { Prisma } from "@prisma/client";
-import { Search, UserPlus, Users } from "lucide-react";
-import { BotaoLink, Botao, Cabecalho, Etiqueta, Input, Select, Tabela, Vazio } from "@/components/ui";
+import { CircleCheck, Search, UserPlus, UserRound, Users } from "lucide-react";
+import { Aviso, BotaoLink, Botao, Cabecalho, Etiqueta, Input, Select, Tabela, Vazio } from "@/components/ui";
 import { db } from "@/lib/db";
+import { urlFoto } from "@/lib/foto";
 import { STATUS_ALUNO, formatarCpf, formatarTelefone, somenteDigitos } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
@@ -12,9 +13,9 @@ const corStatus = { ativo: "verde", concluido: "azul", desistente: "cinza" } as 
 export default async function AlunosPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; status?: string }>;
+  searchParams: Promise<{ q?: string; status?: string; excluido?: string }>;
 }) {
-  const { q = "", status = "ativo" } = await searchParams;
+  const { q = "", status = "ativo", excluido } = await searchParams;
   const busca = q.trim();
   const digitos = somenteDigitos(busca);
 
@@ -39,6 +40,11 @@ export default async function AlunosPage({
           </BotaoLink>
         }
       />
+      {excluido && (
+        <Aviso tipo="sucesso" icone={CircleCheck}>
+          Aluno excluído.
+        </Aviso>
+      )}
 
       <form className="mb-5 flex flex-wrap gap-3">
         <Input name="q" placeholder="Buscar por nome ou CPF" defaultValue={q} className="w-72" />
@@ -71,7 +77,11 @@ export default async function AlunosPage({
           {alunos.map((a) => (
             <tr key={a.id} className="hover:bg-slate-50">
               <td className="px-4 py-3">
-                <Link href={`/alunos/${a.id}`} className="font-medium text-blue-700 hover:underline">
+                <Link
+                  href={`/alunos/${a.id}`}
+                  className="flex items-center gap-3 font-medium text-blue-700 hover:underline"
+                >
+                  <Avatar url={urlFoto(a)} />
                   {a.nome}
                 </Link>
               </td>
@@ -88,5 +98,19 @@ export default async function AlunosPage({
         </Tabela>
       )}
     </>
+  );
+}
+
+// Foto pequena do aluno na lista (ou o ícone, se não tiver foto).
+function Avatar({ url }: { url: string | null }) {
+  return (
+    <span className="flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-full bg-slate-100">
+      {url ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={url} alt="" loading="lazy" className="h-full w-full object-cover" />
+      ) : (
+        <UserRound className="size-5 text-slate-400" aria-hidden />
+      )}
+    </span>
   );
 }

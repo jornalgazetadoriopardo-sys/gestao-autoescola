@@ -1,7 +1,7 @@
-import { Building2, Download, Plus, ShieldCheck, Upload } from "lucide-react";
+import { Building2, Download, Plus, ShieldCheck, Trash2, Upload } from "lucide-react";
 import { BotaoConfirmar } from "@/components/botao-confirmar";
 import { FormAcao } from "@/components/form-acao";
-import { Botao, Cabecalho, Campo, Cartao, Etiqueta, Input, Tabela } from "@/components/ui";
+import { Botao, BotaoLink, Cabecalho, Campo, Cartao, Etiqueta, Input, Tabela } from "@/components/ui";
 import { exigirSuperadmin } from "@/lib/auth";
 import { dbGlobal } from "@/lib/db";
 import { alternarAutoescola, criarAutoescola, importarArquivo } from "./actions";
@@ -64,11 +64,21 @@ export default async function PlataformaPage() {
                       Suspender
                     </BotaoConfirmar>
                   ) : (
-                    <form action={alternarAutoescola.bind(null, a.id)}>
-                      <Botao variante="secundario" tamanho="pequeno">
-                        Reativar
-                      </Botao>
-                    </form>
+                    <>
+                      <form action={alternarAutoescola.bind(null, a.id)}>
+                        <Botao variante="secundario" tamanho="pequeno">
+                          Reativar
+                        </Botao>
+                      </form>
+                      <BotaoLink
+                        href={`/plataforma/excluir/${a.id}`}
+                        variante="perigo"
+                        tamanho="pequeno"
+                        icone={Trash2}
+                      >
+                        Excluir
+                      </BotaoLink>
+                    </>
                   )}
                 </div>
               </td>

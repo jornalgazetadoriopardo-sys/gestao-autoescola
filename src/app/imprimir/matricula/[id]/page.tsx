@@ -15,6 +15,7 @@ import {
 import { FUSO, formatarHora } from "@/lib/aulas";
 import { ORIENTACOES_PADRAO } from "@/lib/orientacoes";
 import { FORMAS_MATRICULA } from "@/lib/pagamentos";
+import { urlFoto } from "@/lib/foto";
 import { CabecalhoDocumento } from "../../cabecalho-documento";
 import { RodapeDocumento } from "../../rodape-documento";
 import { EnviarWhatsapp } from "./enviar-whatsapp";
@@ -79,18 +80,28 @@ export default async function GuiaMatriculaPage({ params }: { params: Promise<{ 
         <CabecalhoDocumento config={config} titulo="Guia do aluno" />
 
         <p className="mt-3 text-base">
-          Seja bem-vindo(a), <b>{aluno.nome.split(" ")[0]}</b>! Aqui estão as informações da sua matrícula.
-          Guarde este guia.
+          Seja bem-vindo(a), <b>{aluno.nome.split(" ")[0]}</b>! Aqui estão as informações da sua matrícula. Guarde este
+          guia.
         </p>
 
         <Secao titulo="Seus dados">
-          <div className="grid grid-cols-3 gap-x-6 gap-y-1">
-            <Dado rotulo="Aluno" valor={aluno.nome} />
-            <Dado rotulo="CPF" valor={formatarCpf(aluno.cpf)} />
-            <Dado rotulo="Telefone" valor={formatarTelefone(aluno.telefone) || "—"} />
-            <Dado rotulo="Nascimento" valor={formatarData(aluno.nascimento) || "—"} />
-            <Dado rotulo="E-mail" valor={aluno.email ?? "—"} />
-            <Dado rotulo="Endereço" valor={aluno.endereco ?? "—"} />
+          <div className="flex gap-4">
+            {urlFoto(aluno) && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={urlFoto(aluno)!}
+                alt=""
+                className="h-24 w-18 shrink-0 rounded border border-slate-300 object-cover"
+              />
+            )}
+            <div className="grid flex-1 grid-cols-3 gap-x-6 gap-y-1">
+              <Dado rotulo="Aluno" valor={aluno.nome} />
+              <Dado rotulo="CPF" valor={formatarCpf(aluno.cpf)} />
+              <Dado rotulo="Telefone" valor={formatarTelefone(aluno.telefone) || "—"} />
+              <Dado rotulo="Nascimento" valor={formatarData(aluno.nascimento) || "—"} />
+              <Dado rotulo="E-mail" valor={aluno.email ?? "—"} />
+              <Dado rotulo="Endereço" valor={aluno.endereco ?? "—"} />
+            </div>
           </div>
         </Secao>
 
@@ -161,8 +172,8 @@ export default async function GuiaMatriculaPage({ params }: { params: Promise<{ 
         {faltas.length > 0 && (
           <p className="mt-2 text-[12px] text-slate-700">
             <b>Faltas registradas:</b>{" "}
-            {faltas.map((a) => `${formatarData(a.dataHora)} ${formatarHora(a.dataHora)}`).join(" · ")} (as
-            faltas não contam como aula dada).
+            {faltas.map((a) => `${formatarData(a.dataHora)} ${formatarHora(a.dataHora)}`).join(" · ")} (as faltas não
+            contam como aula dada).
           </p>
         )}
 

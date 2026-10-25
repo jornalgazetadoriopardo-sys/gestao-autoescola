@@ -59,6 +59,10 @@ model Aluno {
   categoria    String
   status       String      @default("ativo")
   obs          String?
+  // Foto em data URL (JPEG reduzido no navegador). fotoEm muda a cada troca e
+  // serve de versão no endereço da imagem (cache do navegador).
+  foto         String?
+  fotoEm       DateTime?
   criadoEm     DateTime    @default(now())
   matriculas   Matricula[]
 

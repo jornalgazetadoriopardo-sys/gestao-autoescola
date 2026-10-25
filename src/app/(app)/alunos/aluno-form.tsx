@@ -3,11 +3,13 @@ import { FormAcao } from "@/components/form-acao";
 import { Campo, Cartao, Input, Select, Textarea } from "@/components/ui";
 import { CATEGORIAS, STATUS_ALUNO, dataParaInput, formatarCpf, formatarTelefone } from "@/lib/format";
 import { salvarAluno } from "./actions";
+import { FotoAluno } from "./foto-aluno";
 
 export function AlunoForm({ aluno }: { aluno?: Aluno }) {
   return (
     <Cartao className="max-w-3xl">
       <FormAcao acao={salvarAluno.bind(null, aluno?.id ?? null)}>
+        <FotoAluno inicial={aluno?.foto ?? null} />
         <div className="grid gap-4 sm:grid-cols-2">
           <Campo label="Nome completo *" className="sm:col-span-2">
             <Input name="nome" required defaultValue={aluno?.nome} />

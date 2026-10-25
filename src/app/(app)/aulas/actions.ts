@@ -85,8 +85,7 @@ export async function agendarVarias(_: EstadoForm, dados: FormData): Promise<Est
   } catch {
     return { erro: "Lista de datas inválida." };
   }
-  if (!Array.isArray(itens) || itens.length === 0)
-    return { erro: "Clique no calendário para escolher as datas." };
+  if (!Array.isArray(itens) || itens.length === 0) return { erro: "Clique no calendário para escolher as datas." };
   if (itens.length > MAX_LOTE) return { erro: `Escolha no máximo ${MAX_LOTE} aulas de uma vez.` };
 
   const aulas: NovaAula[] = [];
@@ -136,24 +135,23 @@ export async function editarAula(aulaId: number, _: EstadoForm, dados: FormData)
   redirect(destinoSeguro(String(dados.get("voltar") ?? ""), `/aulas?dia=${diaDe(dataHora)}`));
 }
 
-// Exclui uma aula lançada por engano. Aula com presença fica no histórico.
+// Exclui uma aula lançada por engano (com ou sem presença marcada).
 export async function excluirAula(aulaId: number, voltar: string) {
   await exigirSessao();
   const aula = await db.aula.findUnique({ where: { id: aulaId }, include: { matricula: true } });
   if (!aula) return;
-  if (aula.status === "presente")
-    throw new Error("Aula com presença não pode ser excluída. Use 'Desfazer' antes.");
   await db.aula.delete({ where: { id: aulaId } });
   revalidar(aula.matricula.alunoId);
   redirect(destinoSeguro(voltar, `/aulas?dia=${diaDe(aula.dataHora)}`));
 }
 
 // Transições permitidas: agendada → presente/faltou/cancelada,
-// e presente/faltou → agendada (desfazer marcação errada).
+// e presente/faltou/cancelada → agendada (desfazer marcação errada).
 const TRANSICOES: Record<string, string[]> = {
   agendada: ["presente", "faltou", "cancelada"],
   presente: ["agendada"],
   faltou: ["agendada"],
+  cancelada: ["agendada"],
 };
 
 export async function marcarAula(aulaId: number, status: string) {
@@ -163,6 +161,23 @@ export async function marcarAula(aulaId: number, status: string) {
   if (!aula) return;
   if (!TRANSICOES[aula.status]?.includes(status)) {
     throw new Error(`Não é possível mudar a aula de "${aula.status}" para "${status}".`);
+  }
+  // Reativar uma aula cancelada: o horário e o saldo precisam estar livres.
+  if (aula.status === "cancelada") {
+    const erro = await verificarAulas(
+      aula.matriculaId,
+      [
+        {
+          tipo: aula.tipo,
+          instrutorId: aula.instrutorId ?? 0,
+          veiculoId: aula.veiculoId,
+          dataHora: aula.dataHora,
+          duracaoMin: aula.duracaoMin,
+        },
+      ],
+      { id: aula.id, status: "agendada" },
+    );
+    if (erro) redirect(`/aulas/${aula.id}/editar?erro=${encodeURIComponent(`Não foi possível reativar a aula: ${erro}`)}`);
   }
 
   await db.aula.update({ where: { id: aulaId }, data: { status } });

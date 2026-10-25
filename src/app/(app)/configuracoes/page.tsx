@@ -1,12 +1,12 @@
 import Link from "next/link";
-import { Building2, KeyRound, Settings, UserPlus, Users } from "lucide-react";
+import { Building2, KeyRound, Pencil, Settings, UserPlus, Users } from "lucide-react";
 import { BotaoConfirmar } from "@/components/botao-confirmar";
 import { FormAcao } from "@/components/form-acao";
-import { Botao, Cabecalho, Campo, Cartao, Etiqueta, Input, Select, Tabela } from "@/components/ui";
+import { Botao, BotaoLink, Cabecalho, Campo, Cartao, Etiqueta, Input, Select, Tabela } from "@/components/ui";
 import { exigirSessao } from "@/lib/auth";
 import { obterConfigCompleta } from "@/lib/config";
 import { db } from "@/lib/db";
-import { alternarUsuario, criarUsuario, trocarSenha } from "./actions";
+import { alternarUsuario, criarUsuario, excluirUsuario, trocarSenha } from "./actions";
 import { ConfigForm } from "./config-form";
 
 export const dynamic = "force-dynamic";
@@ -86,23 +86,42 @@ async function Usuarios({ usuarioAtual }: { usuarioAtual: number }) {
               {u.ativo ? <Etiqueta cor="verde">Ativo</Etiqueta> : <Etiqueta>Desativado</Etiqueta>}
             </td>
             <td className="px-4 py-3">
-              {u.id === usuarioAtual ? (
-                <span className="text-sm text-slate-500">(você)</span>
-              ) : u.ativo ? (
-                <BotaoConfirmar
-                  acao={alternarUsuario.bind(null, u.id)}
-                  mensagem={`Desativar ${u.nome}? Ele não conseguirá mais entrar.`}
-                  icone="cancelar"
+              <div className="flex items-center gap-2">
+                <BotaoLink
+                  href={`/configuracoes/usuarios/${u.id}`}
+                  variante="secundario"
+                  tamanho="pequeno"
+                  icone={Pencil}
                 >
-                  Desativar
-                </BotaoConfirmar>
-              ) : (
-                <form action={alternarUsuario.bind(null, u.id)}>
-                  <Botao variante="secundario" tamanho="pequeno">
-                    Reativar
-                  </Botao>
-                </form>
-              )}
+                  Alterar
+                </BotaoLink>
+                {u.id === usuarioAtual ? (
+                  <span className="text-sm text-slate-500">(você)</span>
+                ) : u.ativo ? (
+                  <BotaoConfirmar
+                    acao={alternarUsuario.bind(null, u.id)}
+                    mensagem={`Desativar ${u.nome}? Ele não conseguirá mais entrar.`}
+                    icone="cancelar"
+                  >
+                    Desativar
+                  </BotaoConfirmar>
+                ) : (
+                  <form action={alternarUsuario.bind(null, u.id)}>
+                    <Botao variante="secundario" tamanho="pequeno">
+                      Reativar
+                    </Botao>
+                  </form>
+                )}
+                {u.id !== usuarioAtual && !u.superadmin && (
+                  <BotaoConfirmar
+                    acao={excluirUsuario.bind(null, u.id)}
+                    mensagem={`Excluir o usuário ${u.nome}? Ele não poderá mais entrar.`}
+                    icone="excluir"
+                  >
+                    Excluir
+                  </BotaoConfirmar>
+                )}
+              </div>
             </td>
           </tr>
         ))}

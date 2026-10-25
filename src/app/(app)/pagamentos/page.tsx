@@ -4,6 +4,7 @@ import {
   CalendarClock,
   CircleCheck,
   HandCoins,
+  Pencil,
   Printer,
   Search,
   TriangleAlert,
@@ -181,25 +182,27 @@ export default async function PagamentosPage({
                       <BotaoLink href={`/imprimir/recibo/${p.id}`} target="_blank" variante="secundario" tamanho="pequeno" icone={Printer}>
                         Recibo
                       </BotaoLink>
-                      {p.matricula.formaPagamento === "carne" && (
-                        <BotaoConfirmar
-                          acao={estornarParcela.bind(null, p.id)}
-                          mensagem="Desfazer este pagamento? A parcela volta a ficar em aberto."
-                          icone="desfazer"
-                        >
-                          Desfazer
-                        </BotaoConfirmar>
-                      )}
+                      <BotaoConfirmar
+                        acao={estornarParcela.bind(null, p.id)}
+                        mensagem="Desfazer este pagamento? A parcela volta a ficar em aberto."
+                        icone="desfazer"
+                      >
+                        Desfazer
+                      </BotaoConfirmar>
+                      <LinkAlterar id={p.id} voltar={voltar} />
                     </div>
                   ) : (
-                    <BotaoLink
-                      href={`/pagamentos/${p.id}/receber?voltar=${encodeURIComponent(voltar)}`}
-                      variante="sucesso"
-                      tamanho="pequeno"
-                      icone={HandCoins}
-                    >
-                      Receber
-                    </BotaoLink>
+                    <div className="flex items-center gap-2">
+                      <BotaoLink
+                        href={`/pagamentos/${p.id}/receber?voltar=${encodeURIComponent(voltar)}`}
+                        variante="sucesso"
+                        tamanho="pequeno"
+                        icone={HandCoins}
+                      >
+                        Receber
+                      </BotaoLink>
+                      <LinkAlterar id={p.id} voltar={voltar} />
+                    </div>
                   )}
                 </td>
               </tr>
@@ -208,5 +211,18 @@ export default async function PagamentosPage({
         </Tabela>
       )}
     </>
+  );
+}
+
+function LinkAlterar({ id, voltar }: { id: number; voltar: string }) {
+  return (
+    <BotaoLink
+      href={`/pagamentos/${id}/editar?voltar=${encodeURIComponent(voltar)}`}
+      variante="secundario"
+      tamanho="pequeno"
+      icone={Pencil}
+    >
+      Alterar
+    </BotaoLink>
   );
 }

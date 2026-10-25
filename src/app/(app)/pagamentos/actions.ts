@@ -1,5 +1,6 @@
 "use server";
 
+import type { Prisma } from "@prisma/client";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
@@ -38,19 +39,100 @@ export async function receberParcela(parcelaId: number, _: EstadoForm, dados: Fo
   redirect(`${destino}${destino.includes("?") ? "&" : "?"}recebido=${parcelaId}`);
 }
 
-// Desfaz uma baixa lançada por engano.
+// Desfaz uma baixa lançada por engano: a parcela volta a ficar em aberto.
 export async function estornarParcela(parcelaId: number) {
   await exigirSessao();
   const parcela = await db.parcela.findUnique({ where: { id: parcelaId }, include: { matricula: true } });
   if (!parcela?.pagoEm) return;
-  if (parcela.matricula.formaPagamento !== "carne") {
-    throw new Error("Pagamento feito na matrícula (cartão/Pix/dinheiro) não pode ser desfeito aqui.");
-  }
   await db.parcela.update({
     where: { id: parcelaId },
     data: { pagoEm: null, valorPagoCentavos: null, forma: null, obs: null },
   });
+  revalidar(parcela.matricula.alunoId);
+}
+
+function revalidar(alunoId: number) {
   revalidatePath("/pagamentos");
-  revalidatePath(`/alunos/${parcela.matricula.alunoId}`);
+  revalidatePath(`/alunos/${alunoId}`);
   revalidatePath("/");
+}
+
+// Numera as parcelas da matrícula pela ordem de vencimento (1, 2, 3...).
+async function renumerar(matriculaId: number) {
+  const parcelas = await db.parcela.findMany({
+    where: { matriculaId },
+    orderBy: [{ vencimento: "asc" }, { id: "asc" }],
+    select: { id: true, numero: true },
+  });
+  for (const [i, p] of parcelas.entries()) {
+    if (p.numero !== i + 1) await db.parcela.update({ where: { id: p.id }, data: { numero: i + 1 } });
+  }
+}
+
+const DIA = /^\d{4}-\d{2}-\d{2}$/;
+
+// Altera valor, vencimento e observação; se já foi paga, também a data, o valor e a forma do pagamento.
+export async function editarParcela(parcelaId: number, _: EstadoForm, dados: FormData): Promise<EstadoForm> {
+  await exigirSessao();
+  const valor = lerMoeda(String(dados.get("valor") ?? ""));
+  const vencimento = String(dados.get("vencimento") ?? "");
+  const obs = String(dados.get("obs") ?? "").trim() || null;
+  if (valor === null || valor <= 0) return { erro: "Informe o valor da parcela. Ex.: 150,00" };
+  if (!DIA.test(vencimento)) return { erro: "Informe o vencimento." };
+
+  const parcela = await db.parcela.findUnique({ where: { id: parcelaId } });
+  if (!parcela) return { erro: "Parcela não encontrada." };
+  const campos: Prisma.ParcelaUpdateInput = {
+    valorCentavos: valor,
+    vencimento: new Date(`${vencimento}T00:00:00Z`),
+    obs,
+  };
+  if (parcela.pagoEm) {
+    const pagoEm = String(dados.get("pagoEm") ?? "");
+    const valorPago = lerMoeda(String(dados.get("valorPago") ?? ""));
+    const forma = String(dados.get("forma") ?? "");
+    if (!DIA.test(pagoEm)) return { erro: "Informe a data do pagamento." };
+    if (valorPago === null || valorPago <= 0) return { erro: "Informe o valor pago." };
+    if (!(forma in FORMAS_PAGAMENTO)) return { erro: "Escolha a forma de pagamento." };
+    Object.assign(campos, { pagoEm: new Date(`${pagoEm}T00:00:00Z`), valorPagoCentavos: valorPago, forma });
+  }
+  const atual = await db.parcela.update({ where: { id: parcelaId }, data: campos, include: { matricula: true } });
+  await renumerar(atual.matriculaId);
+  revalidar(atual.matricula.alunoId);
+  const voltar = String(dados.get("voltar") ?? "");
+  redirect(voltar.startsWith("/") && !voltar.startsWith("//") ? voltar : `/alunos/${atual.matricula.alunoId}`);
+}
+
+export async function excluirParcela(parcelaId: number) {
+  await exigirSessao();
+  const parcela = await db.parcela.findUnique({ where: { id: parcelaId }, include: { matricula: true } });
+  if (!parcela) return;
+  await db.parcela.delete({ where: { id: parcelaId } });
+  await renumerar(parcela.matriculaId);
+  revalidar(parcela.matricula.alunoId);
+}
+
+// Acrescenta uma parcela em aberto à matrícula.
+export async function adicionarParcela(matriculaId: number, _: EstadoForm, dados: FormData): Promise<EstadoForm> {
+  await exigirSessao();
+  const valor = lerMoeda(String(dados.get("valor") ?? ""));
+  const vencimento = String(dados.get("vencimento") ?? "");
+  if (valor === null || valor <= 0) return { erro: "Informe o valor da parcela. Ex.: 150,00" };
+  if (!DIA.test(vencimento)) return { erro: "Informe o vencimento." };
+  const matricula = await db.matricula.findUnique({
+    where: { id: matriculaId },
+    include: { _count: { select: { parcelas: true } } },
+  });
+  if (!matricula) return { erro: "Matrícula não encontrada." };
+  await db.parcela.create({
+    data: {
+      matriculaId,
+      numero: matricula._count.parcelas + 1,
+      valorCentavos: valor,
+      vencimento: new Date(`${vencimento}T00:00:00Z`),
+    },
+  });
+  await renumerar(matriculaId);
+  revalidar(matricula.alunoId);
+  return { ok: "Parcela acrescentada." };
 }

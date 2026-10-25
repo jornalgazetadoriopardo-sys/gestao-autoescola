@@ -7,7 +7,12 @@ presença e pagamentos.
 
 - **Início**: atalhos para as tarefas do dia, avisos (parcelas em atraso, parcelas
   que vencem hoje, lembretes de manutenção) e aulas de hoje com presença
-- **Alunos**: cadastro, busca por nome/CPF e ficha com aulas, pagamentos e relatório
+- **Alunos**: cadastro com **foto** (arquivo do computador/celular ou câmera do PC), busca por
+  nome/CPF e ficha com aulas, pagamentos e relatório
+- **Tudo pode ser alterado ou excluído**: aluno (com matrículas, aulas e pagamentos), matrícula,
+  parcela (inclusive a baixa já feita) e acrescentar parcela, aula (também com presença; aula
+  cancelada pode ser reativada), instrutor, veículo, manutenção, despesa, usuário e, na
+  Plataforma, autoescola suspensa (digitando o nome para confirmar)
 - **Matrícula** com forma de pagamento:
   - *Parcelado pela autoescola*: gera as parcelas (com juros ao mês opcional) e o
     **carnê para imprimir** (4 parcelas por folha A4, para recortar)

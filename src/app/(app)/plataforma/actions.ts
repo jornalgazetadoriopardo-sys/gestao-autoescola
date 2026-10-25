@@ -2,6 +2,7 @@
 
 import bcrypt from "bcryptjs";
 import { Prisma } from "@prisma/client";
+import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { dbGlobal } from "@/lib/db";
 import { exigirSuperadmin } from "@/lib/auth";
@@ -91,4 +92,34 @@ export async function importarArquivo(_: EstadoForm, dados: FormData): Promise<E
     console.error(e);
     return { erro: "Não foi possível importar. Nada foi gravado." };
   }
+}
+
+// Apaga a autoescola e TODOS os dados dela. Só para autoescola suspensa e com
+// o nome digitado para confirmar.
+export async function excluirAutoescola(autoescolaId: number, _: EstadoForm, dados: FormData): Promise<EstadoForm> {
+  const sessao = await exigirSuperadmin();
+  if (autoescolaId === sessao.autoescolaId) return { erro: "Você não pode excluir a sua própria autoescola." };
+  const autoescola = await dbGlobal.autoescola.findUnique({ where: { id: autoescolaId } });
+  if (!autoescola) return { erro: "Autoescola não encontrada." };
+  if (autoescola.ativo) return { erro: "Suspenda a autoescola antes de excluir." };
+  if (String(dados.get("confirmacao") ?? "").trim() !== autoescola.nome) {
+    return { erro: "O nome digitado não confere. Digite exatamente como aparece acima." };
+  }
+
+  const doAluno = { aluno: { autoescolaId } };
+  await dbGlobal.$transaction([
+    dbGlobal.aula.deleteMany({ where: { matricula: doAluno } }),
+    dbGlobal.parcela.deleteMany({ where: { matricula: doAluno } }),
+    dbGlobal.matricula.deleteMany({ where: doAluno }),
+    dbGlobal.aluno.deleteMany({ where: { autoescolaId } }),
+    dbGlobal.despesa.deleteMany({ where: { autoescolaId } }),
+    dbGlobal.manutencao.deleteMany({ where: { veiculo: { autoescolaId } } }),
+    dbGlobal.veiculo.deleteMany({ where: { autoescolaId } }),
+    dbGlobal.instrutor.deleteMany({ where: { autoescolaId } }),
+    dbGlobal.usuario.deleteMany({ where: { autoescolaId } }),
+    dbGlobal.configuracao.deleteMany({ where: { id: autoescolaId } }),
+    dbGlobal.autoescola.delete({ where: { id: autoescolaId } }),
+  ]);
+  revalidatePath("/plataforma");
+  redirect("/plataforma");
 }
