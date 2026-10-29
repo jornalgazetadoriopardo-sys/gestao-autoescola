@@ -5,10 +5,12 @@ import { Opcoes } from "@/components/opcoes";
 import { CURSOS_TEORICOS, TIPOS_PROCESSO } from "@/lib/etapas";
 import { BotaoLink, Cabecalho, Campo, Cartao, Input, Select } from "@/components/ui";
 import { db } from "@/lib/db";
-import { CATEGORIAS, hojeISO, moedaParaInput } from "@/lib/format";
+import { hojeISO, moedaParaInput } from "@/lib/format";
 import { FORMAS_MATRICULA, SO_PARCELAS } from "@/lib/pagamentos";
 import { adicionarParcela } from "@/app/(app)/pagamentos/actions";
 import { editarMatricula } from "../../actions";
+import { CamposCategoria } from "../../campos-categoria";
+import { praticasPorCategoria } from "@/lib/aulas";
 
 export const dynamic = "force-dynamic";
 
@@ -20,6 +22,7 @@ export default async function EditarMatriculaPage({ params }: { params: Promise<
   });
   if (!matricula || matricula.alunoId !== Number(id)) notFound();
   const voltar = `/alunos/${matricula.alunoId}`;
+  const praticas = praticasPorCategoria(matricula);
   const data = matricula.data.toLocaleDateString("en-CA", { timeZone: "America/Sao_Paulo" });
 
   return (
@@ -51,18 +54,11 @@ export default async function EditarMatriculaPage({ params }: { params: Promise<
               colunas="sm:grid-cols-3"
             />
             <div className="grid gap-5 sm:grid-cols-3">
-              <Campo label="Categoria">
-                <Select name="categoria" defaultValue={matricula.categoria}>
-                  {CATEGORIAS.map((c) => (
-                    <option key={c} value={c}>
-                      {c}
-                    </option>
-                  ))}
-                </Select>
-              </Campo>
-              <Campo label="Aulas práticas">
-                <Input name="qtdPraticas" type="number" min={0} required defaultValue={matricula.qtdPraticas} />
-              </Campo>
+              <CamposCategoria
+                categoria={matricula.categoria}
+                praticas={praticas}
+                totalAntigo={praticas ? undefined : matricula.qtdPraticas}
+              />
               <Campo label="Aulas teóricas">
                 <Input name="qtdTeoricas" type="number" min={0} required defaultValue={matricula.qtdTeoricas} />
               </Campo>

@@ -26,7 +26,7 @@ import {
   type Pedido,
 } from "@/lib/disponibilidade";
 import { agendarVarias } from "./actions";
-import type { OpcaoMatricula } from "./aula-form";
+import { textoRestantes, type OpcaoMatricula } from "./aula-form";
 import { useOcupados } from "./use-ocupados";
 
 type Opcao = { id: number; nome: string; categorias: string };
@@ -92,10 +92,34 @@ export function AulasLoteForm({
   const [aPartir, setAPartir] = useState(hoje);
   const [qtdRep, setQtdRep] = useState("");
 
+  // Matrícula de duas categorias (ex.: AB): agenda uma categoria por vez, com o
+  // saldo dela; o preenchimento automático marca exatamente as aulas que faltam.
+  const categorias = matricula ? Object.keys(matricula.restantes.porCategoria) : [];
+  const [categoriaEscolhida, setCategoriaEscolhida] = useState("");
+  const categoriaAula =
+    tipo === "pratica" && categorias.length > 1
+      ? categorias.includes(categoriaEscolhida)
+        ? categoriaEscolhida
+        : (categorias.find((c) => matricula!.restantes.porCategoria[c] > 0) ?? categorias[0])
+      : null;
   const veiculosCompativeis = matricula
-    ? veiculos.filter((v) => matricula.categoria.includes(v.categorias))
+    ? veiculos.filter((v) =>
+        categoriaAula ? v.categorias === categoriaAula : matricula.categoria.includes(v.categorias),
+      )
     : veiculos;
-  const restantes = matricula ? matricula.restantes[tipo as "pratica" | "teorica"] : null;
+  const restantes = matricula
+    ? categoriaAula
+      ? matricula.restantes.porCategoria[categoriaAula]
+      : matricula.restantes[tipo as "pratica" | "teorica"]
+    : null;
+
+  // Trocar a categoria limpa o veículo padrão e o das aulas da lista que não servem mais.
+  function mudarCategoria(c: string) {
+    setCategoriaEscolhida(c);
+    const servem = new Set(veiculos.filter((v) => v.categorias === c).map((v) => String(v.id)));
+    if (!servem.has(veiculoPadrao)) setVeiculoPadrao("");
+    setItens((atual) => atual.map((i) => (servem.has(i.veiculoId) ? i : { ...i, veiculoId: "" })));
+  }
   const ordenados = useMemo(
     () => [...itens].sort((a, b) => (a.data + a.hora).localeCompare(b.data + b.hora)),
     [itens],
@@ -270,10 +294,7 @@ export function AulasLoteForm({
               ))}
             </Select>
             {matricula && (
-              <span className="mt-1.5 block text-sm font-medium text-blue-800">
-                Restam {matricula.restantes.pratica} aulas práticas e {matricula.restantes.teorica} teóricas
-                para agendar.
-              </span>
+              <span className="mt-1.5 block text-sm font-medium text-blue-800">{textoRestantes(matricula)}</span>
             )}
           </Campo>
           <Campo label="Tipo *">
@@ -282,6 +303,32 @@ export function AulasLoteForm({
               <option value="teorica">Teórica</option>
             </Select>
           </Campo>
+          {categoriaAula && (
+            <fieldset className="sm:col-span-2">
+              <legend className="mb-1.5 text-base font-medium text-slate-800">Categoria destas aulas</legend>
+              <div className="flex flex-wrap gap-2">
+                {categorias.map((c) => (
+                  <button
+                    key={c}
+                    type="button"
+                    aria-pressed={categoriaAula === c}
+                    onClick={() => mudarCategoria(c)}
+                    className={`rounded-xl border-2 px-4 py-2 text-left ${
+                      categoriaAula === c ? "border-blue-600 bg-blue-50" : "border-slate-200 bg-white hover:border-slate-300"
+                    }`}
+                  >
+                    <span className="block text-base font-semibold">Categoria {c}</span>
+                    <span className="block text-sm text-slate-600">
+                      {matricula!.restantes.porCategoria[c]} aulas para agendar
+                    </span>
+                  </button>
+                ))}
+              </div>
+              <span className="mt-1 block text-sm text-slate-500">
+                Os veículos mostrados são só os desta categoria. Depois de agendar, volte aqui para a outra.
+              </span>
+            </fieldset>
+          )}
           <Campo
             label="Instrutor padrão"
             ajuda="Vem preenchido em cada aula. Você pode trocar aula por aula na lista."

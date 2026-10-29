@@ -5,13 +5,17 @@ import { db } from "@/lib/db";
 import { AlunoForm } from "../../aluno-form";
 
 export default async function EditarAlunoPage({ params }: { params: Promise<{ id: string }> }) {
-  const aluno = await db.aluno.findUnique({ where: { id: Number((await params).id) || 0 }, omit: { foto: false } });
+  const id = Number((await params).id) || 0;
+  const [aluno, temSenhaGovbr] = await Promise.all([
+    db.aluno.findUnique({ where: { id }, omit: { foto: false } }),
+    db.aluno.count({ where: { id, govbrSenha: { not: null } } }),
+  ]);
   if (!aluno) notFound();
 
   return (
     <>
       <Cabecalho titulo="Editar aluno" descricao={aluno.nome} icone={Pencil} />
-      <AlunoForm aluno={aluno} />
+      <AlunoForm aluno={aluno} temSenhaGovbr={temSenhaGovbr > 0} />
     </>
   );
 }

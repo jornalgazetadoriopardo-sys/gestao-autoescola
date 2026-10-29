@@ -4,7 +4,7 @@ import { BotaoLink, Cabecalho, Vazio } from "@/components/ui";
 import { db } from "@/lib/db";
 import { expedienteDe, obterConfig } from "@/lib/config";
 import { formatarDataLocal, hojeISO } from "@/lib/format";
-import { resumoAulas, somarDias } from "@/lib/aulas";
+import { resumoAulas, resumoPorCategoria, somarDias } from "@/lib/aulas";
 import { AulaForm, type OpcaoMatricula } from "../aula-form";
 import { carregarFeriados } from "@/lib/feriados-servidor";
 import { AulasLoteForm } from "../aulas-lote-form";
@@ -24,7 +24,7 @@ export default async function NovaAulaPage({
   const [matriculas, instrutores, veiculos, config] = await Promise.all([
     db.matricula.findMany({
       where: { aluno: { status: "ativo" } },
-      include: { aluno: true, aulas: { select: { tipo: true, status: true } } },
+      include: { aluno: true, aulas: { select: { tipo: true, status: true, categoria: true } } },
       orderBy: [{ aluno: { nome: "asc" } }, { data: "desc" }],
     }),
     db.instrutor.findMany({ where: { ativo: true }, orderBy: { nome: "asc" } }),
@@ -42,7 +42,11 @@ export default async function NovaAulaPage({
         alunoId: m.alunoId,
         categoria: m.categoria,
         rotulo: `${m.aluno.nome} — categoria ${m.categoria} (matrícula de ${formatarDataLocal(m.data)})`,
-        restantes: { pratica: r.pratica.restantes, teorica: r.teorica.restantes },
+        restantes: {
+          pratica: r.pratica.restantes,
+          teorica: r.teorica.restantes,
+          porCategoria: Object.fromEntries(resumoPorCategoria(m, m.aulas).map((c) => [c.categoria, c.restantes])),
+        },
       };
     })
     .filter((m) => m.restantes.pratica + m.restantes.teorica > 0);

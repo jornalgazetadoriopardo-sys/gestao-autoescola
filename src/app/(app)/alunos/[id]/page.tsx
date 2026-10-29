@@ -14,6 +14,7 @@ import {
   GraduationCap,
   HandCoins,
   IdCard,
+  KeyRound,
   Pencil,
   Plus,
   Printer,
@@ -24,6 +25,8 @@ import { BotaoConfirmar } from "@/components/botao-confirmar";
 import { Aviso, BotaoDownload, BotaoLink, Cabecalho, Cartao, Etiqueta, Secao, Tabela, Vazio } from "@/components/ui";
 import { db } from "@/lib/db";
 import { prontosParaExamePratico } from "@/lib/prontos-exame";
+import { NIVEIS_GOVBR } from "@/lib/govbr-niveis";
+import { SenhaGovbr } from "./senha-govbr";
 import {
   FORMAS_PAGAMENTO,
   STATUS_ALUNO,
@@ -35,7 +38,15 @@ import {
   formatarTelefone,
   situacaoParcela,
 } from "@/lib/format";
-import { COR_STATUS_AULA, STATUS_AULA, TIPOS_AULA, formatarDataHora, resumoAulas } from "@/lib/aulas";
+import {
+  COR_STATUS_AULA,
+  STATUS_AULA,
+  TIPOS_AULA,
+  formatarDataHora,
+  resumoAulas,
+  resumoPorCategoria,
+  textoPraticas,
+} from "@/lib/aulas";
 import { descricaoPagamento, rotuloParcela, totalDeParcelas } from "@/lib/pagamentos";
 import { CURSOS_TEORICOS, TIPOS_PROCESSO } from "@/lib/etapas";
 import { AvisoTaxaRecebida } from "../../exames/aviso-taxa";
@@ -76,6 +87,7 @@ export default async function FichaAlunoPage({
   if (!aluno) notFound();
 
   const prontos = aluno.status === "ativo" ? await prontosParaExamePratico(aluno.id) : [];
+  const temSenhaGovbr = (await db.aluno.count({ where: { id: aluno.id, govbrSenha: { not: null } } })) > 0;
   const foto = urlFoto(aluno);
   const totalAulas = aluno.matriculas.reduce((s, m) => s + m.aulas.length, 0);
   const totalParcelas = aluno.matriculas.reduce((s, m) => s + m.parcelas.length, 0);
@@ -202,6 +214,28 @@ export default async function FichaAlunoPage({
               <p className="whitespace-pre-line text-base">{aluno.obs}</p>
             </div>
           )}
+          {(temSenhaGovbr || aluno.govbrNivel || aluno.govbrObs) && (
+            <div className="mt-4 rounded-lg border border-slate-200 p-3">
+              <div className="mb-2 flex items-center gap-2 text-sm font-medium uppercase text-slate-500">
+                <KeyRound className="size-4" aria-hidden /> Conta gov.br (uso interno)
+              </div>
+              <dl className="grid gap-x-8 gap-y-2 sm:grid-cols-3">
+                <div>
+                  <dt className="text-sm text-slate-500">Login (CPF)</dt>
+                  <dd className="text-base">{formatarCpf(aluno.cpf)}</dd>
+                </div>
+                <div>
+                  <dt className="text-sm text-slate-500">Senha</dt>
+                  <dd>{temSenhaGovbr ? <SenhaGovbr alunoId={aluno.id} /> : "não cadastrada"}</dd>
+                </div>
+                <div>
+                  <dt className="text-sm text-slate-500">Nível</dt>
+                  <dd className="text-base">{NIVEIS_GOVBR[aluno.govbrNivel ?? ""] ?? "—"}</dd>
+                </div>
+              </dl>
+              {aluno.govbrObs && <p className="mt-2 text-base text-slate-700">{aluno.govbrObs}</p>}
+            </div>
+          )}
         </div>
       </Cartao>
 
@@ -225,7 +259,8 @@ export default async function FichaAlunoPage({
           const emAberto = m.parcelas.filter((p) => !p.pagoEm).reduce((s, p) => s + p.valorCentavos, 0);
           const totalParcelado = m.parcelas.reduce((s, p) => s + p.valorCentavos, 0);
           const resumo = resumoAulas(m, m.aulas);
-          const pronto = prontos.find((p) => p.matriculaId === m.id);
+          const porCategoria = resumoPorCategoria(m, m.aulas);
+          const prontasDaMatricula = prontos.filter((p) => p.matriculaId === m.id);
 
           return (
             <Cartao key={m.id}>
@@ -236,7 +271,7 @@ export default async function FichaAlunoPage({
                     {formatarDataLocal(m.data)}
                   </div>
                   <div className="text-base text-slate-600">
-                    {m.qtdPraticas} aulas práticas ·{" "}
+                    {textoPraticas(m)} aulas práticas ·{" "}
                     {m.cursoTeorico === "autoescola"
                       ? `${m.qtdTeoricas} aulas teóricas`
                       : `curso teórico: ${CURSOS_TEORICOS[m.cursoTeorico]?.titulo.toLowerCase() ?? m.cursoTeorico}`}{" "}
@@ -296,10 +331,13 @@ export default async function FichaAlunoPage({
                 </div>
               </div>
 
-              {pronto && (
-                <Aviso tipo="info" icone={Flag}>
+              {prontasDaMatricula.map((pronto) => (
+                <Aviso key={pronto.chave} tipo="info" icone={Flag}>
                   <span className="flex-1">
-                    <strong>Pronto para o exame prático!</strong> Fez todas as {pronto.praticas} aulas práticas.
+                    <strong>
+                      Pronto para o exame prático{porCategoria.length ? ` da categoria ${pronto.categoria}` : ""}!
+                    </strong>{" "}
+                    Fez todas as {pronto.praticas} aulas práticas{porCategoria.length ? " dessa categoria" : ""}.
                   </span>
                   <BotaoLink
                     href={`${pronto.agendar}${pronto.agendar.includes("?") ? "&" : "?"}voltar=${encodeURIComponent(`/alunos/${aluno.id}`)}`}
@@ -309,7 +347,7 @@ export default async function FichaAlunoPage({
                     Agendar exame
                   </BotaoLink>
                 </Aviso>
-              )}
+              ))}
 
               <div className="mb-3 flex items-center justify-between gap-3">
                 <h3 className="flex items-center gap-2 text-lg font-semibold">
@@ -330,15 +368,23 @@ export default async function FichaAlunoPage({
                 </div>
               </div>
               <div className="mb-4 grid gap-3 sm:grid-cols-2">
-                {(["pratica", "teorica"] as const)
-                  .filter((tipo) => resumo[tipo].contratadas > 0)
-                  .map((tipo) => {
-                    const r = resumo[tipo];
+                {[
+                  ...(porCategoria.length
+                    ? porCategoria.map((r) => ({
+                        chave: r.categoria,
+                        titulo: `Práticas – categoria ${r.categoria}`,
+                        r,
+                      }))
+                    : [{ chave: "pratica", titulo: "Práticas", r: resumo.pratica }]),
+                  { chave: "teorica", titulo: "Teóricas", r: resumo.teorica },
+                ]
+                  .filter(({ r }) => r.contratadas > 0)
+                  .map(({ chave, titulo, r }) => {
                     const faltam = Math.max(r.contratadas - r.feitas, 0);
                     return (
-                      <div key={tipo} className="rounded-xl bg-slate-50 p-4">
+                      <div key={chave} className="rounded-xl bg-slate-50 p-4">
                         <div className="mb-2 flex justify-between text-base">
-                          <span className="font-semibold">{tipo === "pratica" ? "Práticas" : "Teóricas"}</span>
+                          <span className="font-semibold">{titulo}</span>
                           <span>
                             {r.feitas} de {r.contratadas} feitas
                           </span>
@@ -371,7 +417,10 @@ export default async function FichaAlunoPage({
                     {m.aulas.map((a) => (
                       <tr key={a.id} className={a.status === "cancelada" ? "text-slate-400" : ""}>
                         <td className="px-4 py-2.5">{formatarDataHora(a.dataHora)}</td>
-                        <td className="px-4 py-2.5">{TIPOS_AULA[a.tipo]}</td>
+                        <td className="px-4 py-2.5">
+                          {TIPOS_AULA[a.tipo]}
+                          {porCategoria.length > 0 && a.categoria ? ` (${a.categoria})` : ""}
+                        </td>
                         <td className="px-4 py-2.5">{a.instrutor?.nome ?? "—"}</td>
                         <td className="px-4 py-2.5">{a.veiculo?.placa ?? "—"}</td>
                         <td className="px-4 py-2.5">

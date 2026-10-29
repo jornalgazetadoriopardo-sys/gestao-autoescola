@@ -104,6 +104,8 @@ export default async function InicioPage() {
     carregarFeriados(hojeTexto, somarDias(hojeTexto, 7)),
   ]);
 
+  const nomesProntos = [...new Set(prontos.map((p) => p.alunoNome))];
+
   const [aulasHoje, lembretes, atrasadas, vencemHoje, recebidoMes, alunosAtivos] = await Promise.all([
     db.aula.findMany({
       where: { dataHora: { gte: inicio, lt: fim }, status: { not: "cancelada" } },
@@ -219,11 +221,10 @@ export default async function InicioPage() {
               <AvisoLinha
                 cor="azul"
                 icone={Flag}
-                titulo={`${prontos.length} ${prontos.length === 1 ? "aluno pronto" : "alunos prontos"} para o exame prático`}
-                texto={`Já fizeram todas as aulas práticas: ${prontos
+                titulo={`${nomesProntos.length} ${nomesProntos.length === 1 ? "aluno pronto" : "alunos prontos"} para o exame prático`}
+                texto={`Já fizeram todas as aulas práticas: ${nomesProntos
                   .slice(0, 3)
-                  .map((p) => p.alunoNome)
-                  .join(", ")}${prontos.length > 3 ? "…" : ""}`}
+                  .join(", ")}${nomesProntos.length > 3 ? "…" : ""}`}
                 acao={<LinkAcao href="/exames?aba=prontos">Agendar exame</LinkAcao>}
               />
             )}

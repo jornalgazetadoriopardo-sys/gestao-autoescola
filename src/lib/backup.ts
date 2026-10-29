@@ -1,6 +1,7 @@
 import "server-only";
 import { Prisma } from "@prisma/client";
 import { dbGlobal } from "./db";
+import { cifrarSenha, decifrarSenha } from "./govbr";
 
 // Cópia completa de uma autoescola em JSON, para levar a outro servidor.
 // Os ids do arquivo só servem para ligar os registros entre si: na
@@ -36,7 +37,7 @@ export async function exportarAutoescola(autoescolaId: number) {
     dbGlobal.aluno.findMany({
       orderBy: { id: "asc" },
       where: { autoescolaId },
-      omit: { autoescolaId: true, foto: false },
+      omit: { autoescolaId: true, foto: false, govbrSenha: false },
     }),
     dbGlobal.instrutor.findMany({ orderBy: { id: "asc" }, where: { autoescolaId }, omit: { autoescolaId: true } }),
     dbGlobal.veiculo.findMany({ orderBy: { id: "asc" }, where: { autoescolaId }, omit: { autoescolaId: true } }),
@@ -61,7 +62,9 @@ export async function exportarAutoescola(autoescolaId: number) {
         : null,
     },
     usuarios,
-    alunos,
+    // A senha do gov.br vai aberta no arquivo: no servidor novo ela é criptografada
+    // com a chave de lá (o arquivo de exportação já é confidencial).
+    alunos: alunos.map((a) => ({ ...a, govbrSenha: a.govbrSenha ? decifrarSenha(a.govbrSenha) : null })),
     instrutores,
     veiculos,
     manutencoes,
@@ -252,6 +255,9 @@ export async function importarAutoescola(arquivo: unknown) {
           categoria: al.str(x, "categoria"),
           status: al.str(x, "status"),
           obs: al.strN(x, "obs"),
+          govbrSenha: al.strN(x, "govbrSenha") ? cifrarSenha(al.strN(x, "govbrSenha")!) : null,
+          govbrNivel: al.strN(x, "govbrNivel"),
+          govbrObs: al.strN(x, "govbrObs"),
           foto: al.strN(x, "foto"),
           telefone2: al.strN(x, "telefone2"),
           numero: al.strN(x, "numero"),
@@ -325,6 +331,10 @@ export async function importarAutoescola(arquivo: unknown) {
           alunoId: idAluno(mt.int(x, "alunoId")),
           categoria: mt.str(x, "categoria"),
           qtdPraticas: mt.int(x, "qtdPraticas"),
+          praticasPorCategoria:
+            x.praticasPorCategoria && typeof x.praticasPorCategoria === "object"
+              ? (x.praticasPorCategoria as object)
+              : undefined,
           qtdTeoricas: mt.int(x, "qtdTeoricas"),
           valorTotalCentavos: mt.int(x, "valorTotalCentavos"),
           jurosMesBp: mt.int(x, "jurosMesBp"),
@@ -358,6 +368,7 @@ export async function importarAutoescola(arquivo: unknown) {
           instrutorId: opcional(au.intN(x, "instrutorId"), idInstrutor),
           veiculoId: opcional(au.intN(x, "veiculoId"), idVeiculo),
           tipo: au.str(x, "tipo"),
+          categoria: au.strN(x, "categoria"),
           dataHora: au.data(x, "dataHora"),
           duracaoMin: au.int(x, "duracaoMin"),
           status: au.str(x, "status"),

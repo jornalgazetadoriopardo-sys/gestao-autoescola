@@ -7,6 +7,7 @@ import { formatarCpf, formatarData, formatarMoeda } from "@/lib/format";
 import { formatoDe } from "@/lib/formato";
 import { SO_PARCELAS } from "@/lib/pagamentos";
 import { CabecalhoCupom, Cupom, LinhaCupom } from "../../cupom";
+import { QrPix } from "../../qr-pix";
 
 export const dynamic = "force-dynamic";
 
@@ -57,6 +58,17 @@ export default async function CarnePage({
                 <div>
                   Pague com Pix: <b className="break-all">{config.chavePix}</b>
                 </div>
+                {!p.pagoEm && (
+                  <div className="mt-1 flex flex-col items-center">
+                    <QrPix
+                      config={config}
+                      valorCentavos={p.valorCentavos}
+                      identificador={`PARC${p.id}`}
+                      className="size-[34mm]"
+                    />
+                    <div className="mt-0.5 text-[11px]">Aponte a câmera do app do banco</div>
+                  </div>
+                )}
               </>
             )}
             {config.avisoCarne && <div className="mt-1 text-[11px]">{config.avisoCarne}</div>}
@@ -153,21 +165,34 @@ function Lamina({
           <div className="text-right text-[10px] uppercase text-slate-500">Carnê de pagamento</div>
         </div>
 
-        <div className="grid grid-cols-[1fr_auto_auto_auto] gap-x-4 gap-y-1">
-          <Campo rotulo="Aluno" valor={aluno.nome} />
-          <Campo rotulo="Parcela" valor={numero} />
-          <Campo rotulo="Vencimento" valor={formatarData(parcela.vencimento)} destaque />
-          <Campo rotulo="Valor" valor={valor} destaque />
-          <Campo rotulo="CPF" valor={aluno.cpf} />
-          <Campo rotulo="Categoria" valor={categoria} />
-        </div>
+        <div className="flex gap-3">
+          <div className="min-w-0 flex-1 space-y-1.5">
+            <div className="grid grid-cols-[1fr_auto_auto_auto] gap-x-4 gap-y-1">
+              <Campo rotulo="Aluno" valor={aluno.nome} />
+              <Campo rotulo="Parcela" valor={numero} />
+              <Campo rotulo="Vencimento" valor={formatarData(parcela.vencimento)} destaque />
+              <Campo rotulo="Valor" valor={valor} destaque />
+              <Campo rotulo="CPF" valor={aluno.cpf} />
+              <Campo rotulo="Categoria" valor={categoria} />
+            </div>
 
-        {config.chavePix && (
-          <div className="text-[10px]">
-            <b>Pague com Pix:</b> {config.chavePix}
+            {config.chavePix && (
+              <div className="text-[10px]">
+                <b>Pague com Pix:</b> {config.chavePix}
+                {!parcela.pagoEm && " (ou leia o QR Code ao lado, já com o valor)"}
+              </div>
+            )}
+            {config.avisoCarne && <div className="text-[10px] italic text-slate-700">{config.avisoCarne}</div>}
           </div>
-        )}
-        {config.avisoCarne && <div className="text-[10px] italic text-slate-700">{config.avisoCarne}</div>}
+          {!parcela.pagoEm && (
+            <QrPix
+              config={config}
+              valorCentavos={parcela.valorCentavos}
+              identificador={`PARC${parcela.id}`}
+              className="size-[24mm]"
+            />
+          )}
+        </div>
 
         <div className="mt-auto grid grid-cols-3 gap-4 pt-1">
           <Linha rotulo="Valor pago" />

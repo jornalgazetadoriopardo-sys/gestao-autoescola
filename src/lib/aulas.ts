@@ -90,3 +90,47 @@ export function resumoAulas(
   };
   return { pratica: resumo("pratica", matricula.qtdPraticas), teorica: resumo("teorica", matricula.qtdTeoricas) };
 }
+
+type MatriculaComCategorias = { categoria: string; qtdPraticas: number; praticasPorCategoria?: unknown };
+
+// Aulas práticas contratadas por categoria (AB → { A: 10, B: 20 }). Matrícula de
+// uma categoria só tem todas nela. Matrícula antiga de duas categorias, sem a
+// divisão, devolve null: o saldo é controlado só pelo total.
+export function praticasPorCategoria(m: MatriculaComCategorias): Record<string, number> | null {
+  const letras = [...new Set(m.categoria.split(""))];
+  if (letras.length === 1) return { [letras[0]]: m.qtdPraticas };
+  const json = m.praticasPorCategoria;
+  if (!json || typeof json !== "object") return null;
+  const r: Record<string, number> = {};
+  for (const l of letras) {
+    const v = (json as Record<string, unknown>)[l];
+    r[l] = Number.isInteger(v) && (v as number) >= 0 ? (v as number) : 0;
+  }
+  return r;
+}
+
+// Saldo de aulas práticas de cada categoria, para matrículas de duas categorias
+// (AB, AC...). Lista vazia nas de uma categoria só ou sem a divisão.
+export function resumoPorCategoria(
+  m: MatriculaComCategorias,
+  aulas: { tipo: string; status: string; categoria?: string | null }[],
+) {
+  const mapa = praticasPorCategoria(m);
+  if (!mapa || Object.keys(mapa).length < 2) return [];
+  return Object.entries(mapa).map(([categoria, contratadas]) => {
+    const r = resumoAulas(
+      { qtdPraticas: contratadas, qtdTeoricas: 0 },
+      aulas.filter((a) => a.tipo === "pratica" && a.categoria === categoria),
+    ).pratica;
+    return { categoria, ...r };
+  });
+}
+
+// "30" ou "30 (A: 10, B: 20)".
+export function textoPraticas(m: MatriculaComCategorias) {
+  const mapa = praticasPorCategoria(m);
+  if (!mapa || Object.keys(mapa).length < 2) return String(m.qtdPraticas);
+  return `${m.qtdPraticas} (${Object.entries(mapa)
+    .map(([c, n]) => `${c}: ${n}`)
+    .join(", ")})`;
+}

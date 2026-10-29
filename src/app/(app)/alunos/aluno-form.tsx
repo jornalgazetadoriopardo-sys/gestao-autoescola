@@ -2,10 +2,17 @@ import type { Aluno } from "@prisma/client";
 import { FormAcao } from "@/components/form-acao";
 import { Campo, Cartao, Input, Select, Textarea } from "@/components/ui";
 import { CATEGORIAS, STATUS_ALUNO, dataParaInput, formatarCpf, formatarTelefone } from "@/lib/format";
+import { NIVEIS_GOVBR } from "@/lib/govbr-niveis";
 import { salvarAluno } from "./actions";
 import { FotoAluno } from "./foto-aluno";
 
-export function AlunoForm({ aluno }: { aluno?: Aluno }) {
+export function AlunoForm({
+  aluno,
+  temSenhaGovbr = false,
+}: {
+  aluno?: Omit<Aluno, "govbrSenha">;
+  temSenhaGovbr?: boolean;
+}) {
   return (
     <Cartao className="max-w-3xl">
       <FormAcao acao={salvarAluno.bind(null, aluno?.id ?? null)}>
@@ -119,6 +126,47 @@ export function AlunoForm({ aluno }: { aluno?: Aluno }) {
             <Campo label="Atualização biométrica (data)">
               <Input name="biometriaEm" type="date" defaultValue={dataParaInput(aluno?.biometriaEm)} />
             </Campo>
+          </div>
+        </details>
+
+        <details className="rounded-xl border border-slate-200 p-4" open={Boolean(temSenhaGovbr || aluno?.govbrNivel)}>
+          <summary className="cursor-pointer text-base font-semibold text-slate-800">
+            Conta gov.br (só para consulta da autoescola)
+          </summary>
+          <p className="mt-2 text-sm text-slate-600">
+            O login é o CPF do aluno. Estes dados não aparecem no contrato, na ficha nem nos relatórios. A senha fica
+            guardada de forma criptografada e só aparece na tela do aluno ao clicar em &quot;Mostrar&quot;.
+          </p>
+          <div className="mt-4 grid gap-4 sm:grid-cols-2">
+            <Campo
+              label="Senha do gov.br"
+              ajuda={temSenhaGovbr ? "Já cadastrada. Deixe em branco para manter a atual." : "Opcional."}
+            >
+              <Input name="govbrSenha" type="password" autoComplete="new-password" />
+            </Campo>
+            <Campo label="Nível da conta">
+              <Select name="govbrNivel" defaultValue={aluno?.govbrNivel ?? ""}>
+                <option value="">Não sei</option>
+                {Object.entries(NIVEIS_GOVBR).map(([id, nome]) => (
+                  <option key={id} value={id}>
+                    {nome}
+                  </option>
+                ))}
+              </Select>
+            </Campo>
+            <Campo label="Observação" className="sm:col-span-2">
+              <Input
+                name="govbrObs"
+                defaultValue={aluno?.govbrObs ?? ""}
+                placeholder="Ex.: verificação em duas etapas no celular da mãe"
+              />
+            </Campo>
+            {temSenhaGovbr && (
+              <label className="flex items-center gap-3 text-base sm:col-span-2">
+                <input type="checkbox" name="govbrApagar" className="size-5" />
+                Apagar a senha cadastrada
+              </label>
+            )}
           </div>
         </details>
 

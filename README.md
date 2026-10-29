@@ -30,6 +30,14 @@ presença e pagamentos.
   - *Cartão*, *Pix* ou *dinheiro* à vista: a matrícula já fica quitada
   - **Entrada** opcional (dinheiro, Pix ou cartão, até em vezes) e o restante no carnê, no cartão,
     no Pix ou em dinheiro. A entrada sai no recibo como "entrada da matrícula" e não entra no carnê
+  - **Aulas por categoria** (ex.: AB = 10 aulas de moto e 20 de carro): cada aula conta na
+    categoria do veículo; no agendamento de várias aulas escolhe-se a categoria e o preenchimento
+    automático marca exatamente as que faltam. A prova prática de cada categoria fica liberada
+    quando as aulas dela terminam
+  - **QR Code do Pix** no carnê (A4 e térmica, já com o valor da parcela) e na guia do aluno,
+    além da chave escrita
+- **Conta gov.br** no cadastro do aluno (senha criptografada, nível e observação), só para
+  consulta da autoescola: não sai em contrato, ficha nem relatórios
 - **Guia do aluno** gerado na matrícula (imprimir ou salvar em PDF): dados, pagamento,
   **cronograma** com um quadro por aula contratada (preenchido com as aulas agendadas
   ou em branco para anotar data e horário), orientações e assinaturas; botão para

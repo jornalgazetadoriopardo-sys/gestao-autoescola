@@ -108,7 +108,7 @@ export default async function ExamesPage({
         ) : (
           <Tabela cabecalhos={["Aluno", "Categoria", "Aulas práticas", "Prova", ""]}>
             {prontos.map((p) => (
-              <tr key={p.matriculaId}>
+              <tr key={p.chave}>
                 <td className="px-4 py-3">
                   <Link href={`/alunos/${p.alunoId}`} className="font-medium text-blue-700 hover:underline">
                     {p.alunoNome}

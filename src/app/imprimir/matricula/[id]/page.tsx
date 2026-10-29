@@ -12,7 +12,8 @@ import {
   formatarTelefone,
   situacaoParcela,
 } from "@/lib/format";
-import { FUSO, formatarHora } from "@/lib/aulas";
+import { FUSO, formatarHora, textoPraticas } from "@/lib/aulas";
+import { QrPix } from "../../qr-pix";
 import { ORIENTACOES_PADRAO } from "@/lib/orientacoes";
 import { descricaoPagamento } from "@/lib/pagamentos";
 import { urlFoto } from "@/lib/foto";
@@ -123,7 +124,7 @@ export default async function GuiaMatriculaPage({ params }: { params: Promise<{ 
           <div className="grid grid-cols-4 gap-x-6 gap-y-1">
             <Dado rotulo="Categoria" valor={matricula.categoria} />
             <Dado rotulo="Data da matrícula" valor={formatarDataLocal(matricula.data)} />
-            <Dado rotulo="Aulas práticas" valor={String(matricula.qtdPraticas)} />
+            <Dado rotulo="Aulas práticas" valor={textoPraticas(matricula)} />
             <Dado rotulo="Aulas teóricas" valor={String(matricula.qtdTeoricas)} />
           </div>
         </Secao>
@@ -162,9 +163,16 @@ export default async function GuiaMatriculaPage({ params }: { params: Promise<{ 
                 ))}
               </div>
               {config.chavePix && (
-                <p className="mt-1.5">
-                  Pague com Pix: <b>{config.chavePix}</b>
-                </p>
+                <div className="mt-1.5 flex items-center gap-3">
+                  <QrPix config={config} className="size-[20mm]" />
+                  <p>
+                    Pague com Pix: <b>{config.chavePix}</b>
+                    <br />
+                    <span className="text-[11px] text-slate-600">
+                      Leia o QR Code com o app do banco e digite o valor da parcela.
+                    </span>
+                  </p>
+                </div>
               )}
             </>
           )}
