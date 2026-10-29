@@ -3,6 +3,7 @@ import PizZip from "pizzip";
 import Docxtemplater from "docxtemplater";
 import type { Aluno, Configuracao, Matricula, Parcela } from "@prisma/client";
 import { enderecoCompleto } from "./config";
+import { textoPraticas } from "./aulas";
 import { CURSOS_TEORICOS, TIPOS_PROCESSO } from "./etapas";
 import {
   FORMAS_PAGAMENTO,
@@ -46,7 +47,7 @@ export const CAMPOS_CONTRATO: { grupo: string; campos: [chave: string, descricao
       ["categoria", "Categoria (A, B, AB...)"],
       ["tipo_processo", "Tipo de processo (1ª habilitação, adição...)"],
       ["curso_teorico", "Curso teórico (na autoescola, online grátis...)"],
-      ["aulas_praticas", "Quantidade de aulas práticas"],
+      ["aulas_praticas", "Quantidade de aulas práticas (com a divisão por categoria, se houver)"],
       ["aulas_teoricas", "Quantidade de aulas teóricas"],
       ["valor_total", "Valor contratado (R$ 1.500,00)"],
       ["valor_total_extenso", "Valor por extenso"],
@@ -126,7 +127,7 @@ export function dadosDoContrato(m: MatriculaCompleta, c: Configuracao) {
     tipo_processo: TIPOS_PROCESSO[m.tipoProcesso]?.titulo ?? m.tipoProcesso,
     curso_teorico: CURSOS_TEORICOS[m.cursoTeorico]?.titulo ?? m.cursoTeorico,
     categoria: m.categoria,
-    aulas_praticas: String(m.qtdPraticas),
+    aulas_praticas: textoPraticas(m),
     aulas_teoricas: String(m.qtdTeoricas),
     valor_total: formatarMoeda(m.valorTotalCentavos),
     valor_total_extenso: valorPorExtenso(m.valorTotalCentavos),

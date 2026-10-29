@@ -15,11 +15,23 @@ function inteiro(dados: FormData, campo: string) {
   return /^\d+$/.test(v) ? Number(v) : null;
 }
 
+// Aulas práticas de cada letra da categoria (campos praticas_A, praticas_B...).
+function lerPraticas(dados: FormData, categoria: string) {
+  const mapa: Record<string, number> = {};
+  for (const l of new Set(categoria.split(""))) {
+    const n = inteiro(dados, `praticas_${l}`);
+    if (n === null) return null;
+    mapa[l] = n;
+  }
+  return { mapa, total: Object.values(mapa).reduce((s, n) => s + n, 0) };
+}
+
 export async function criarMatricula(alunoId: number, _: EstadoForm, dados: FormData): Promise<EstadoForm> {
   await exigirSessao();
 
   const categoria = String(dados.get("categoria") ?? "");
-  const qtdPraticas = inteiro(dados, "qtdPraticas");
+  const praticas = (CATEGORIAS as readonly string[]).includes(categoria) ? lerPraticas(dados, categoria) : null;
+  const qtdPraticas = praticas?.total ?? null;
   const qtdTeoricas = inteiro(dados, "qtdTeoricas");
   const valorTotal = lerMoeda(String(dados.get("valorTotal") ?? ""));
   const formaPagamento = String(dados.get("formaPagamento") ?? "");
@@ -29,7 +41,9 @@ export async function criarMatricula(alunoId: number, _: EstadoForm, dados: Form
   if (!(cursoTeorico in CURSOS_TEORICOS)) return { erro: "Escolha como será o curso teórico." };
 
   if (!(CATEGORIAS as readonly string[]).includes(categoria)) return { erro: "Selecione a categoria." };
-  if (qtdPraticas === null || qtdTeoricas === null) return { erro: "Informe a quantidade de aulas." };
+  if (qtdPraticas === null || qtdTeoricas === null) {
+    return { erro: "Informe a quantidade de aulas (de cada categoria)." };
+  }
   if (qtdPraticas + qtdTeoricas === 0) return { erro: "A matrícula precisa ter ao menos uma aula." };
   if (valorTotal === null) return { erro: "Valor total inválido. Use o formato 1.500,00." };
   if (!(formaPagamento in FORMAS_MATRICULA)) return { erro: "Escolha a forma de pagamento." };
@@ -121,6 +135,7 @@ export async function criarMatricula(alunoId: number, _: EstadoForm, dados: Form
       alunoId,
       categoria,
       qtdPraticas,
+      praticasPorCategoria: praticas!.mapa,
       qtdTeoricas: cursoTeorico === "autoescola" ? qtdTeoricas : 0,
       valorTotalCentavos: valorTotal,
       jurosMesBp,
@@ -158,14 +173,17 @@ export async function excluirMatricula(matriculaId: number) {
 export async function editarMatricula(matriculaId: number, _: EstadoForm, dados: FormData): Promise<EstadoForm> {
   await exigirSessao();
   const categoria = String(dados.get("categoria") ?? "");
-  const qtdPraticas = inteiro(dados, "qtdPraticas");
+  const praticas = (CATEGORIAS as readonly string[]).includes(categoria) ? lerPraticas(dados, categoria) : null;
+  const qtdPraticas = praticas?.total ?? null;
   const qtdTeoricas = inteiro(dados, "qtdTeoricas");
   const valorTotal = lerMoeda(String(dados.get("valorTotal") ?? ""));
   const formaPagamento = String(dados.get("formaPagamento") ?? "");
   const data = String(dados.get("data") ?? "");
 
   if (!(CATEGORIAS as readonly string[]).includes(categoria)) return { erro: "Selecione a categoria." };
-  if (qtdPraticas === null || qtdTeoricas === null) return { erro: "Informe a quantidade de aulas." };
+  if (qtdPraticas === null || qtdTeoricas === null) {
+    return { erro: "Informe a quantidade de aulas (de cada categoria)." };
+  }
   if (qtdPraticas + qtdTeoricas === 0) return { erro: "A matrícula precisa ter ao menos uma aula." };
   if (valorTotal === null) return { erro: "Valor total inválido. Use o formato 1.500,00." };
   if (!(formaPagamento in FORMAS_MATRICULA)) return { erro: "Escolha a forma de pagamento." };
@@ -183,6 +201,7 @@ export async function editarMatricula(matriculaId: number, _: EstadoForm, dados:
     data: {
       categoria,
       qtdPraticas,
+      praticasPorCategoria: praticas!.mapa,
       qtdTeoricas,
       valorTotalCentavos: valorTotal,
       formaPagamento,

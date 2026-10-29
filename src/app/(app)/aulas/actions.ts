@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
 import { exigirSessao } from "@/lib/auth";
 import { DURACOES, TIPOS_AULA, lerDataHora } from "@/lib/aulas";
-import { verificarAulas, type NovaAula } from "@/lib/validar-aula";
+import { comCategoria, verificarAulas, type NovaAula } from "@/lib/validar-aula";
 import type { EstadoForm } from "@/components/form-acao";
 
 const MAX_LOTE = 60;
@@ -61,8 +61,9 @@ export async function agendarAula(_: EstadoForm, dados: FormData): Promise<Estad
   const erro = await verificarAulas(matriculaId, [aula]);
   if (erro) return { erro };
 
+  const [comCat] = await comCategoria([aula]);
   const criada = await db.aula.create({
-    data: { matriculaId, ...aula, obs: comum.obs },
+    data: { matriculaId, ...comCat, obs: comum.obs },
     include: { matricula: true },
   });
   revalidar(criada.matricula.alunoId);
@@ -110,7 +111,7 @@ export async function agendarVarias(_: EstadoForm, dados: FormData): Promise<Est
   if (erro) return { erro: `Nenhuma aula foi agendada. ${erro}` };
 
   const matricula = await db.matricula.findUniqueOrThrow({ where: { id: matriculaId } });
-  await db.aula.createMany({ data: aulas.map((a) => ({ matriculaId, ...a, obs: comum.obs })) });
+  await db.aula.createMany({ data: (await comCategoria(aulas)).map((a) => ({ matriculaId, ...a, obs: comum.obs })) });
   revalidar(matricula.alunoId);
   redirect(`/alunos/${matricula.alunoId}?agendadas=${aulas.length}`);
 }
@@ -130,7 +131,8 @@ export async function editarAula(aulaId: number, _: EstadoForm, dados: FormData)
   const erro = await verificarAulas(atual.matriculaId, [aula], { id: atual.id, status: atual.status });
   if (erro) return { erro };
 
-  await db.aula.update({ where: { id: aulaId }, data: { ...aula, obs: comum.obs } });
+  const [comCat] = await comCategoria([aula]);
+  await db.aula.update({ where: { id: aulaId }, data: { ...comCat, obs: comum.obs } });
   revalidar(atual.matricula.alunoId);
   redirect(destinoSeguro(String(dados.get("voltar") ?? ""), `/aulas?dia=${diaDe(dataHora)}`));
 }

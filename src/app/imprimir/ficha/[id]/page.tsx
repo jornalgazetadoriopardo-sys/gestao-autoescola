@@ -1,3 +1,4 @@
+import { textoPraticas } from "@/lib/aulas";
 import { notFound } from "next/navigation";
 import { obterConfig } from "@/lib/config";
 import { db } from "@/lib/db";
@@ -132,7 +133,7 @@ export default async function FichaPage({ params }: { params: Promise<{ id: stri
           </b>
         </div>
         <div>
-          Aulas práticas: <b>{matricula.qtdPraticas}</b>
+          Aulas práticas: <b>{textoPraticas(matricula)}</b>
         </div>
       </div>
       {matricula.parcelas.length > 0 && (

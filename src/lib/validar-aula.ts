@@ -2,7 +2,7 @@ import "server-only";
 import { db } from "./db";
 import { DURACAO_EXAME } from "./disponibilidade";
 import { carregarFeriados } from "./feriados-servidor";
-import { fimDaAula, formatarDataHora, formatarHora, resumoAulas } from "./aulas";
+import { fimDaAula, formatarDataHora, formatarHora, resumoAulas, resumoPorCategoria } from "./aulas";
 
 export type NovaAula = {
   tipo: string;
@@ -29,7 +29,7 @@ export async function verificarAulas(
 
   const matricula = await db.matricula.findUnique({
     where: { id: matriculaId },
-    include: { aluno: true, aulas: { select: { id: true, tipo: true, status: true } } },
+    include: { aluno: true, aulas: { select: { id: true, tipo: true, status: true, categoria: true } } },
   });
   if (!matricula) return "Matrícula não encontrada.";
   if (matricula.aluno.status !== "ativo") return "O aluno não está ativo.";
@@ -70,6 +70,21 @@ export async function verificarAulas(
         return r.restantes === 0
           ? `Este aluno não tem mais aulas ${nome} disponíveis na matrícula (${r.feitas} feitas, ${r.agendadas} agendadas de ${r.contratadas}).`
           : `Você escolheu ${pedidas} aulas ${nome}, mas só restam ${r.restantes} para agendar nesta matrícula.`;
+      }
+    }
+    // Matrícula de duas categorias (ex.: AB): cada aula prática conta na categoria do veículo.
+    const porCategoria = resumoPorCategoria(
+      matricula,
+      matricula.aulas.filter((a) => a.id !== editando?.id),
+    );
+    for (const r of porCategoria) {
+      const pedidas = aulas.filter(
+        (a) => a.tipo === "pratica" && veiculos.find((v) => v.id === a.veiculoId)?.categoria === r.categoria,
+      ).length;
+      if (pedidas > r.restantes) {
+        return r.restantes === 0
+          ? `Este aluno não tem mais aulas práticas da categoria ${r.categoria} para agendar (${r.feitas} feitas, ${r.agendadas} agendadas de ${r.contratadas}). Use um veículo de outra categoria.`
+          : `Você escolheu ${pedidas} aulas da categoria ${r.categoria}, mas só restam ${r.restantes} dessa categoria.`;
       }
     }
   }
@@ -212,4 +227,14 @@ export async function verificarExame(e: {
     return `O veículo ${a.veiculo?.placa ?? ""} está em aula ${quando} com ${a.matricula.aluno.nome}.`;
   }
   return `${a.instrutor?.nome ?? "O instrutor"} tem aula ${quando} com ${a.matricula.aluno.nome}.`;
+}
+
+// Categoria de cada aula prática: a do veículo usado.
+export async function comCategoria<T extends NovaAula>(aulas: T[]) {
+  const ids = [...new Set(aulas.map((a) => a.veiculoId).filter((x): x is number => x !== null))];
+  const veiculos = await db.veiculo.findMany({ where: { id: { in: ids } }, select: { id: true, categoria: true } });
+  return aulas.map((a) => ({
+    ...a,
+    categoria: a.tipo === "pratica" ? (veiculos.find((v) => v.id === a.veiculoId)?.categoria ?? null) : null,
+  }));
 }

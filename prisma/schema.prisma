@@ -79,6 +79,11 @@ model Aluno {
   // serve de versão no endereço da imagem (cache do navegador).
   foto           String?
   fotoEm         DateTime?
+  // Conta gov.br (o login é o CPF). Só para consulta da autoescola: não sai em
+  // contrato, ficha nem relatório. A senha fica criptografada (src/lib/govbr.ts).
+  govbrSenha     String?
+  govbrNivel     String?
+  govbrObs       String?
   criadoEm       DateTime    @default(now())
   matriculas     Matricula[]
 
@@ -128,6 +133,8 @@ model Matricula {
   aluno              Aluno     @relation(fields: [alunoId], references: [id])
   categoria          String
   qtdPraticas        Int
+  // Aulas práticas por categoria, ex.: {"A": 10, "B": 20} (a soma é qtdPraticas).
+  praticasPorCategoria Json?
   qtdTeoricas        Int
   valorTotalCentavos Int
   // Juros ao mês em centésimos de ponto percentual (199 = 1,99% a.m.).
@@ -195,6 +202,8 @@ model Aula {
   veiculoId   Int?
   veiculo     Veiculo?   @relation(fields: [veiculoId], references: [id])
   tipo        String
+  // Categoria da aula prática (a do veículo): conta no saldo daquela categoria.
+  categoria   String?
   dataHora    DateTime
   duracaoMin  Int        @default(50)
   status      String     @default("agendada")

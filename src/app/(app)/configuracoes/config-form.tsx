@@ -121,7 +121,11 @@ export function ConfigForm({ config }: { config: Configuracao }) {
         <Campo label="E-mail">
           <Input name="email" type="email" defaultValue={config.email ?? ""} />
         </Campo>
-        <Campo label="Chave Pix" ajuda="Impressa no carnê para o aluno pagar por Pix." className="sm:col-span-2">
+        <Campo
+          label="Chave Pix"
+          ajuda="Impressa no carnê e na guia, junto com o QR Code para pagar. Telefone: escreva com o DDD entre parênteses, ex.: (11) 99999-9999."
+          className="sm:col-span-2"
+        >
           <Input name="chavePix" defaultValue={config.chavePix ?? ""} />
         </Campo>
         <Campo

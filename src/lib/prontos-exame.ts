@@ -1,7 +1,9 @@
 import "server-only";
 import { db } from "./db";
+import { praticasPorCategoria } from "./aulas";
 
 export type ProntoParaExame = {
+  chave: string;
   matriculaId: number;
   alunoId: number;
   alunoNome: string;
@@ -13,8 +15,9 @@ export type ProntoParaExame = {
 };
 
 // Alunos ativos que já fizeram todas as aulas práticas contratadas e ainda não
-// têm a prova prática marcada (sem data, ou nem cadastrada). Quem já passou em
-// todas as provas práticas não entra.
+// têm a prova prática marcada (sem data, ou nem cadastrada). Em matrículas de
+// duas categorias (ex.: AB) cada categoria é conferida separada: quem terminou
+// as aulas de moto já pode marcar a prova da A. Quem já passou não entra.
 export async function prontosParaExamePratico(alunoId?: number): Promise<ProntoParaExame[]> {
   const matriculas = await db.matricula.findMany({
     where: { aluno: { status: "ativo", ...(alunoId ? { id: alunoId } : {}) }, qtdPraticas: { gt: 0 } },
@@ -22,29 +25,48 @@ export async function prontosParaExamePratico(alunoId?: number): Promise<ProntoP
       id: true,
       categoria: true,
       qtdPraticas: true,
+      praticasPorCategoria: true,
       aluno: { select: { id: true, nome: true } },
       etapas: { where: { tipo: "exame_pratico" }, orderBy: { ordem: "asc" } },
-      _count: { select: { aulas: { where: { tipo: "pratica", status: "presente" } } } },
+      aulas: { where: { tipo: "pratica", status: "presente" }, select: { categoria: true } },
     },
     orderBy: { aluno: { nome: "asc" } },
   });
 
   const prontos: ProntoParaExame[] = [];
   for (const m of matriculas) {
-    if (m._count.aulas < m.qtdPraticas) continue;
-    const semData = m.etapas.find((e) => e.resultado === null && !e.data);
-    if (!semData && m.etapas.length > 0) continue;
-    prontos.push({
-      matriculaId: m.id,
-      alunoId: m.aluno.id,
-      alunoNome: m.aluno.nome,
-      categoria: m.categoria,
-      praticas: m._count.aulas,
-      prova: semData?.descricao ?? "Exame prático",
-      agendar: semData
-        ? `/exames/${semData.id}/editar`
-        : `/exames/nova?matricula=${m.id}&tipo=exame_pratico&categoria=${m.categoria.slice(-1)}`,
-    });
+    const mapa = praticasPorCategoria(m);
+    // Sem a divisão por categoria (matrícula antiga AB): confere pelo total.
+    const grupos = mapa
+      ? Object.entries(mapa)
+          .filter(([, n]) => n > 0)
+          .map(([letra, contratadas]) => ({
+            letra,
+            contratadas,
+            feitas: Object.keys(mapa).length > 1 ? m.aulas.filter((a) => a.categoria === letra).length : m.aulas.length,
+          }))
+      : [{ letra: null, contratadas: m.qtdPraticas, feitas: m.aulas.length }];
+
+    for (const g of grupos) {
+      if (g.feitas < g.contratadas) continue;
+      const provas = g.letra ? m.etapas.filter((e) => !e.categoria || e.categoria === g.letra) : m.etapas;
+      if (provas.some((e) => e.resultado === "ok")) continue;
+      const semData = provas.find((e) => e.resultado === null && !e.data);
+      if (!semData && provas.length > 0) continue;
+      const letra = g.letra ?? m.categoria.slice(-1);
+      prontos.push({
+        chave: `${m.id}-${letra}`,
+        matriculaId: m.id,
+        alunoId: m.aluno.id,
+        alunoNome: m.aluno.nome,
+        categoria: g.letra ?? m.categoria,
+        praticas: g.feitas,
+        prova: semData?.descricao ?? `Exame prático – categoria ${letra}`,
+        agendar: semData
+          ? `/exames/${semData.id}/editar`
+          : `/exames/nova?matricula=${m.id}&tipo=exame_pratico&categoria=${letra}`,
+      });
+    }
   }
   return prontos;
 }

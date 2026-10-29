@@ -14,8 +14,16 @@ export type OpcaoMatricula = {
   alunoId: number;
   rotulo: string;
   categoria: string;
-  restantes: { pratica: number; teorica: number };
+  // porCategoria: saldo de aulas práticas de cada categoria (só em matrículas como AB).
+  restantes: { pratica: number; teorica: number; porCategoria: Record<string, number> };
 };
+
+// "Restam 30 aulas práticas (A: 10, B: 20) e 0 teóricas para agendar."
+export function textoRestantes(m: OpcaoMatricula) {
+  const cats = Object.entries(m.restantes.porCategoria);
+  const detalhe = cats.length ? ` (${cats.map(([c, n]) => `${c}: ${n}`).join(", ")})` : "";
+  return `Restam ${m.restantes.pratica} aulas práticas${detalhe} e ${m.restantes.teorica} teóricas para agendar.`;
+}
 
 type Opcao = { id: number; nome: string; categorias: string };
 
@@ -68,10 +76,7 @@ export function AulaForm({
               ))}
             </Select>
             {matricula && (
-              <span className="mt-1.5 block text-sm font-medium text-blue-800">
-                Restam {matricula.restantes.pratica} aulas práticas e {matricula.restantes.teorica} teóricas
-                para agendar.
-              </span>
+              <span className="mt-1.5 block text-sm font-medium text-blue-800">{textoRestantes(matricula)}</span>
             )}
           </Campo>
           <Campo label="Tipo *">

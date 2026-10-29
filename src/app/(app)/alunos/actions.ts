@@ -7,6 +7,8 @@ import { db } from "@/lib/db";
 import { exigirSessao } from "@/lib/auth";
 import { CATEGORIAS, STATUS_ALUNO, cpfValido, somenteDigitos } from "@/lib/format";
 import { FOTO_MAX } from "@/lib/foto";
+import { cifrarSenha, decifrarSenha } from "@/lib/govbr";
+import { NIVEIS_GOVBR } from "@/lib/govbr-niveis";
 import type { EstadoForm } from "@/components/form-acao";
 
 // "AAAA-MM-DD" → data (meia-noite UTC), ou null.
@@ -39,6 +41,18 @@ export async function salvarAluno(id: number | null, _: EstadoForm, dados: FormD
     return { erro: "Foto inválida. Tente escolher a imagem de novo." };
   }
 
+  // Conta gov.br: senha em branco mantém a atual; "apagar" remove.
+  const govbrNivel = texto(dados, "govbrNivel");
+  if (govbrNivel && !(govbrNivel in NIVEIS_GOVBR)) return { erro: "Nível da conta gov.br inválido." };
+  const govbrSenha = String(dados.get("govbrSenha") ?? "");
+  if (govbrSenha.length > 200) return { erro: "Senha do gov.br muito longa." };
+  const senhaGovbr =
+    dados.get("govbrApagar") === "on"
+      ? { govbrSenha: null }
+      : govbrSenha
+        ? { govbrSenha: cifrarSenha(govbrSenha) }
+        : {};
+
   const campos = {
     nome,
     cpf,
@@ -63,6 +77,9 @@ export async function salvarAluno(id: number | null, _: EstadoForm, dados: FormD
     registroCnh: texto(dados, "registroCnh"),
     biometriaEm: dia(texto(dados, "biometriaEm")),
     obs: texto(dados, "obs"),
+    govbrNivel,
+    govbrObs: texto(dados, "govbrObs"),
+    ...senhaGovbr,
     ...(foto === "manter" ? {} : { foto: foto || null, fotoEm: foto ? new Date() : null }),
   };
 
@@ -102,4 +119,13 @@ export async function excluirAluno(alunoId: number) {
   revalidatePath("/aulas");
   revalidatePath("/");
   redirect("/alunos?excluido=1");
+}
+
+// Mostra a senha do gov.br na tela do aluno (só quando o usuário pede).
+export async function verSenhaGovbr(alunoId: number): Promise<string | null> {
+  await exigirSessao();
+  const aluno = await db.aluno.findUnique({ where: { id: alunoId }, select: { govbrSenha: true } });
+  return aluno?.govbrSenha
+    ? (decifrarSenha(aluno.govbrSenha) ?? "(não foi possível ler: cadastre a senha de novo)")
+    : null;
 }

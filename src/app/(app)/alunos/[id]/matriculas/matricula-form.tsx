@@ -5,11 +5,12 @@ import { Banknote, BookOpen, CreditCard, QrCode, ScrollText, type LucideIcon } f
 import { FormAcao } from "@/components/form-acao";
 import { Opcoes } from "@/components/opcoes";
 import { Campo, Cartao, Input, Select } from "@/components/ui";
-import { CATEGORIAS, formatarData, formatarMoeda, lerMoeda, lerPercentual } from "@/lib/format";
+import { formatarData, formatarMoeda, lerMoeda, lerPercentual } from "@/lib/format";
 import { FORMAS_ENTRADA, FORMAS_MATRICULA } from "@/lib/pagamentos";
 import { CURSOS_TEORICOS, TIPOS_PROCESSO } from "@/lib/etapas";
 import { gerarParcelas } from "@/lib/parcelas";
 import { criarMatricula } from "./actions";
+import { CamposCategoria } from "./campos-categoria";
 
 const ICONES_FORMA: Record<string, LucideIcon> = {
   carne: ScrollText,
@@ -75,18 +76,7 @@ export function MatriculaForm({ alunoId, categoria, hoje }: { alunoId: number; c
             sozinhos na lista do aluno.
           </p>
           <div className="grid gap-5 sm:grid-cols-3">
-            <Campo label="Categoria">
-              <Select name="categoria" defaultValue={categoria}>
-                {CATEGORIAS.map((c) => (
-                  <option key={c} value={c}>
-                    {c}
-                  </option>
-                ))}
-              </Select>
-            </Campo>
-            <Campo label="Aulas práticas">
-              <Input name="qtdPraticas" type="number" min={0} required defaultValue={0} />
-            </Campo>
+            <CamposCategoria categoria={categoria} />
             {curso === "autoescola" ? (
               <Campo label="Aulas teóricas">
                 <Input name="qtdTeoricas" type="number" min={0} required defaultValue={0} />
