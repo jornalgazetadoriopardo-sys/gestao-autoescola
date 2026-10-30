@@ -285,6 +285,8 @@ model Configuracao {
   calendarioLicenciamento Json?
   // Feriados automáticos (nacionais/estaduais) que a autoescola não segue: lista de chaves.
   feriadosIgnorados       Json?
+  // Cor principal do sistema para esta autoescola (ver PALETAS em src/lib/paletas.ts).
+  paleta                  String     @default("azul")
 }
 
 // Despesas da autoescola: folha, vales, abastecimento, contas, retiradas...

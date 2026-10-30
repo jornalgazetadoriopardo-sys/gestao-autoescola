@@ -3,6 +3,7 @@ import {
   Building2,
   CalendarOff,
   Car,
+  Palette,
   ClipboardCheck,
   Download,
   FileSignature,
@@ -35,11 +36,19 @@ import { CAMPOS_CONTRATO, CAMPOS_PARCELA } from "@/lib/contrato";
 import { formatarData, formatarDataLocal } from "@/lib/format";
 import { TAXAS_CONFIGURAVEIS, lerTaxasPadrao } from "@/lib/etapas";
 import { moedaParaInput } from "@/lib/format";
-import { adicionarFeriado, excluirFeriado, salvarCalendario, salvarFeriadosIgnorados, salvarTaxas } from "./actions";
+import {
+  adicionarFeriado,
+  excluirFeriado,
+  salvarCalendario,
+  salvarFeriadosIgnorados,
+  salvarPaleta,
+  salvarTaxas,
+} from "./actions";
 import { ESTADUAIS, feriadosAutomaticos, lerIgnorados } from "@/lib/feriados";
 import { FINAIS, NOMES_MESES, TIPOS_LICENCIAMENTO, lerCalendario } from "@/lib/licenciamento";
 import { alternarUsuario, criarUsuario, excluirUsuario, removerContrato, salvarContrato, trocarSenha } from "./actions";
 import { ConfigForm } from "./config-form";
+import { SeletorPaleta } from "./seletor-paleta";
 import { CopiarMarcacao } from "./copiar-marcacao";
 import { ImpressoraForm } from "./impressora-form";
 
@@ -47,6 +56,7 @@ export const dynamic = "force-dynamic";
 
 const abas = [
   { id: "dados", label: "Dados da autoescola", icone: Building2, soAdmin: true },
+  { id: "aparencia", label: "Aparência", icone: Palette, soAdmin: true },
   { id: "usuarios", label: "Usuários", icone: Users, soAdmin: true },
   { id: "taxas", label: "Taxas e exames", icone: ClipboardCheck, soAdmin: true },
   { id: "licenciamento", label: "Licenciamento", icone: Car, soAdmin: true },
@@ -93,6 +103,7 @@ export default async function ConfiguracoesPage({ searchParams }: { searchParams
           <ConfigForm config={await obterConfigCompleta()} />
         </Cartao>
       )}
+      {aba === "aparencia" && <Aparencia />}
       {aba === "usuarios" && <Usuarios usuarioAtual={sessao.usuarioId} />}
       {aba === "taxas" && <Taxas />}
       {aba === "licenciamento" && <Licenciamento />}
@@ -372,6 +383,25 @@ async function Taxas() {
             </div>
           ))}
         </div>
+      </FormAcao>
+    </Cartao>
+  );
+}
+
+async function Aparencia() {
+  const config = await obterConfigCompleta();
+  return (
+    <Cartao className="max-w-3xl">
+      <h2 className="mb-1 flex items-center gap-2 text-lg font-semibold">
+        <Palette className="size-6 text-blue-600" aria-hidden /> Cor principal
+      </h2>
+      <p className="mb-5 text-base text-slate-600">
+        Escolha a cor que combina com a sua autoescola. Ela aparece nos botões, no menu lateral, nas abas e nos
+        destaques de todas as telas, para todos os usuários. O modo claro ou escuro continua sendo escolhido por cada
+        pessoa, no menu.
+      </p>
+      <FormAcao acao={salvarPaleta} textoBotao="Aplicar cor">
+        <SeletorPaleta atual={config.paleta} />
       </FormAcao>
     </Cartao>
   );

@@ -47,8 +47,8 @@ export default async function AlunosPage({
       )}
 
       <form className="mb-5 flex flex-wrap gap-3">
-        <Input name="q" placeholder="Buscar por nome ou CPF" defaultValue={q} className="w-72" />
-        <Select name="status" defaultValue={status} className="w-44">
+        <Input name="q" placeholder="Buscar por nome ou CPF" defaultValue={q} className="max-w-72" />
+        <Select name="status" defaultValue={status} className="max-w-44">
           {Object.entries(STATUS_ALUNO).map(([valor, label]) => (
             <option key={valor} value={valor}>
               {label}

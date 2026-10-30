@@ -10,6 +10,7 @@ import { CONTRATO_MAX, conferirModelo } from "@/lib/contrato";
 import { TAXAS_CONFIGURAVEIS, type TaxasPadrao } from "@/lib/etapas";
 import { lerMoeda } from "@/lib/format";
 import { feriadosAutomaticos } from "@/lib/feriados";
+import { PALETAS } from "@/lib/paletas";
 import { CALENDARIO_SP, FINAIS, lerCalendario } from "@/lib/licenciamento";
 import type { EstadoForm } from "@/components/form-acao";
 
@@ -317,4 +318,20 @@ function revalidarFeriados() {
   revalidatePath("/configuracoes");
   revalidatePath("/aulas");
   revalidatePath("/");
+}
+
+// Cor principal do sistema para esta autoescola.
+export async function salvarPaleta(_: EstadoForm, dados: FormData): Promise<EstadoForm> {
+  const sessao = await exigirAdmin();
+  const paleta = String(dados.get("paleta") ?? "");
+  if (!(paleta in PALETAS)) return { erro: "Escolha uma das cores." };
+  const id = sessao.autoescolaId;
+  const autoescola = await db.autoescola.findFirstOrThrow();
+  await db.configuracao.upsert({
+    where: { id },
+    create: { id, nome: autoescola.nome, paleta },
+    update: { paleta },
+  });
+  revalidatePath("/", "layout");
+  return { ok: `Pronto! O sistema agora usa a cor ${PALETAS[paleta].nome.toLowerCase()}.` };
 }
