@@ -135,14 +135,15 @@ export default async function InicioPage() {
   return (
     <>
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-slate-900">Olá, {primeiroNome}!</h1>
-        <p className="mt-1 text-lg text-slate-600">{formatarDiaSemana(hojeTexto)}. O que você quer fazer?</p>
+        <p className="text-sm font-medium uppercase tracking-wider text-slate-500">{formatarDiaSemana(hojeTexto)}</p>
+        <h1 className="mt-1 text-3xl font-bold tracking-tight text-slate-900">Olá, {primeiroNome}!</h1>
+        <p className="mt-1 text-lg text-slate-600">O que você quer fazer?</p>
       </div>
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         {ATALHOS.map((a) => (
           <Link key={a.href} href={a.href}>
-            <Cartao className="flex h-full flex-col items-start gap-3 transition hover:-translate-y-0.5 hover:border-blue-300 hover:shadow-md">
+            <Cartao className="flex h-full flex-col items-start gap-3 transition hover:border-blue-300 hover:shadow-md">
               <IconeRedondo icone={a.icone} cor={a.cor} />
               <div>
                 <div className="text-lg font-semibold">{a.titulo}</div>

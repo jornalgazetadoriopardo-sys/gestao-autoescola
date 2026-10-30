@@ -36,9 +36,8 @@ export function SeletorTema() {
   };
 
   return (
-    <div role="radiogroup" aria-label="Modo de cores" className="mb-4">
-      <div className="mb-1.5 text-sm text-slate-400">Modo de cores</div>
-      <div className="grid grid-cols-3 gap-1 rounded-lg bg-slate-800 p-1">
+    <div role="radiogroup" aria-label="Modo de cores" className="mb-3">
+      <div className="grid grid-cols-3 gap-1 rounded-xl bg-white/5 p-1">
         {OPCOES.map(({ id, label, icone: Icone }) => (
           <button
             key={id}
@@ -47,8 +46,8 @@ export function SeletorTema() {
             aria-checked={tema === id}
             title={id === "auto" ? "Segue o modo do computador ou celular" : `Modo ${label.toLowerCase()}`}
             onClick={() => escolher(id)}
-            className={`flex flex-col items-center gap-0.5 rounded-md px-1 py-1.5 text-xs font-medium transition ${
-              tema === id ? "bg-slate-600 text-white" : "text-slate-300 hover:bg-slate-700 hover:text-white"
+            className={`flex flex-col items-center gap-0.5 rounded-lg px-1 py-1.5 text-[11px] font-medium transition ${
+              tema === id ? "bg-white/15 text-white" : "text-white/60 hover:bg-white/10 hover:text-white"
             }`}
           >
             <Icone className="size-4" aria-hidden />

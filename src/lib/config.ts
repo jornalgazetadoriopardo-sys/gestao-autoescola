@@ -55,6 +55,7 @@ async function configPadrao(): Promise<Configuracao> {
       taxasPadrao: null,
       calendarioLicenciamento: null,
       feriadosIgnorados: null,
+      paleta: "azul",
     }
   );
 }

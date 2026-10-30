@@ -2,6 +2,7 @@ import "server-only";
 import { Prisma } from "@prisma/client";
 import { dbGlobal } from "./db";
 import { cifrarSenha, decifrarSenha } from "./govbr";
+import { paletaValida } from "./paletas";
 
 // Cópia completa de uma autoescola em JSON, para levar a outro servidor.
 // Os ids do arquivo só servem para ligar os registros entre si: na
@@ -215,6 +216,7 @@ export async function importarAutoescola(arquivo: unknown) {
             intervaloMin: r.intN(C, "intervaloMin") ?? undefined,
             logo: r.strN(C, "logo"),
             impressoraRecibo: r.strN(C, "impressoraRecibo") === "termica" ? "termica" : "a4",
+            paleta: paletaValida(r.strN(C, "paleta")),
             contratoArquivo: r.strN(C, "contratoArquivo") ? Buffer.from(r.strN(C, "contratoArquivo")!, "base64") : null,
             contratoNome: r.strN(C, "contratoNome"),
             contratoEm: r.dataN(C, "contratoEm"),

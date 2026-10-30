@@ -60,6 +60,10 @@ presença e pagamentos.
   A prova é agendada com data, horário, local, instrutor e veículo, aparece na agenda do dia e
   bloqueia aulas nesse horário
 - **Modo de cores** claro, escuro ou automático (segue o computador/celular), no menu lateral
+- **Cor principal da autoescola** (Configurações > Aparência): azul, azul-petróleo, verde, roxo,
+  vinho, laranja, rosa ou grafite. Muda botões, abas, destaques e o menu de todas as telas
+- **Menu lateral** agrupado por assunto (Dia a dia, Financeiro, Cadastros, Sistema), recolhível
+  no computador (só ícones) e em gaveta no celular
 - **Despesas** (só administrador): folha de pagamento, vales, abastecimento (com veículo,
   litros e km), retirada do dono, aluguel, contas, impostos e outras
   - Cada despesa pode estar *paga* ou *a pagar* (com vencimento); botão para pagar depois

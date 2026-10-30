@@ -6,7 +6,7 @@ import type { ComponentProps, ReactNode } from "react";
 // Tamanhos generosos (texto 16px+, botões altos) para facilitar o uso.
 
 const campoBase =
-  "w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2.5 text-base shadow-sm placeholder:text-slate-400 focus:border-blue-500 focus:outline-none focus:ring-4 focus:ring-blue-100 disabled:bg-slate-100 disabled:text-slate-500";
+  "w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-base shadow-xs transition placeholder:text-slate-400 hover:border-slate-400 focus:border-blue-500 focus:outline-none focus:ring-4 focus:ring-blue-100 disabled:bg-slate-100 disabled:text-slate-500";
 
 export function Input(props: ComponentProps<"input">) {
   return <input {...props} className={`${campoBase} ${props.className ?? ""}`} />;
@@ -41,9 +41,9 @@ export function Campo({
 }
 
 const variantes = {
-  primario: "bg-blue-600 text-white hover:bg-blue-700",
-  sucesso: "bg-green-600 text-white hover:bg-green-700",
-  secundario: "border border-slate-300 bg-white text-slate-700 hover:bg-slate-50",
+  primario: "bg-blue-600 text-white shadow-blue-600/20 hover:bg-blue-700",
+  sucesso: "bg-green-600 text-white shadow-green-600/20 hover:bg-green-700",
+  secundario: "border border-slate-300 bg-white text-slate-700 hover:border-slate-400 hover:bg-slate-50",
   perigo: "border border-red-300 bg-white text-red-700 hover:bg-red-50",
 };
 
@@ -57,7 +57,7 @@ const tamanhos = {
 type Tamanho = keyof typeof tamanhos;
 
 const botaoBase =
-  "inline-flex items-center justify-center rounded-lg font-medium transition disabled:opacity-50 whitespace-nowrap";
+  "inline-flex items-center justify-center rounded-xl font-medium transition active:scale-[0.98] disabled:opacity-50 disabled:active:scale-100 whitespace-nowrap focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-blue-100";
 
 type ExtrasBotao = { variante?: Variante; tamanho?: Tamanho; icone?: LucideIcon };
 
@@ -115,7 +115,9 @@ export function BotaoDownload({
 
 export function Cartao({ children, className = "" }: { children: ReactNode; className?: string }) {
   return (
-    <div className={`rounded-xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6 ${className}`}>{children}</div>
+    <div className={`rounded-2xl border border-slate-200/80 bg-white p-5 shadow-xs sm:p-6 ${className}`}>
+      {children}
+    </div>
   );
 }
 
@@ -166,7 +168,7 @@ export function Cabecalho({
       <div className="flex items-center gap-4">
         {icone && <IconeRedondo icone={icone} cor={cor} />}
         <div>
-          <h1 className="text-2xl font-bold text-slate-900 sm:text-3xl">{titulo}</h1>
+          <h1 className="text-2xl font-bold tracking-tight text-slate-900 sm:text-[28px]">{titulo}</h1>
           {descricao && <p className="mt-0.5 text-base text-slate-600">{descricao}</p>}
         </div>
       </div>
@@ -178,7 +180,7 @@ export function Cabecalho({
 export function Secao({ titulo, icone: Icone, acoes }: { titulo: string; icone?: LucideIcon; acoes?: ReactNode }) {
   return (
     <div className="mb-3 mt-8 flex flex-wrap items-center justify-between gap-3">
-      <h2 className="flex items-center gap-2 text-xl font-semibold text-slate-900">
+      <h2 className="flex items-center gap-2 text-xl font-semibold tracking-tight text-slate-900">
         {Icone && <Icone className="size-6 text-slate-500" aria-hidden />}
         {titulo}
       </h2>
@@ -189,12 +191,12 @@ export function Secao({ titulo, icone: Icone, acoes }: { titulo: string; icone?:
 
 export function Tabela({ cabecalhos, children }: { cabecalhos: string[]; children: ReactNode }) {
   return (
-    <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm">
-      <table className="w-full text-left text-base [&_td]:whitespace-nowrap">
-        <thead className="border-b border-slate-200 bg-slate-50 text-sm text-slate-600">
+    <div className="overflow-x-auto rounded-2xl border border-slate-200/80 bg-white shadow-xs">
+      <table className="w-full text-left text-base [&_td]:whitespace-nowrap [&_tbody_tr]:transition-colors [&_tbody_tr:hover]:bg-slate-50/60">
+        <thead className="border-b border-slate-200 bg-slate-50/80 text-[13px] text-slate-500">
           <tr>
             {cabecalhos.map((c, i) => (
-              <th key={`${c}-${i}`} className="px-4 py-3 font-semibold uppercase tracking-wide">
+              <th key={`${c}-${i}`} className="px-4 py-3 font-semibold">
                 {c}
               </th>
             ))}
@@ -229,7 +231,7 @@ export function Vazio({
   acao?: ReactNode;
 }) {
   return (
-    <div className="flex flex-col items-center rounded-xl border-2 border-dashed border-slate-200 bg-white px-6 py-12 text-center">
+    <div className="flex flex-col items-center rounded-2xl border-2 border-dashed border-slate-200 bg-white px-6 py-12 text-center">
       <IconeRedondo icone={icone} cor="cinza" tamanho="grande" />
       <p className="mt-4 text-lg font-semibold text-slate-800">{titulo}</p>
       {texto && <p className="mt-1 max-w-md text-base text-slate-600">{texto}</p>}
@@ -248,7 +250,9 @@ const cores: Record<string, string> = {
 
 export function Etiqueta({ cor = "cinza", children }: { cor?: keyof typeof cores; children: ReactNode }) {
   return (
-    <span className={`inline-block rounded-full px-2.5 py-0.5 text-sm font-semibold ${cores[cor]}`}>{children}</span>
+    <span className={`inline-block rounded-full px-2.5 py-0.5 text-[13px] font-semibold ${cores[cor]}`}>
+      {children}
+    </span>
   );
 }
 
@@ -269,7 +273,9 @@ export function Aviso({
   children: ReactNode;
 }) {
   return (
-    <div className={`mb-5 flex flex-wrap items-center gap-3 rounded-xl border px-4 py-3 text-base ${coresAviso[tipo]}`}>
+    <div
+      className={`mb-5 flex flex-wrap items-center gap-3 rounded-2xl border px-4 py-3 text-base ${coresAviso[tipo]}`}
+    >
       {Icone && <Icone className="size-6 shrink-0" aria-hidden />}
       <div className="flex flex-1 flex-wrap items-center gap-3">{children}</div>
     </div>
