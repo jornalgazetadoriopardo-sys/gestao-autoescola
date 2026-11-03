@@ -5,6 +5,8 @@ export async function middleware(req: NextRequest) {
   const sessao = await verificarSessao(req.cookies.get(SESSION_COOKIE)?.value);
   const naLogin = req.nextUrl.pathname === "/login";
   if (req.nextUrl.pathname === "/sair") return NextResponse.next();
+  // Site de apresentação do sistema: público, com ou sem login.
+  if (req.nextUrl.pathname === "/conheca" || req.nextUrl.pathname.startsWith("/site/")) return NextResponse.next();
 
   if (!sessao && !naLogin) {
     return NextResponse.redirect(new URL("/login", req.url));

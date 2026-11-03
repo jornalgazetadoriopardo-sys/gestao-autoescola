@@ -163,10 +163,21 @@ Não é preciso instalar nada no computador.
    | `SESSION_SECRET` | um texto aleatório longo (gere em https://generate-secret.vercel.app/32) |
    | `ADMIN_EMAIL` | seu e-mail, para o primeiro login |
    | `ADMIN_SENHA` | sua senha do primeiro login (mínimo 8 caracteres) |
+   | `WHATSAPP_VENDAS` | (opcional) WhatsApp com DDD que recebe os contatos do site de apresentação, ex.: `(51) 99999-9999` |
 
 4. Clique em **Deploy**. A cada publicação o banco é atualizado sozinho
    (`vercel-build` aplica as migrações e cria o primeiro usuário, se ainda não existir).
 5. Ao terminar, a Vercel mostra o endereço do sistema (ex.: `gestao-autoescola.vercel.app`).
+
+## Site de apresentação
+
+Página pública para divulgar e vender o sistema, em `/conheca` (ex.:
+`gestao-autoescola.vercel.app/conheca`), com as telas do sistema, preço e contato. Também tem um
+link na tela de login. Os botões de WhatsApp usam o número da variável `WHATSAPP_VENDAS`; sem
+ela, não aparecem. Depois de cadastrar ou trocar o número na Vercel, faça um **Redeploy**.
+
+As imagens ficam em `public/site/` e são prints de uma autoescola de demonstração, com dados
+fictícios.
 
 ## Rodar no computador (desenvolvimento)
 
