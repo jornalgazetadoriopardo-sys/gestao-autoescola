@@ -11,6 +11,8 @@ import { CURSOS_TEORICOS, TIPOS_PROCESSO } from "@/lib/etapas";
 import { gerarParcelas } from "@/lib/parcelas";
 import { criarMatricula } from "./actions";
 import { CamposCategoria } from "./campos-categoria";
+import { CamposCnh } from "./campos-cnh";
+import { PROCESSOS_COM_CNH } from "@/lib/etapas";
 
 const ICONES_FORMA: Record<string, LucideIcon> = {
   carne: ScrollText,
@@ -19,7 +21,17 @@ const ICONES_FORMA: Record<string, LucideIcon> = {
   dinheiro: Banknote,
 };
 
-export function MatriculaForm({ alunoId, categoria, hoje }: { alunoId: number; categoria: string; hoje: string }) {
+export function MatriculaForm({
+  alunoId,
+  categoria,
+  hoje,
+  cnh,
+}: {
+  alunoId: number;
+  categoria: string;
+  hoje: string;
+  cnh: { registro: string; emissao: string; validade: string };
+}) {
   const [forma, setForma] = useState("carne");
   const [valor, setValor] = useState("");
   const [qtdParcelas, setQtdParcelas] = useState("1");
@@ -59,10 +71,11 @@ export function MatriculaForm({ alunoId, categoria, hoje }: { alunoId: number; c
             aoMudar={(v) => {
               setProcesso(v);
               if (v === "adicao") setCurso("dispensado");
+              if (v === "reciclagem") setCurso("autoescola");
             }}
           />
           <Opcoes
-            key={processo === "adicao" ? "adicao" : "outro"}
+            key={processo === "adicao" || processo === "reciclagem" ? processo : "outro"}
             nome="cursoTeorico"
             legenda="Curso teórico"
             opcoes={CURSOS_TEORICOS}
@@ -70,6 +83,7 @@ export function MatriculaForm({ alunoId, categoria, hoje }: { alunoId: number; c
             aoMudar={setCurso}
             colunas="sm:grid-cols-3"
           />
+          {PROCESSOS_COM_CNH.includes(processo) && <CamposCnh inicial={cnh} />}
           <p className="rounded-lg bg-blue-50 px-3 py-2 text-sm text-blue-900">
             Regras novas (Resolução Contran 1.020/2025): o curso teórico pode ser feito grátis no app CNH do Brasil e o
             mínimo de aulas práticas caiu de 20 para 2. Os exames e taxas do Detran continuam obrigatórios e entram

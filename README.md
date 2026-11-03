@@ -14,7 +14,7 @@ presença e pagamentos.
   cancelada pode ser reativada), instrutor, veículo, manutenção, despesa, usuário e, na
   Plataforma, autoescola suspensa (digitando o nome para confirmar)
 - **Processo de habilitação** (regras de 2025/2026): na matrícula, o tipo (1ª habilitação, adição,
-  mudança de categoria ou reabilitação) e o curso teórico (na autoescola, online grátis pelo app
+  mudança de categoria, reabilitação ou reciclagem) e o curso teórico (na autoescola, online grátis pelo app
   CNH do Brasil ou não precisa). A lista de **exames e taxas** do aluno é criada sozinha: exame
   médico, psicológico, toxicológico (1ª habilitação e categorias C, D, E), biometria, curso online,
   prova teórica, prova prática de cada categoria e emissão da CNH, com os valores de
@@ -22,8 +22,16 @@ presença e pagamentos.
   valor e quem paga (aluno direto ou autoescola cobra, com recebimento e recibo). Reprovou na
   prova: a nova tentativa entra sozinha com a taxa de reexame. Tela **Exames e taxas** com os
   exames agendados, os resultados pendentes, o que falta marcar e as taxas a receber
-- **Ficha do aluno** para imprimir (A4), no lugar da ficha de papel: dados, filiação, RG, RENACH,
-  foto, pagamento e andamento dos exames
+  - Quem já tem CNH (adição, mudança, reabilitação, reciclagem): nº de registro, data de emissão e
+    validade da CNH na matrícula; ficam no cadastro do aluno e saem na ficha e no contrato
+  - Reciclagem (CNH suspensa): só o curso e a prova teórica entram na lista
+  - **Cancelar uma categoria** (ex.: contratou AB e desistiu da A): a matrícula fica só com a
+    outra, as aulas agendadas da categoria saem, a prova prática dela também (se não foi feita nem
+    paga), e fica o registro de quando e por quê. Valor e parcelas são ajustados à mão
+- **Ficha do aluno** para imprimir, no lugar da ficha de papel: dados, filiação, RG, RENACH, CNH,
+  foto, pagamento e andamento dos exames. Em **folha A4 inteira** ou em **meia folha, frente e
+  verso** (dados na frente, pagamento e exames no verso; imprime frente e verso e corta ao meio).
+  Padrão em Configurações > Impressora; dá para trocar na própria tela de impressão
 - **Matrícula** com forma de pagamento:
   - *Parcelado pela autoescola*: gera as parcelas (com juros ao mês opcional) e o
     **carnê para imprimir** (4 parcelas por folha A4, para recortar)
@@ -86,6 +94,9 @@ presença e pagamentos.
 - **Contrato**: cada autoescola envia o seu contrato em Word (.docx) com marcações como
   `{{aluno_nome}}`; na ficha do aluno, o botão Contrato baixa o arquivo preenchido (lista de
   marcações e um exemplo em Configurações > Contrato)
+- **Outros documentos** do mesmo jeito, em Configurações > Documentos (com exemplos para baixar):
+  **declaração de comparecimento** (gerada a partir de uma aula com presença, com data e horário,
+  para o aluno justificar a falta na escola ou no trabalho) e **autorização de uso de imagem**
 - **Configurações**: dados e logotipo da autoescola (usados no menu, carnê, recibos
   e relatórios), usuários (administrador ou secretaria) e troca de senha
 - **Várias autoescolas** no mesmo sistema: cada usuário pertence a uma autoescola e

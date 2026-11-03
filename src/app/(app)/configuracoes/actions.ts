@@ -11,6 +11,7 @@ import { TAXAS_CONFIGURAVEIS, type TaxasPadrao } from "@/lib/etapas";
 import { lerMoeda } from "@/lib/format";
 import { feriadosAutomaticos } from "@/lib/feriados";
 import { PALETAS } from "@/lib/paletas";
+import { CAMPOS_AULA, TIPOS_DOCUMENTO } from "@/lib/documentos";
 import { CALENDARIO_SP, FINAIS, lerCalendario } from "@/lib/licenciamento";
 import type { EstadoForm } from "@/components/form-acao";
 
@@ -334,4 +335,60 @@ export async function salvarPaleta(_: EstadoForm, dados: FormData): Promise<Esta
   });
   revalidatePath("/", "layout");
   return { ok: `Pronto! O sistema agora usa a cor ${PALETAS[paleta].nome.toLowerCase()}.` };
+}
+
+// Recebe o modelo (.docx) de um documento: declaração, autorização de imagem...
+export async function salvarDocumento(tipo: string, _: EstadoForm, dados: FormData): Promise<EstadoForm> {
+  const sessao = await exigirAdmin();
+  const doc = TIPOS_DOCUMENTO[tipo];
+  if (!doc) return { erro: "Documento desconhecido." };
+  const arquivo = dados.get("arquivo");
+  if (!(arquivo instanceof File) || arquivo.size === 0) return { erro: "Escolha o arquivo (.docx)." };
+  if (!/\.docx$/i.test(arquivo.name)) {
+    return {
+      erro: "Use um arquivo do Word no formato .docx. No Word: Arquivo > Salvar como > Documento do Word (.docx).",
+    };
+  }
+  if (arquivo.size > CONTRATO_MAX) {
+    return { erro: "Arquivo grande demais (máximo 3 MB). Tire imagens pesadas do documento." };
+  }
+  const bytes = new Uint8Array(await arquivo.arrayBuffer());
+  const conferido = conferirModelo(bytes, doc.porAula ? CAMPOS_AULA.map(([c]) => c) : []);
+  if ("erro" in conferido) return conferido;
+
+  const campos = { arquivo: bytes, nome: arquivo.name, enviadoEm: new Date() };
+  const atual = await db.modeloDocumento.findFirst({ where: { tipo }, select: { id: true } });
+  if (atual) await db.modeloDocumento.update({ where: { id: atual.id }, data: campos });
+  else await db.modeloDocumento.create({ data: { ...campos, tipo, autoescolaId: sessao.autoescolaId } });
+  revalidatePath("/configuracoes");
+  const aviso = conferido.desconhecidas.length
+    ? ` Atenção: estas marcações não são reconhecidas e vão sair em branco: ${conferido.desconhecidas.map((t) => `{{${t}}}`).join(", ")}.`
+    : "";
+  return { ok: `${doc.titulo} salvo!${aviso}` };
+}
+
+export async function removerDocumento(tipo: string) {
+  await exigirAdmin();
+  await db.modeloDocumento.deleteMany({ where: { tipo } });
+  revalidatePath("/configuracoes");
+}
+
+// Ficha do aluno: folha A4 inteira ou meia folha (frente e verso).
+export async function salvarFormatoFicha(_: EstadoForm, dados: FormData): Promise<EstadoForm> {
+  const sessao = await exigirAdmin();
+  const formatoFicha = dados.get("formatoFicha") === "meia" ? "meia" : "inteira";
+  const id = sessao.autoescolaId;
+  const autoescola = await db.autoescola.findFirstOrThrow();
+  await db.configuracao.upsert({
+    where: { id },
+    create: { id, nome: autoescola.nome, formatoFicha },
+    update: { formatoFicha },
+  });
+  revalidatePath("/configuracoes");
+  return {
+    ok:
+      formatoFicha === "meia"
+        ? "Pronto: a ficha vai sair em meia folha, frente e verso."
+        : "Pronto: a ficha vai sair na folha inteira.",
+  };
 }

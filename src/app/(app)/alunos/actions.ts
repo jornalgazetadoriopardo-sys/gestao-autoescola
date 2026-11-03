@@ -75,6 +75,8 @@ export async function salvarAluno(id: number | null, _: EstadoForm, dados: FormD
     naturalidade: texto(dados, "naturalidade"),
     renach: texto(dados, "renach"),
     registroCnh: texto(dados, "registroCnh"),
+    cnhEmissao: dia(texto(dados, "cnhEmissao")),
+    cnhValidade: dia(texto(dados, "cnhValidade")),
     biometriaEm: dia(texto(dados, "biometriaEm")),
     obs: texto(dados, "obs"),
     govbrNivel,

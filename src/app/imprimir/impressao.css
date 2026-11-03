@@ -36,6 +36,36 @@
   }
 }
 
+/* Ficha em meia folha A4 (frente e verso). Na tela, cada lado aparece como a
+   metade de cima de uma folha. No papel, cada lado ocupa a metade de cima de
+   uma página: impressa frente e verso, a folha é cortada na linha tracejada. */
+.meia-folha {
+  width: 210mm;
+  height: 148.5mm;
+  margin: 0 auto 8mm;
+  padding: 8mm 10mm;
+  background: white;
+  box-shadow: 0 2px 12px rgb(0 0 0 / 0.15);
+  color: #0f172a;
+  overflow: hidden;
+  border-bottom: 1px dashed #94a3b8;
+}
+
+@media print {
+  .meia-folha {
+    width: auto;
+    /* Metade da folha menos a margem de cima da página (8 mm). */
+    height: 140.5mm;
+    margin: 0;
+    padding: 0 0 2mm;
+    box-shadow: none;
+    break-after: page;
+  }
+  .meia-folha:last-of-type {
+    break-after: auto;
+  }
+}
+
 /* Impressora térmica (bobina 80 mm, área de impressão de 72 mm).
    A página "termica" usa o papel escolhido no driver da impressora. */
 @page termica {

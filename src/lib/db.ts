@@ -53,6 +53,7 @@ const FILTRO: Record<string, (autoescolaId: number) => object> = {
   Manutencao: (id) => ({ veiculo: { autoescolaId: id } }),
   Despesa: (id) => ({ autoescolaId: id }),
   Feriado: (id) => ({ autoescolaId: id }),
+  ModeloDocumento: (id) => ({ autoescolaId: id }),
 };
 
 // Coluna preenchida automaticamente ao criar.
@@ -63,6 +64,7 @@ const COLUNA: Record<string, string> = {
   Veiculo: "autoescolaId",
   Despesa: "autoescolaId",
   Feriado: "autoescolaId",
+  ModeloDocumento: "autoescolaId",
   Configuracao: "id",
 };
 

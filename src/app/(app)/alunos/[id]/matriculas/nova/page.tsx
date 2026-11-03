@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import { GraduationCap } from "lucide-react";
 import { Cabecalho } from "@/components/ui";
 import { db } from "@/lib/db";
-import { hojeISO } from "@/lib/format";
+import { hojeISO, dataParaInput } from "@/lib/format";
 import { MatriculaForm } from "../matricula-form";
 
 export default async function NovaMatriculaPage({ params }: { params: Promise<{ id: string }> }) {
@@ -12,7 +12,16 @@ export default async function NovaMatriculaPage({ params }: { params: Promise<{ 
   return (
     <>
       <Cabecalho titulo="Nova matrícula" descricao={`Aluno: ${aluno.nome}`} icone={GraduationCap} />
-      <MatriculaForm alunoId={aluno.id} categoria={aluno.categoria} hoje={hojeISO()} />
+      <MatriculaForm
+        alunoId={aluno.id}
+        categoria={aluno.categoria}
+        hoje={hojeISO()}
+        cnh={{
+          registro: aluno.registroCnh ?? "",
+          emissao: dataParaInput(aluno.cnhEmissao),
+          validade: dataParaInput(aluno.cnhValidade),
+        }}
+      />
     </>
   );
 }

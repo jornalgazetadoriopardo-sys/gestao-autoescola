@@ -88,7 +88,7 @@ export function AlunoForm({
 
         <details
           className="rounded-xl border border-slate-200 p-4"
-          open={Boolean(aluno?.rg || aluno?.renach || aluno?.mae)}
+          open={Boolean(aluno?.rg || aluno?.renach || aluno?.mae || aluno?.registroCnh)}
         >
           <summary className="cursor-pointer text-base font-semibold text-slate-800">
             Documentos e filiação (para a ficha do Detran)
@@ -120,9 +120,17 @@ export function AlunoForm({
             <Campo label="RENACH" ajuda="Número do processo no Detran.">
               <Input name="renach" defaultValue={aluno?.renach ?? ""} />
             </Campo>
-            <Campo label="Nº de registro da CNH" ajuda="Para quem já tem CNH (adição/mudança).">
+            <Campo label="Nº de registro da CNH" ajuda="Para quem já tem CNH (adição, mudança, reciclagem).">
               <Input name="registroCnh" defaultValue={aluno?.registroCnh ?? ""} />
             </Campo>
+            <div className="grid grid-cols-2 gap-4">
+              <Campo label="Emissão da CNH">
+                <Input name="cnhEmissao" type="date" defaultValue={dataParaInput(aluno?.cnhEmissao)} />
+              </Campo>
+              <Campo label="Validade da CNH">
+                <Input name="cnhValidade" type="date" defaultValue={dataParaInput(aluno?.cnhValidade)} />
+              </Campo>
+            </div>
             <Campo label="Atualização biométrica (data)">
               <Input name="biometriaEm" type="date" defaultValue={dataParaInput(aluno?.biometriaEm)} />
             </Campo>

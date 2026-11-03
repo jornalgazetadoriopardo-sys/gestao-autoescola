@@ -58,6 +58,7 @@ export default async function AgendaPage({
     carregarFeriados(dia, dia),
   ]);
   const feriado = feriados.get(dia);
+  const temDeclaracao = (await db.modeloDocumento.count({ where: { tipo: "declaracao" } })) > 0;
 
   const link = (d: string) => `/aulas?dia=${d}${instrutorId ? `&instrutor=${instrutorId}` : ""}`;
   const ativas = aulas.filter((a) => a.status !== "cancelada").length;
@@ -179,7 +180,7 @@ export default async function AgendaPage({
                 </Etiqueta>
               </td>
               <td className="px-4 py-3">
-                <AcoesAula aula={a} voltar={link(dia)} />
+                <AcoesAula aula={a} voltar={link(dia)} declaracao={temDeclaracao} />
               </td>
             </tr>
           ))}
