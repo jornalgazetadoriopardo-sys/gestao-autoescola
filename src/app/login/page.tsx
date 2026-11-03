@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { Car } from "lucide-react";
 import { FormAcao } from "@/components/form-acao";
 import { Aviso, Campo, Cartao, Input } from "@/components/ui";
@@ -14,7 +15,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
   const { motivo } = await searchParams;
   const aviso = motivo ? MOTIVOS[motivo] : undefined;
   return (
-    <main className="sem-tema flex min-h-screen items-center justify-center bg-[var(--menu-fundo)] p-4">
+    <main className="sem-tema relative flex min-h-screen items-center justify-center bg-[var(--menu-fundo)] p-4">
       <Cartao className="w-full max-w-md">
         <div className="mb-6 flex flex-col items-center text-center">
           <span className="mb-4 flex size-14 items-center justify-center rounded-2xl bg-blue-600 text-white shadow-lg shadow-blue-600/30">
@@ -33,6 +34,9 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
           </Campo>
         </FormAcao>
       </Cartao>
+      <Link href="/conheca" className="absolute bottom-6 text-sm text-white/60 hover:text-white">
+        Ainda não usa o sistema? Conheça
+      </Link>
     </main>
   );
 }
