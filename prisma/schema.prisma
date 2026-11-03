@@ -26,6 +26,7 @@ model Autoescola {
   veiculos     Veiculo[]
   despesas     Despesa[]
   feriados     Feriado[]
+  modelos      ModeloDocumento[]
   configuracao Configuracao?
 }
 
@@ -69,6 +70,9 @@ model Aluno {
   rgExpedicao    DateTime?
   renach         String?
   registroCnh    String?
+  // CNH atual (adição, mudança, reciclagem...): datas de emissão e de validade.
+  cnhEmissao     DateTime?
+  cnhValidade    DateTime?
   naturalidade   String?
   localAtividade String?
   biometriaEm    DateTime?
@@ -149,6 +153,8 @@ model Matricula {
   tipoProcesso       String    @default("primeira")
   // Curso teórico: "autoescola" (aulas pagas) | "online" (grátis no app CNH do Brasil) | "dispensado"
   cursoTeorico       String    @default("autoescola")
+  // Categorias que o aluno desistiu: [{ categoria, em, motivo, praticas }].
+  categoriasCanceladas Json?
   data               DateTime  @default(now())
   aulas              Aula[]
   parcelas           Parcela[]
@@ -287,6 +293,23 @@ model Configuracao {
   feriadosIgnorados       Json?
   // Cor principal do sistema para esta autoescola (ver PALETAS em src/lib/paletas.ts).
   paleta                  String     @default("azul")
+  // Ficha do aluno: "inteira" (folha A4) ou "meia" (meia folha A4, frente e verso).
+  formatoFicha            String     @default("inteira")
+}
+
+// Modelos de documentos em Word (.docx) da autoescola, preenchidos com os dados
+// do aluno como o contrato: declaração de comparecimento e autorização de uso
+// de imagem (ver TIPOS_DOCUMENTO em src/lib/documentos.ts). Um por tipo.
+model ModeloDocumento {
+  id           Int        @id @default(autoincrement())
+  autoescolaId Int
+  autoescola   Autoescola @relation(fields: [autoescolaId], references: [id])
+  tipo         String
+  arquivo      Bytes
+  nome         String
+  enviadoEm    DateTime   @default(now())
+
+  @@unique([autoescolaId, tipo])
 }
 
 // Despesas da autoescola: folha, vales, abastecimento, contas, retiradas...

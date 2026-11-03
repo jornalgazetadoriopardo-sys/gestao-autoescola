@@ -56,6 +56,7 @@ async function configPadrao(): Promise<Configuracao> {
       calendarioLicenciamento: null,
       feriadosIgnorados: null,
       paleta: "azul",
+      formatoFicha: "inteira",
     }
   );
 }

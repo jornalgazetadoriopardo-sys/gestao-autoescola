@@ -7,7 +7,11 @@ export const TIPOS_PROCESSO: Record<string, { titulo: string; descricao: string 
   adicao: { titulo: "Adição de categoria", descricao: "Já tem CNH e quer outra categoria (ex.: tem B, quer A)" },
   mudanca: { titulo: "Mudança de categoria", descricao: "Passa para categoria maior (ex.: B para C, D ou E)" },
   reabilitacao: { titulo: "Reabilitação", descricao: "CNH cassada ou vencida há muito tempo" },
+  reciclagem: { titulo: "Reciclagem", descricao: "CNH suspensa: curso de reciclagem e prova teórica" },
 };
+
+// Processos de quem já tem CNH: a matrícula pede o nº de registro e as datas da CNH.
+export const PROCESSOS_COM_CNH = ["adicao", "mudanca", "reabilitacao", "reciclagem"];
 
 export const CURSOS_TEORICOS: Record<string, { titulo: string; descricao: string }> = {
   autoescola: { titulo: "Na autoescola", descricao: "Aulas teóricas pagas, dadas pela autoescola" },
@@ -89,6 +93,19 @@ export function gerarEtapas(
   const novas: Omit<NovaEtapa, "ordem" | "valorCentavos" | "cobranca">[] = [];
   const add = (tipo: string, descricao = TIPOS_ETAPA[tipo].titulo, categoria: string | null = null) =>
     novas.push({ tipo, descricao, categoria });
+
+  // Reciclagem (CNH suspensa): só o curso e a prova teórica; não há exames
+  // médicos nem prova prática, e a CNH devolvida é a mesma.
+  if (m.tipoProcesso === "reciclagem") {
+    if (m.cursoTeorico === "online") add("curso_online", "Curso de reciclagem online");
+    add("exame_teorico", "Prova teórica da reciclagem");
+    return novas.map((e, i) => ({
+      ...e,
+      ordem: i + 1,
+      valorCentavos: taxas[e.tipo]?.valor ?? null,
+      cobranca: taxas[e.tipo]?.cobranca ?? "aluno",
+    }));
+  }
 
   const primeira = m.tipoProcesso === "primeira";
   const comTeorico = m.tipoProcesso !== "adicao";

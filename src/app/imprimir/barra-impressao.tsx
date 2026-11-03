@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
-import { FileText, Printer, Receipt, X } from "lucide-react";
+import { Columns2, FileText, Printer, Receipt, X } from "lucide-react";
 
 // Recibo e carnê podem sair em folha A4 ou na impressora térmica (80 mm).
 const COM_TERMICA = ["/imprimir/recibo/", "/imprimir/recibo-taxa/", "/imprimir/carne/"];
@@ -12,7 +12,12 @@ export function BarraImpressao() {
   const params = useSearchParams();
   // A página mostra cupons (.cupom) quando está no formato da térmica.
   const [termica, setTermica] = useState(false);
-  useEffect(() => setTermica(Boolean(document.querySelector(".cupom"))), [caminho, params]);
+  const [meiaFolha, setMeiaFolha] = useState(false);
+  useEffect(() => {
+    setTermica(Boolean(document.querySelector(".cupom")));
+    setMeiaFolha(Boolean(document.querySelector(".meia-folha")));
+  }, [caminho, params]);
+  const ficha = caminho.startsWith("/imprimir/ficha/");
 
   const alternavel = COM_TERMICA.some((c) => caminho.startsWith(c));
   const recibo = caminho.startsWith("/imprimir/recibo");
@@ -31,7 +36,9 @@ export function BarraImpressao() {
       <span className="text-base">
         {termica
           ? "Térmica: escolha a impressora ELGIN i9, margens Nenhuma e escala 100%."
-          : "Confira abaixo e clique em imprimir. No papel, use folha A4."}
+          : meiaFolha
+            ? "Folha A4, frente e verso (virar pela borda maior). Depois corte ao meio na linha tracejada."
+            : "Confira abaixo e clique em imprimir. No papel, use folha A4."}
       </span>
       {alternavel && (
         <div className="flex gap-1">
@@ -40,6 +47,16 @@ export function BarraImpressao() {
           </a>
           <a href={link({ formato: "termica" })} className={opcao(termica)}>
             <Receipt className="size-4" aria-hidden /> Térmica 80 mm
+          </a>
+        </div>
+      )}
+      {ficha && (
+        <div className="flex gap-1">
+          <a href={link({ formato: "inteira" })} className={opcao(!meiaFolha)}>
+            <FileText className="size-4" aria-hidden /> Folha inteira
+          </a>
+          <a href={link({ formato: "meia" })} className={opcao(meiaFolha)}>
+            <Columns2 className="size-4 rotate-90" aria-hidden /> Meia folha (frente e verso)
           </a>
         </div>
       )}

@@ -28,6 +28,7 @@ export async function exportarAutoescola(autoescolaId: number) {
     despesas,
     etapas,
     feriados,
+    modelos,
   ] = await Promise.all([
     dbGlobal.configuracao.findUnique({ where: { id: autoescolaId }, omit: { id: true, contratoArquivo: false } }),
     dbGlobal.usuario.findMany({
@@ -49,6 +50,11 @@ export async function exportarAutoescola(autoescolaId: number) {
     dbGlobal.despesa.findMany({ orderBy: { id: "asc" }, where: { autoescolaId }, omit: { autoescolaId: true } }),
     dbGlobal.etapa.findMany({ orderBy: { id: "asc" }, where: { matricula: doAluno } }),
     dbGlobal.feriado.findMany({ orderBy: { id: "asc" }, where: { autoescolaId }, omit: { autoescolaId: true } }),
+    dbGlobal.modeloDocumento.findMany({
+      orderBy: { id: "asc" },
+      where: { autoescolaId },
+      omit: { autoescolaId: true },
+    }),
   ]);
   return {
     formato: FORMATO,
@@ -75,6 +81,8 @@ export async function exportarAutoescola(autoescolaId: number) {
     despesas,
     etapas,
     feriados,
+    // Modelos de documentos (.docx) em base64, como o contrato.
+    modelos: modelos.map((m) => ({ ...m, arquivo: Buffer.from(m.arquivo).toString("base64") })),
   };
 }
 
@@ -172,6 +180,7 @@ export async function importarAutoescola(arquivo: unknown) {
   const despesas = lista(o, "despesas");
   const etapas = lista(o, "etapas");
   const feriados = lista(o, "feriados");
+  const modelos = lista(o, "modelos");
 
   // E-mail de login é único no sistema todo.
   const u = ler("usuários");
@@ -217,6 +226,7 @@ export async function importarAutoescola(arquivo: unknown) {
             logo: r.strN(C, "logo"),
             impressoraRecibo: r.strN(C, "impressoraRecibo") === "termica" ? "termica" : "a4",
             paleta: paletaValida(r.strN(C, "paleta")),
+            formatoFicha: r.strN(C, "formatoFicha") === "meia" ? "meia" : "inteira",
             contratoArquivo: r.strN(C, "contratoArquivo") ? Buffer.from(r.strN(C, "contratoArquivo")!, "base64") : null,
             contratoNome: r.strN(C, "contratoNome"),
             contratoEm: r.dataN(C, "contratoEm"),
@@ -272,6 +282,8 @@ export async function importarAutoescola(arquivo: unknown) {
           rgExpedicao: al.dataN(x, "rgExpedicao"),
           renach: al.strN(x, "renach"),
           registroCnh: al.strN(x, "registroCnh"),
+          cnhEmissao: al.dataN(x, "cnhEmissao"),
+          cnhValidade: al.dataN(x, "cnhValidade"),
           naturalidade: al.strN(x, "naturalidade"),
           localAtividade: al.strN(x, "localAtividade"),
           biometriaEm: al.dataN(x, "biometriaEm"),
@@ -345,6 +357,9 @@ export async function importarAutoescola(arquivo: unknown) {
           entradaCentavos: mt.intN(x, "entradaCentavos") ?? 0,
           entradaForma: mt.strN(x, "entradaForma"),
           cursoTeorico: mt.strN(x, "cursoTeorico") ?? "autoescola",
+          categoriasCanceladas: Array.isArray(x.categoriasCanceladas)
+            ? (x.categoriasCanceladas as object[])
+            : undefined,
           data: mt.data(x, "data"),
         })),
       });
@@ -428,6 +443,17 @@ export async function importarAutoescola(arquivo: unknown) {
           nome: fe.str(x, "nome"),
           anual: fe.bool(x, "anual"),
           criadoEm: fe.dataN(x, "criadoEm") ?? undefined,
+        })),
+      });
+
+      const mo = ler("modelos");
+      await tx.modeloDocumento.createMany({
+        data: modelos.map((x) => ({
+          autoescolaId,
+          tipo: mo.str(x, "tipo"),
+          nome: mo.str(x, "nome"),
+          arquivo: Buffer.from(mo.str(x, "arquivo"), "base64"),
+          enviadoEm: mo.dataN(x, "enviadoEm") ?? undefined,
         })),
       });
 

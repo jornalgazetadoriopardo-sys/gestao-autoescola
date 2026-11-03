@@ -7,6 +7,7 @@ import {
   CalendarPlus,
   CalendarRange,
   CircleCheck,
+  CircleMinus,
   ClipboardCheck,
   FileSignature,
   Flag,
@@ -26,6 +27,7 @@ import { Aviso, BotaoDownload, BotaoLink, Cabecalho, Cartao, Etiqueta, Secao, Ta
 import { db } from "@/lib/db";
 import { prontosParaExamePratico } from "@/lib/prontos-exame";
 import { NIVEIS_GOVBR } from "@/lib/govbr-niveis";
+import { lerCanceladas } from "@/lib/categorias";
 import { SenhaGovbr } from "./senha-govbr";
 import {
   FORMAS_PAGAMENTO,
@@ -67,10 +69,19 @@ export default async function FichaAlunoPage({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ nova?: string; recebido?: string; agendadas?: string; taxaRecebida?: string }>;
+  searchParams: Promise<{
+    nova?: string;
+    recebido?: string;
+    agendadas?: string;
+    taxaRecebida?: string;
+    cancelada?: string;
+  }>;
 }) {
-  const { nova, recebido, agendadas, taxaRecebida } = await searchParams;
-  const temContrato = Boolean((await db.configuracao.findFirst({ select: { contratoNome: true } }))?.contratoNome);
+  const { nova, recebido, agendadas, taxaRecebida, cancelada } = await searchParams;
+  const [temContrato, modelos] = await Promise.all([
+    db.configuracao.findFirst({ select: { contratoNome: true } }).then((c) => Boolean(c?.contratoNome)),
+    db.modeloDocumento.findMany({ select: { tipo: true } }).then((l) => new Set(l.map((m) => m.tipo))),
+  ]);
   const aluno = await db.aluno.findUnique({
     where: { id: Number((await params).id) || 0 },
     include: {
@@ -171,6 +182,12 @@ export default async function FichaAlunoPage({
                 {p.numero === 0 ? "Recibo da entrada" : "Imprimir recibo"}
               </BotaoLink>
             ))}
+        </Aviso>
+      )}
+      {cancelada && /^[A-E]$/.test(cancelada) && (
+        <Aviso tipo="sucesso" icone={CircleCheck}>
+          Categoria {cancelada} cancelada. Se houver devolução ou desconto, ajuste o valor em Alterar e as parcelas no
+          Financeiro.
         </Aviso>
       )}
       {Number(agendadas) > 0 && (
@@ -277,6 +294,12 @@ export default async function FichaAlunoPage({
                       : `curso teórico: ${CURSOS_TEORICOS[m.cursoTeorico]?.titulo.toLowerCase() ?? m.cursoTeorico}`}{" "}
                     · {descricaoPagamento(m, formatarMoeda)}
                   </div>
+                  {lerCanceladas(m.categoriasCanceladas).map((c) => (
+                    <div key={c.em} className="mt-1 text-sm text-red-700">
+                      Categoria {c.categoria} cancelada em {formatarDataLocal(new Date(c.em))}
+                      {c.motivo ? ` — ${c.motivo}` : ""}
+                    </div>
+                  ))}
                 </div>
                 <div className="flex flex-wrap gap-2">
                   <BotaoLink
@@ -302,6 +325,11 @@ export default async function FichaAlunoPage({
                       Contrato
                     </BotaoDownload>
                   )}
+                  {modelos.has("imagem") && (
+                    <BotaoDownload href={`/documento/imagem/${m.id}`} tamanho="pequeno" icone={Camera}>
+                      Autorização de imagem
+                    </BotaoDownload>
+                  )}
                   {m.formaPagamento === "carne" && totalDeParcelas(m.parcelas) > 0 && (
                     <BotaoLink
                       href={`/imprimir/carne/${m.id}`}
@@ -321,6 +349,16 @@ export default async function FichaAlunoPage({
                   >
                     Alterar
                   </BotaoLink>
+                  {new Set(m.categoria).size > 1 && (
+                    <BotaoLink
+                      href={`/alunos/${aluno.id}/matriculas/${m.id}/cancelar-categoria`}
+                      variante="perigo"
+                      tamanho="pequeno"
+                      icone={CircleMinus}
+                    >
+                      Cancelar categoria
+                    </BotaoLink>
+                  )}
                   <BotaoConfirmar
                     acao={excluirMatricula.bind(null, m.id)}
                     mensagem={`Excluir esta matrícula?\n\nIsso apaga também ${m.aulas.length} aula(s) e ${m.parcelas.length} parcela(s), inclusive os pagamentos já recebidos. Não dá para desfazer.`}
@@ -429,7 +467,7 @@ export default async function FichaAlunoPage({
                           </Etiqueta>
                         </td>
                         <td className="px-4 py-2.5">
-                          <AcoesAula aula={a} voltar={`/alunos/${aluno.id}`} />
+                          <AcoesAula aula={a} voltar={`/alunos/${aluno.id}`} declaracao={modelos.has("declaracao")} />
                         </td>
                       </tr>
                     ))}

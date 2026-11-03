@@ -7,6 +7,8 @@ import {
   ClipboardCheck,
   Download,
   FileSignature,
+  FileText,
+  IdCard,
   KeyRound,
   Pencil,
   Printer,
@@ -41,9 +43,14 @@ import {
   excluirFeriado,
   salvarCalendario,
   salvarFeriadosIgnorados,
+  removerDocumento,
+  salvarDocumento,
+  salvarFormatoFicha,
   salvarPaleta,
   salvarTaxas,
 } from "./actions";
+import { CAMPOS_AULA, TIPOS_DOCUMENTO } from "@/lib/documentos";
+import { Opcoes } from "@/components/opcoes";
 import { ESTADUAIS, feriadosAutomaticos, lerIgnorados } from "@/lib/feriados";
 import { FINAIS, NOMES_MESES, TIPOS_LICENCIAMENTO, lerCalendario } from "@/lib/licenciamento";
 import { alternarUsuario, criarUsuario, excluirUsuario, removerContrato, salvarContrato, trocarSenha } from "./actions";
@@ -63,6 +70,7 @@ const abas = [
   { id: "feriados", label: "Feriados", icone: CalendarOff, soAdmin: true },
   { id: "impressora", label: "Impressora", icone: Printer, soAdmin: true },
   { id: "contrato", label: "Contrato", icone: FileSignature, soAdmin: true },
+  { id: "documentos", label: "Documentos", icone: FileText, soAdmin: true },
   { id: "senha", label: "Minha senha", icone: KeyRound, soAdmin: false },
 ];
 
@@ -110,6 +118,7 @@ export default async function ConfiguracoesPage({ searchParams }: { searchParams
       {aba === "feriados" && <Feriados />}
       {aba === "impressora" && <Impressora />}
       {aba === "contrato" && <Contrato />}
+      {aba === "documentos" && <Documentos />}
       {aba === "senha" && (
         <Cartao className="max-w-md">
           <FormAcao acao={trocarSenha} textoBotao="Trocar senha" limparAoSalvar>
@@ -214,9 +223,34 @@ async function Impressora() {
   const config = await obterConfigCompleta();
   return (
     <div className="grid gap-6 2xl:grid-cols-[minmax(0,48rem)_1fr] [&>*]:min-w-0">
-      <Cartao>
-        <ImpressoraForm atual={config.impressoraRecibo} />
-      </Cartao>
+      <div className="space-y-6">
+        <Cartao>
+          <ImpressoraForm atual={config.impressoraRecibo} />
+        </Cartao>
+        <Cartao>
+          <h2 className="mb-1 flex items-center gap-2 text-lg font-semibold">
+            <IdCard className="size-6 text-blue-600" aria-hidden /> Ficha do aluno
+          </h2>
+          <p className="mb-4 text-base text-slate-600">
+            Na hora de imprimir também dá para trocar, na barra de cima da ficha.
+          </p>
+          <FormAcao acao={salvarFormatoFicha} textoBotao="Salvar">
+            <Opcoes
+              nome="formatoFicha"
+              legenda="A ficha sai em:"
+              opcoes={{
+                inteira: { titulo: "Folha A4 inteira", descricao: "Tudo numa página só." },
+                meia: {
+                  titulo: "Meia folha, frente e verso",
+                  descricao:
+                    "Dados do aluno na frente, pagamento e exames no verso. Imprima frente e verso e corte a folha ao meio.",
+                },
+              }}
+              inicial={config.formatoFicha}
+            />
+          </FormAcao>
+        </Cartao>
+      </div>
       <Cartao className="h-fit">
         <h2 className="mb-3 flex items-center gap-2 text-lg font-semibold">
           <Printer className="size-6 text-blue-600" aria-hidden /> Como preparar a térmica (Elgin i9)
@@ -244,6 +278,96 @@ async function Impressora() {
         >
           Imprimir cupom de teste
         </BotaoLink>
+      </Cartao>
+    </div>
+  );
+}
+
+async function Documentos() {
+  const modelos = await db.modeloDocumento.findMany({ select: { tipo: true, nome: true, enviadoEm: true } });
+  return (
+    <div className="grid gap-6 2xl:grid-cols-[minmax(0,40rem)_1fr] [&>*]:min-w-0">
+      <div className="space-y-6">
+        {Object.entries(TIPOS_DOCUMENTO).map(([tipo, doc]) => {
+          const modelo = modelos.find((m) => m.tipo === tipo);
+          return (
+            <Cartao key={tipo}>
+              <h2 className="mb-1 flex items-center gap-2 text-lg font-semibold">
+                <FileText className="size-6 text-blue-600" aria-hidden /> {doc.titulo}
+              </h2>
+              <p className="mb-4 text-base text-slate-600">{doc.descricao}</p>
+              {modelo ? (
+                <div className="mb-4 flex flex-wrap items-center gap-3 rounded-xl bg-green-50 p-4">
+                  <FileText className="size-7 text-green-700" aria-hidden />
+                  <div className="min-w-0 flex-1">
+                    <div className="truncate font-semibold">{modelo.nome}</div>
+                    <div className="text-sm text-slate-600">Enviado em {formatarDataLocal(modelo.enviadoEm)}</div>
+                  </div>
+                  <BotaoDownload href={`/documento/${tipo}/modelo`} tamanho="pequeno" icone={Download}>
+                    Baixar
+                  </BotaoDownload>
+                  <BotaoConfirmar
+                    acao={removerDocumento.bind(null, tipo)}
+                    mensagem={`Remover o modelo de "${doc.titulo}"?`}
+                    icone="excluir"
+                  >
+                    Remover
+                  </BotaoConfirmar>
+                </div>
+              ) : (
+                <p className="mb-4 rounded-xl bg-amber-50 p-4 text-base text-amber-900">
+                  Nenhum modelo enviado ainda.{" "}
+                  <a href={doc.exemplo} download className="font-medium underline">
+                    Baixe o exemplo
+                  </a>
+                  , ajuste no Word e envie aqui.
+                </p>
+              )}
+              <FormAcao
+                acao={salvarDocumento.bind(null, tipo)}
+                textoBotao={modelo ? "Trocar modelo" : "Enviar modelo"}
+                limparAoSalvar
+              >
+                <Campo label="Arquivo (.docx)">
+                  <Input
+                    name="arquivo"
+                    type="file"
+                    required
+                    accept=".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                  />
+                </Campo>
+              </FormAcao>
+              {modelo && (
+                <p className="mt-3 text-sm text-slate-500">
+                  Quer recomeçar?{" "}
+                  <a href={doc.exemplo} download className="underline">
+                    Baixar o exemplo
+                  </a>
+                  .
+                </p>
+              )}
+            </Cartao>
+          );
+        })}
+      </div>
+
+      <Cartao className="h-fit">
+        <h2 className="mb-1 text-lg font-semibold">Marcações que o sistema preenche</h2>
+        <p className="mb-4 text-sm text-slate-600">
+          As mesmas do contrato (veja a aba Contrato), por exemplo <CopiarMarcacao texto="{{aluno_nome}}" />,{" "}
+          <CopiarMarcacao texto="{{aluno_cpf}}" /> e <CopiarMarcacao texto="{{cidade_data}}" />. Na declaração de
+          comparecimento também estas, da aula escolhida:
+        </p>
+        <dl className="grid gap-x-4 gap-y-2 sm:grid-cols-[auto_1fr]">
+          {CAMPOS_AULA.map(([chave, descricao]) => (
+            <div key={chave} className="contents">
+              <dt>
+                <CopiarMarcacao texto={`{{${chave}}}`} />
+              </dt>
+              <dd className="self-center text-sm text-slate-700">{descricao}</dd>
+            </div>
+          ))}
+        </dl>
       </Cartao>
     </div>
   );

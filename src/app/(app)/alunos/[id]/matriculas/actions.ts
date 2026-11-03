@@ -7,7 +7,9 @@ import { exigirSessao } from "@/lib/auth";
 import { CATEGORIAS, hojeISO, lerMoeda, lerPercentual } from "@/lib/format";
 import { gerarParcelas } from "@/lib/parcelas";
 import { FORMAS_ENTRADA, FORMAS_MATRICULA } from "@/lib/pagamentos";
-import { CURSOS_TEORICOS, TIPOS_PROCESSO, gerarEtapas, lerTaxasPadrao } from "@/lib/etapas";
+import { CURSOS_TEORICOS, PROCESSOS_COM_CNH, TIPOS_PROCESSO, gerarEtapas, lerTaxasPadrao } from "@/lib/etapas";
+import { praticasPorCategoria } from "@/lib/aulas";
+import { lerCanceladas, semCategoria, type CategoriaCancelada } from "@/lib/categorias";
 import type { EstadoForm } from "@/components/form-acao";
 
 function inteiro(dados: FormData, campo: string) {
@@ -24,6 +26,28 @@ function lerPraticas(dados: FormData, categoria: string) {
     mapa[l] = n;
   }
   return { mapa, total: Object.values(mapa).reduce((s, n) => s + n, 0) };
+}
+
+// Dados da CNH atual (adição, mudança, reabilitação, reciclagem): só os campos
+// preenchidos mudam o cadastro do aluno.
+function lerCnh(dados: FormData): { erro: string } | { campos: Record<string, string | Date> } {
+  const registro = String(dados.get("cnhRegistro") ?? "").trim();
+  const data = (campo: string) => {
+    const v = String(dados.get(campo) ?? "");
+    return /^\d{4}-\d{2}-\d{2}$/.test(v) ? new Date(`${v}T00:00:00Z`) : null;
+  };
+  const emissao = data("cnhEmissao");
+  const validade = data("cnhValidade");
+  if (emissao && validade && validade <= emissao) {
+    return { erro: "A validade da CNH precisa ser depois da data de emissão." };
+  }
+  return {
+    campos: {
+      ...(registro ? { registroCnh: registro.slice(0, 20) } : {}),
+      ...(emissao ? { cnhEmissao: emissao } : {}),
+      ...(validade ? { cnhValidade: validade } : {}),
+    },
+  };
 }
 
 export async function criarMatricula(alunoId: number, _: EstadoForm, dados: FormData): Promise<EstadoForm> {
@@ -44,9 +68,13 @@ export async function criarMatricula(alunoId: number, _: EstadoForm, dados: Form
   if (qtdPraticas === null || qtdTeoricas === null) {
     return { erro: "Informe a quantidade de aulas (de cada categoria)." };
   }
-  if (qtdPraticas + qtdTeoricas === 0) return { erro: "A matrícula precisa ter ao menos uma aula." };
+  if (qtdPraticas + qtdTeoricas === 0 && tipoProcesso !== "reciclagem") {
+    return { erro: "A matrícula precisa ter ao menos uma aula." };
+  }
   if (valorTotal === null) return { erro: "Valor total inválido. Use o formato 1.500,00." };
   if (!(formaPagamento in FORMAS_MATRICULA)) return { erro: "Escolha a forma de pagamento." };
+  const cnh = PROCESSOS_COM_CNH.includes(tipoProcesso) ? lerCnh(dados) : { campos: {} };
+  if ("erro" in cnh) return cnh;
 
   // Entrada opcional, paga na hora; o restante segue a forma escolhida.
   const temEntrada = dados.get("temEntrada") === "sim";
@@ -63,6 +91,7 @@ export async function criarMatricula(alunoId: number, _: EstadoForm, dados: Form
 
   const aluno = await db.aluno.findUnique({ where: { id: alunoId } });
   if (!aluno) return { erro: "Aluno não encontrado." };
+  if (Object.keys(cnh.campos).length) await db.aluno.update({ where: { id: alunoId }, data: cnh.campos });
 
   const hoje = new Date(`${hojeISO()}T00:00:00Z`);
   let jurosMesBp = 0;
@@ -184,17 +213,25 @@ export async function editarMatricula(matriculaId: number, _: EstadoForm, dados:
   if (qtdPraticas === null || qtdTeoricas === null) {
     return { erro: "Informe a quantidade de aulas (de cada categoria)." };
   }
-  if (qtdPraticas + qtdTeoricas === 0) return { erro: "A matrícula precisa ter ao menos uma aula." };
+  const tipoProcesso = String(dados.get("tipoProcesso") ?? "");
+  if (qtdPraticas + qtdTeoricas === 0 && tipoProcesso !== "reciclagem") {
+    return { erro: "A matrícula precisa ter ao menos uma aula." };
+  }
   if (valorTotal === null) return { erro: "Valor total inválido. Use o formato 1.500,00." };
   if (!(formaPagamento in FORMAS_MATRICULA)) return { erro: "Escolha a forma de pagamento." };
   if (!/^\d{4}-\d{2}-\d{2}$/.test(data)) return { erro: "Informe a data da matrícula." };
-  const tipoProcesso = String(dados.get("tipoProcesso") ?? "");
   const cursoTeorico = String(dados.get("cursoTeorico") ?? "");
   if (!(tipoProcesso in TIPOS_PROCESSO)) return { erro: "Escolha o tipo de processo." };
   if (!(cursoTeorico in CURSOS_TEORICOS)) return { erro: "Escolha como será o curso teórico." };
 
+  const cnh = PROCESSOS_COM_CNH.includes(tipoProcesso) ? lerCnh(dados) : { campos: {} };
+  if ("erro" in cnh) return cnh;
+
   const matricula = await db.matricula.findUnique({ where: { id: matriculaId } });
   if (!matricula) return { erro: "Matrícula não encontrada." };
+  if (Object.keys(cnh.campos).length) {
+    await db.aluno.update({ where: { id: matricula.alunoId }, data: cnh.campos });
+  }
   await db.matricula.update({
     where: { id: matriculaId },
     // Meio-dia no horário de Brasília, para a data não mudar com o fuso.
@@ -212,4 +249,65 @@ export async function editarMatricula(matriculaId: number, _: EstadoForm, dados:
   });
   revalidatePath(`/alunos/${matricula.alunoId}`);
   redirect(`/alunos/${matricula.alunoId}`);
+}
+
+// O aluno desistiu de uma das categorias (ex.: contratou AB e fica só com B).
+// As aulas ainda agendadas dessa categoria são canceladas e a prova prática dela,
+// se ainda não foi feita nem paga, sai da lista. O que já aconteceu fica no
+// histórico. O valor e as parcelas não mudam sozinhos: ajuste em Alterar.
+export async function cancelarCategoria(matriculaId: number, _: EstadoForm, dados: FormData): Promise<EstadoForm> {
+  await exigirSessao();
+  const matricula = await db.matricula.findUnique({ where: { id: matriculaId }, include: { aluno: true } });
+  if (!matricula) return { erro: "Matrícula não encontrada." };
+  const letras = [...new Set(matricula.categoria.split(""))];
+  const letra = String(dados.get("categoria") ?? "");
+  if (letras.length < 2)
+    return { erro: "Esta matrícula tem uma categoria só. Para desistir de tudo, exclua a matrícula." };
+  if (!letras.includes(letra)) return { erro: "Escolha a categoria que o aluno vai deixar." };
+  const nova = semCategoria(matricula.categoria, letra);
+  if (!(CATEGORIAS as readonly string[]).includes(nova)) return { erro: "Categoria inválida." };
+  const restantes = inteiro(dados, "praticasRestantes");
+  if (restantes === null) return { erro: `Informe quantas aulas práticas continuam na categoria ${nova}.` };
+  const motivo =
+    String(dados.get("motivo") ?? "")
+      .trim()
+      .slice(0, 300) || null;
+
+  const mapa = praticasPorCategoria(matricula);
+  const [aulas] = await db.$transaction([
+    db.aula.updateMany({
+      where: { matriculaId, status: "agendada", tipo: "pratica", categoria: letra },
+      data: { status: "cancelada", obs: `Categoria ${letra} cancelada` },
+    }),
+    db.etapa.deleteMany({
+      where: { matriculaId, tipo: "exame_pratico", categoria: letra, resultado: null, pagoEm: null },
+    }),
+  ]);
+  const historico: CategoriaCancelada[] = [
+    ...lerCanceladas(matricula.categoriasCanceladas),
+    {
+      categoria: letra,
+      em: new Date().toISOString(),
+      motivo,
+      praticas: mapa?.[letra] ?? null,
+      aulasCanceladas: aulas.count,
+    },
+  ];
+  await db.matricula.update({
+    where: { id: matriculaId },
+    data: {
+      categoria: nova,
+      qtdPraticas: restantes,
+      praticasPorCategoria: { [nova]: restantes },
+      categoriasCanceladas: historico,
+    },
+  });
+  // O cadastro do aluno acompanha, se estava com a mesma categoria da matrícula.
+  if (matricula.aluno.categoria === matricula.categoria) {
+    await db.aluno.update({ where: { id: matricula.alunoId }, data: { categoria: nova } });
+  }
+  revalidatePath(`/alunos/${matricula.alunoId}`);
+  revalidatePath("/aulas");
+  revalidatePath("/exames");
+  redirect(`/alunos/${matricula.alunoId}?cancelada=${letra}`);
 }

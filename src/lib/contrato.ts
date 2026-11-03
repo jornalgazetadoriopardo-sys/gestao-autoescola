@@ -39,6 +39,9 @@ export const CAMPOS_CONTRATO: { grupo: string; campos: [chave: string, descricao
       ["aluno_pai", "Nome do pai"],
       ["aluno_naturalidade", "Naturalidade"],
       ["aluno_renach", "RENACH"],
+      ["aluno_cnh_registro", "Nº de registro da CNH (quem já tem)"],
+      ["aluno_cnh_emissao", "Data de emissão da CNH"],
+      ["aluno_cnh_validade", "Data de validade da CNH"],
     ],
   },
   {
@@ -124,6 +127,9 @@ export function dadosDoContrato(m: MatriculaCompleta, c: Configuracao) {
     aluno_pai: ou(m.aluno.pai),
     aluno_naturalidade: ou(m.aluno.naturalidade),
     aluno_renach: ou(m.aluno.renach),
+    aluno_cnh_registro: ou(m.aluno.registroCnh),
+    aluno_cnh_emissao: ou(formatarData(m.aluno.cnhEmissao)),
+    aluno_cnh_validade: ou(formatarData(m.aluno.cnhValidade)),
     tipo_processo: TIPOS_PROCESSO[m.tipoProcesso]?.titulo ?? m.tipoProcesso,
     curso_teorico: CURSOS_TEORICOS[m.cursoTeorico]?.titulo ?? m.cursoTeorico,
     categoria: m.categoria,
@@ -170,12 +176,16 @@ function abrir(arquivo: Uint8Array) {
 
 // Confere o arquivo enviado: precisa ser um .docx válido e com as marcações
 // bem escritas. Devolve o erro ou as marcações que o sistema não conhece.
-export function conferirModelo(arquivo: Uint8Array): { erro: string } | { desconhecidas: string[] } {
+// `extras`: marcações próprias de outro documento (ex.: data da aula na declaração).
+export function conferirModelo(
+  arquivo: Uint8Array,
+  extras: string[] = [],
+): { erro: string } | { desconhecidas: string[] } {
   try {
     // Abrir já confere se as marcações estão bem escritas.
     const texto = abrir(arquivo).getFullText();
     const encontradas = [...texto.matchAll(/\{\{\s*[#/^]?\s*([^}]+?)\s*\}\}/g)].map((m) => m[1]);
-    const conhecidas = new Set([...CHAVES, ...CAMPOS_PARCELA.map(([c]) => c)]);
+    const conhecidas = new Set([...CHAVES, ...CAMPOS_PARCELA.map(([c]) => c), ...extras]);
     const desconhecidas = [...new Set(encontradas.filter((t) => !conhecidas.has(t)))];
     return { desconhecidas };
   } catch (e) {
@@ -201,7 +211,10 @@ export function conferirModelo(arquivo: Uint8Array): { erro: string } | { descon
   }
 }
 
-export function preencherContrato(arquivo: Uint8Array, dados: ReturnType<typeof dadosDoContrato>) {
+export function preencherContrato(
+  arquivo: Uint8Array,
+  dados: ReturnType<typeof dadosDoContrato> & Record<string, unknown>,
+) {
   const doc = abrir(arquivo);
   doc.render(dados);
   return doc.getZip().generate({ type: "nodebuffer", compression: "DEFLATE" });

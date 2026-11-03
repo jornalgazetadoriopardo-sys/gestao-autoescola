@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Check, Pencil, Undo2, X } from "lucide-react";
+import { Check, FileText, Pencil, Undo2, X } from "lucide-react";
 import { BotaoConfirmar } from "@/components/botao-confirmar";
 import { marcarAula } from "./actions";
 
@@ -7,10 +7,29 @@ const botao = "inline-flex items-center gap-1.5 rounded-lg border-2 px-3 py-1.5 
 
 // Botões de presença de uma aula, conforme a situação atual, e o link de edição.
 // `voltar` é a página para onde a edição retorna depois de salvar.
-export function AcoesAula({ aula, voltar }: { aula: { id: number; status: string }; voltar: string }) {
+// `declaracao`: com o modelo cadastrado, a aula com presença ganha o botão da
+// declaração de comparecimento (para o aluno justificar a falta na escola ou no trabalho).
+export function AcoesAula({
+  aula,
+  voltar,
+  declaracao = false,
+}: {
+  aula: { id: number; status: string; matriculaId: number };
+  voltar: string;
+  declaracao?: boolean;
+}) {
   return (
     <div className="flex items-center gap-2">
       <Presenca aula={aula} />
+      {declaracao && aula.status === "presente" && (
+        <a
+          href={`/documento/declaracao/${aula.matriculaId}?aula=${aula.id}`}
+          className={`${botao} border-blue-300 text-blue-800 hover:bg-blue-50`}
+          title="Baixar a declaração de comparecimento desta aula"
+        >
+          <FileText className="size-4" aria-hidden /> Declaração
+        </a>
+      )}
       <Link
         href={`/aulas/${aula.id}/editar?voltar=${encodeURIComponent(voltar)}`}
         className={`${botao} border-slate-300 text-slate-700 hover:bg-slate-50`}

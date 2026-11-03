@@ -2,14 +2,15 @@ import { notFound } from "next/navigation";
 import { ArrowLeft, Pencil, Plus } from "lucide-react";
 import { FormAcao } from "@/components/form-acao";
 import { Opcoes } from "@/components/opcoes";
-import { CURSOS_TEORICOS, TIPOS_PROCESSO } from "@/lib/etapas";
+import { CURSOS_TEORICOS, PROCESSOS_COM_CNH, TIPOS_PROCESSO } from "@/lib/etapas";
 import { BotaoLink, Cabecalho, Campo, Cartao, Input, Select } from "@/components/ui";
 import { db } from "@/lib/db";
-import { hojeISO, moedaParaInput } from "@/lib/format";
+import { dataParaInput, hojeISO, moedaParaInput } from "@/lib/format";
 import { FORMAS_MATRICULA, SO_PARCELAS } from "@/lib/pagamentos";
 import { adicionarParcela } from "@/app/(app)/pagamentos/actions";
 import { editarMatricula } from "../../actions";
 import { CamposCategoria } from "../../campos-categoria";
+import { CamposCnh } from "../../campos-cnh";
 import { praticasPorCategoria } from "@/lib/aulas";
 
 export const dynamic = "force-dynamic";
@@ -53,6 +54,15 @@ export default async function EditarMatriculaPage({ params }: { params: Promise<
               inicial={matricula.cursoTeorico}
               colunas="sm:grid-cols-3"
             />
+            {(PROCESSOS_COM_CNH.includes(matricula.tipoProcesso) || matricula.aluno.registroCnh) && (
+              <CamposCnh
+                inicial={{
+                  registro: matricula.aluno.registroCnh ?? "",
+                  emissao: dataParaInput(matricula.aluno.cnhEmissao),
+                  validade: dataParaInput(matricula.aluno.cnhValidade),
+                }}
+              />
+            )}
             <div className="grid gap-5 sm:grid-cols-3">
               <CamposCategoria
                 categoria={matricula.categoria}
