@@ -4,8 +4,8 @@ import { useEffect, useState } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
 import { Columns2, FileText, Printer, Receipt, X } from "lucide-react";
 
-// Recibo e carnê podem sair em folha A4 ou na impressora térmica (80 mm).
-const COM_TERMICA = ["/imprimir/recibo/", "/imprimir/recibo-taxa/", "/imprimir/carne/"];
+// Recibo, carnê e guia de taxas podem sair em folha A4 ou na impressora térmica (80 mm).
+const COM_TERMICA = ["/imprimir/recibo/", "/imprimir/recibo-taxa/", "/imprimir/carne/", "/imprimir/taxas/"];
 
 export function BarraImpressao() {
   const caminho = usePathname();

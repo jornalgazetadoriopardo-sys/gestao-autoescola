@@ -16,6 +16,7 @@ import {
   HandCoins,
   IdCard,
   KeyRound,
+  Landmark,
   Pencil,
   Plus,
   Printer,
@@ -28,6 +29,7 @@ import { db } from "@/lib/db";
 import { prontosParaExamePratico } from "@/lib/prontos-exame";
 import { NIVEIS_GOVBR } from "@/lib/govbr-niveis";
 import { lerCanceladas } from "@/lib/categorias";
+import { entraNaGuia, taxaPaga } from "@/lib/guia-taxas";
 import { SenhaGovbr } from "./senha-govbr";
 import {
   FORMAS_PAGAMENTO,
@@ -482,9 +484,33 @@ export default async function FichaAlunoPage({
                     ({m.etapas.filter((e) => e.resultado === "ok").length} de {m.etapas.length} concluídos)
                   </span>
                 </h3>
-                <BotaoLink href={`/exames/nova?matricula=${m.id}`} variante="secundario" tamanho="pequeno" icone={Plus}>
-                  Adicionar exame ou taxa
-                </BotaoLink>
+                <div className="flex flex-wrap gap-2">
+                  {m.etapas.some(entraNaGuia) && (
+                    <BotaoLink
+                      href={`/imprimir/taxas/${m.id}`}
+                      target="_blank"
+                      variante="secundario"
+                      tamanho="pequeno"
+                      icone={Landmark}
+                      title="Guia para o aluno pagar as taxas do Detran no banco, pelo CPF"
+                    >
+                      Guia de taxas do Detran
+                      {m.etapas.some((e) => entraNaGuia(e) && !taxaPaga(e)) && (
+                        <span className="ml-1 rounded-full bg-red-100 px-1.5 text-xs font-semibold text-red-800">
+                          {m.etapas.filter((e) => entraNaGuia(e) && !taxaPaga(e)).length} a pagar
+                        </span>
+                      )}
+                    </BotaoLink>
+                  )}
+                  <BotaoLink
+                    href={`/exames/nova?matricula=${m.id}`}
+                    variante="secundario"
+                    tamanho="pequeno"
+                    icone={Plus}
+                  >
+                    Adicionar exame ou taxa
+                  </BotaoLink>
+                </div>
               </div>
               <div className="mb-6">
                 {m.etapas.length > 0 ? (

@@ -295,6 +295,12 @@ model Configuracao {
   paleta                  String     @default("azul")
   // Ficha do aluno: "inteira" (folha A4) ou "meia" (meia folha A4, frente e verso).
   formatoFicha            String     @default("inteira")
+  // Impressora térmica: largura útil do cupom (mm) e posição ("esquerda" ou "centro").
+  // Muitos drivers só imprimem 72 mm a partir da esquerda de uma página de 80 mm.
+  larguraTermica          Int        @default(68)
+  alinhamentoTermica      String     @default("esquerda")
+  // Observação impressa na guia de taxas do Detran (onde o aluno paga).
+  obsGuiaTaxas            String?
 }
 
 // Modelos de documentos em Word (.docx) da autoescola, preenchidos com os dados

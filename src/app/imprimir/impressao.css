@@ -75,7 +75,8 @@
 
 .cupom {
   page: termica;
-  width: 72mm;
+  /* Largura útil escolhida em Configurações > Impressora (padrão 68 mm). */
+  width: var(--largura-termica, 68mm);
   margin: 0 auto 6mm;
   padding: 4mm 3mm;
   background: white;
@@ -100,5 +101,10 @@
   }
   .cupom:last-child {
     break-after: auto;
+  }
+  /* Encostado à esquerda: a maioria dos drivers de 80 mm imprime só os 72 mm
+     da esquerda da página, e o cupom centralizado perdia a borda direita. */
+  .termica-esquerda .cupom {
+    margin-left: 0;
   }
 }

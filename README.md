@@ -24,7 +24,12 @@ presença e pagamentos.
   exames agendados, os resultados pendentes, o que falta marcar e as taxas a receber
   - Quem já tem CNH (adição, mudança, reabilitação, reciclagem): nº de registro, data de emissão e
     validade da CNH na matrícula; ficam no cadastro do aluno e saem na ficha e no contrato
-  - Reciclagem (CNH suspensa): só o curso e a prova teórica entram na lista
+  - Reciclagem (CNH suspensa): só o curso e a prova teórica entram na lista. Curso especializado
+    (transporte escolar, MOPP...): só a taxa do curso
+  - **Taxas do Detran pagas pelo aluno** (exames teórico e prático, emissão, curso especializado):
+    botão "Aluno pagou" em cada uma, aba em Exames com quem ainda não pagou e **guia de taxas**
+    para imprimir (A4 ou térmica) com o CPF em destaque e a quantidade de cada taxa (ex.: carro e
+    moto = 2 práticos). A observação da guia (onde pagar) fica em Configurações > Taxas e exames
   - **Cancelar uma categoria** (ex.: contratou AB e desistiu da A): a matrícula fica só com a
     outra, as aulas agendadas da categoria saem, a prova prática dela também (se não foi feita nem
     paga), e fica o registro de quando e por quê. Valor e parcelas são ajustados à mão
@@ -90,7 +95,9 @@ presença e pagamentos.
   resumo do ano mês a mês e aulas por período
 - **Impressora térmica** (ex.: Elgin i9, bobina 80 mm): recibo (1 ou 2 vias) e carnê (um cupom
   por parcela) saem em cupom; escolha o padrão em Configurações > Impressora e troque entre A4 e
-  térmica na própria tela de impressão. Guia do aluno, relatórios e contrato continuam em A4
+  térmica na própria tela de impressão. Guia do aluno, relatórios e contrato continuam em A4.
+  Se a impressão cortar um pedaço da direita, ajuste a **largura** (padrão 68 mm) e a **posição**
+  (encostado à esquerda) em Configurações > Impressora; o cupom de teste tem uma régua em mm
 - **Contrato**: cada autoescola envia o seu contrato em Word (.docx) com marcações como
   `{{aluno_nome}}`; na ficha do aluno, o botão Contrato baixa o arquivo preenchido (lista de
   marcações e um exemplo em Configurações > Contrato)

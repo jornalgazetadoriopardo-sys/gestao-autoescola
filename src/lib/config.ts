@@ -57,6 +57,9 @@ async function configPadrao(): Promise<Configuracao> {
       feriadosIgnorados: null,
       paleta: "azul",
       formatoFicha: "inteira",
+      larguraTermica: 68,
+      alinhamentoTermica: "esquerda",
+      obsGuiaTaxas: null,
     }
   );
 }
