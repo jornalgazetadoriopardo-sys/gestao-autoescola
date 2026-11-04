@@ -12,7 +12,7 @@ export function CabecalhoCupom({ config, titulo }: { config: Configuracao; titul
     <div className="text-center">
       {config.logo && (
         // eslint-disable-next-line @next/next/no-img-element
-        <img src={config.logo} alt="" className="mx-auto mb-1 max-h-[16mm] max-w-[50mm] grayscale" />
+        <img src={config.logo} alt="" className="mx-auto mb-1 max-h-[16mm] max-w-[75%] grayscale" />
       )}
       <div className="text-[14px] font-bold uppercase leading-tight">{config.nome}</div>
       {config.cnpj && <div>CNPJ {config.cnpj}</div>}
@@ -38,7 +38,7 @@ export function LinhaCupom({ rotulo, valor, forte }: { rotulo: string; valor: Re
 export function Assinatura({ texto }: { texto: string }) {
   return (
     <div className="mt-8 text-center">
-      <div className="mx-auto w-[56mm] border-t border-black" />
+      <div className="mx-auto w-[80%] border-t border-black" />
       <div className="text-[11px]">{texto}</div>
     </div>
   );

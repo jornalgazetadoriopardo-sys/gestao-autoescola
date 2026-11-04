@@ -50,6 +50,7 @@ import {
   salvarTaxas,
 } from "./actions";
 import { CAMPOS_AULA, TIPOS_DOCUMENTO } from "@/lib/documentos";
+import { OBS_GUIA_PADRAO } from "@/lib/guia-taxas";
 import { Opcoes } from "@/components/opcoes";
 import { ESTADUAIS, feriadosAutomaticos, lerIgnorados } from "@/lib/feriados";
 import { FINAIS, NOMES_MESES, TIPOS_LICENCIAMENTO, lerCalendario } from "@/lib/licenciamento";
@@ -225,7 +226,11 @@ async function Impressora() {
     <div className="grid gap-6 2xl:grid-cols-[minmax(0,48rem)_1fr] [&>*]:min-w-0">
       <div className="space-y-6">
         <Cartao>
-          <ImpressoraForm atual={config.impressoraRecibo} />
+          <ImpressoraForm
+            atual={config.impressoraRecibo}
+            largura={config.larguraTermica}
+            alinhamento={config.alinhamentoTermica}
+          />
         </Cartao>
         <Cartao>
           <h2 className="mb-1 flex items-center gap-2 text-lg font-semibold">
@@ -507,6 +512,17 @@ async function Taxas() {
             </div>
           ))}
         </div>
+        <Campo
+          label="Observação na guia de taxas do Detran"
+          ajuda="Sai no fim da guia que o aluno leva para pagar os exames e a emissão da CNH pelo CPF."
+        >
+          <Input
+            name="obsGuiaTaxas"
+            maxLength={200}
+            defaultValue={config.obsGuiaTaxas ?? ""}
+            placeholder={OBS_GUIA_PADRAO}
+          />
+        </Campo>
       </FormAcao>
     </Cartao>
   );

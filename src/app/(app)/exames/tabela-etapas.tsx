@@ -1,10 +1,11 @@
 import Link from "next/link";
-import { Check, HandCoins, Pencil, Printer, Undo2, X } from "lucide-react";
+import { BadgeCheck, Check, HandCoins, Pencil, Printer, Undo2, X } from "lucide-react";
 import type { Etapa } from "@prisma/client";
 import { Etiqueta, Tabela } from "@/components/ui";
 import { formatarData, formatarMoeda } from "@/lib/format";
 import { COR_SITUACAO_ETAPA, TIPOS_ETAPA, situacaoEtapa, textoSituacaoEtapa } from "@/lib/etapas";
-import { marcarEtapa } from "./actions";
+import { marcarEtapa, marcarPagamentoAluno } from "./actions";
+import { entraNaGuia } from "@/lib/guia-taxas";
 
 const botao =
   "inline-flex items-center gap-1.5 rounded-lg border-2 px-3 py-1.5 text-sm font-semibold whitespace-nowrap";
@@ -55,10 +56,10 @@ export function TabelaEtapas({
               {e.valorCentavos != null ? <div className="font-semibold">{formatarMoeda(e.valorCentavos)}</div> : "—"}
               <div className="text-sm text-slate-600">
                 {e.pagoEm
-                  ? `Pago em ${formatarData(e.pagoEm)}`
+                  ? `${e.cobranca === "aluno" ? "Aluno pagou" : "Pago"} em ${formatarData(e.pagoEm)}`
                   : e.cobranca === "autoescola"
                     ? "Autoescola cobra · a receber"
-                    : "Aluno paga direto"}
+                    : "Aluno paga direto · não pagou"}
               </div>
             </td>
             <td className="min-w-64 px-4 py-2.5">
@@ -70,6 +71,26 @@ export function TabelaEtapas({
                   >
                     <HandCoins className="size-4" aria-hidden /> Receber
                   </Link>
+                )}
+                {/* Taxa do Detran que o aluno paga no banco: marcar se já pagou. */}
+                {!receber && entraNaGuia(e) && !e.resultado && (
+                  <form action={marcarPagamentoAluno.bind(null, e.id, !e.pagoEm)}>
+                    {e.pagoEm ? (
+                      <button
+                        className={`${botao} border-slate-300 text-slate-600 hover:bg-slate-50`}
+                        title="Desfazer o pagamento"
+                      >
+                        <Undo2 className="size-4" aria-hidden /> Não pagou
+                      </button>
+                    ) : (
+                      <button
+                        className={`${botao} border-blue-300 text-blue-800 hover:bg-blue-50`}
+                        title="O aluno já pagou esta taxa"
+                      >
+                        <BadgeCheck className="size-4" aria-hidden /> Aluno pagou
+                      </button>
+                    )}
+                  </form>
                 )}
                 {receber ? null : e.resultado ? (
                   <form action={marcarEtapa.bind(null, e.id, null)}>

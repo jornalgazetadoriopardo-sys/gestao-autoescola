@@ -8,10 +8,17 @@ export const TIPOS_PROCESSO: Record<string, { titulo: string; descricao: string 
   mudanca: { titulo: "Mudança de categoria", descricao: "Passa para categoria maior (ex.: B para C, D ou E)" },
   reabilitacao: { titulo: "Reabilitação", descricao: "CNH cassada ou vencida há muito tempo" },
   reciclagem: { titulo: "Reciclagem", descricao: "CNH suspensa: curso de reciclagem e prova teórica" },
+  especializado: {
+    titulo: "Curso especializado",
+    descricao: "Transporte escolar, coletivo, emergência, cargas perigosas (MOPP)...",
+  },
 };
 
 // Processos de quem já tem CNH: a matrícula pede o nº de registro e as datas da CNH.
-export const PROCESSOS_COM_CNH = ["adicao", "mudanca", "reabilitacao", "reciclagem"];
+export const PROCESSOS_COM_CNH = ["adicao", "mudanca", "reabilitacao", "reciclagem", "especializado"];
+
+// Processos sem aulas práticas obrigatórias (só curso e prova/taxa).
+export const PROCESSOS_SEM_PRATICA = ["reciclagem", "especializado"];
 
 export const CURSOS_TEORICOS: Record<string, { titulo: string; descricao: string }> = {
   autoescola: { titulo: "Na autoescola", descricao: "Aulas teóricas pagas, dadas pela autoescola" },
@@ -34,6 +41,7 @@ export const TIPOS_ETAPA: Record<string, { titulo: string; resultados: Resultado
   exame_teorico: { titulo: "Exame teórico (prova do Detran)", resultados: EXAME, reexame: true },
   exame_pratico: { titulo: "Exame prático", resultados: EXAME, reexame: true },
   emissao: { titulo: "Emissão da CNH", resultados: CONCLUIDO },
+  curso_especializado: { titulo: "Curso especializado (taxa do Detran)", resultados: CONCLUIDO },
   outra: { titulo: "Outra taxa", resultados: CONCLUIDO },
 };
 
@@ -95,10 +103,14 @@ export function gerarEtapas(
     novas.push({ tipo, descricao, categoria });
 
   // Reciclagem (CNH suspensa): só o curso e a prova teórica; não há exames
-  // médicos nem prova prática, e a CNH devolvida é a mesma.
-  if (m.tipoProcesso === "reciclagem") {
-    if (m.cursoTeorico === "online") add("curso_online", "Curso de reciclagem online");
-    add("exame_teorico", "Prova teórica da reciclagem");
+  // médicos nem prova prática, e a CNH devolvida é a mesma. Curso especializado:
+  // só a taxa do curso no Detran.
+  if (PROCESSOS_SEM_PRATICA.includes(m.tipoProcesso)) {
+    if (m.tipoProcesso === "especializado") add("curso_especializado");
+    else {
+      if (m.cursoTeorico === "online") add("curso_online", "Curso de reciclagem online");
+      add("exame_teorico", "Prova teórica da reciclagem");
+    }
     return novas.map((e, i) => ({
       ...e,
       ordem: i + 1,

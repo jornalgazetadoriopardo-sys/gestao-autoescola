@@ -211,12 +211,18 @@ export async function removerContrato() {
 export async function salvarImpressora(_: EstadoForm, dados: FormData): Promise<EstadoForm> {
   const sessao = await exigirAdmin();
   const impressoraRecibo = dados.get("impressoraRecibo") === "termica" ? "termica" : "a4";
+  const larguraTermica = Number(dados.get("larguraTermica"));
+  if (!Number.isInteger(larguraTermica) || larguraTermica < 44 || larguraTermica > 80) {
+    return { erro: "Largura inválida." };
+  }
+  const alinhamentoTermica = dados.get("alinhamentoTermica") === "centro" ? "centro" : "esquerda";
+  const campos = { impressoraRecibo, larguraTermica, alinhamentoTermica };
   const id = sessao.autoescolaId;
   const autoescola = await db.autoescola.findFirstOrThrow();
   await db.configuracao.upsert({
     where: { id },
-    create: { id, nome: autoescola.nome, impressoraRecibo },
-    update: { impressoraRecibo },
+    create: { id, nome: autoescola.nome, ...campos },
+    update: campos,
   });
   revalidatePath("/configuracoes");
   return {
@@ -239,10 +245,14 @@ export async function salvarTaxas(_: EstadoForm, dados: FormData): Promise<Estad
   }
   const id = sessao.autoescolaId;
   const autoescola = await db.autoescola.findFirstOrThrow();
+  const obsGuiaTaxas =
+    String(dados.get("obsGuiaTaxas") ?? "")
+      .trim()
+      .slice(0, 200) || null;
   await db.configuracao.upsert({
     where: { id },
-    create: { id, nome: autoescola.nome, taxasPadrao: taxas },
-    update: { taxasPadrao: taxas },
+    create: { id, nome: autoescola.nome, taxasPadrao: taxas, obsGuiaTaxas },
+    update: { taxasPadrao: taxas, obsGuiaTaxas },
   });
   revalidatePath("/configuracoes");
   return { ok: "Valores salvos! Eles entram nas próximas matrículas." };

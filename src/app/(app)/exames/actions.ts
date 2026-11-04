@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache";
 import type { Etapa } from "@prisma/client";
 import { db } from "@/lib/db";
 import { exigirSessao } from "@/lib/auth";
-import { FORMAS_PAGAMENTO, lerMoeda } from "@/lib/format";
+import { FORMAS_PAGAMENTO, hojeISO, lerMoeda } from "@/lib/format";
 import { REEXAME, TIPOS_ETAPA, lerTaxasPadrao } from "@/lib/etapas";
 import { verificarExame } from "@/lib/validar-aula";
 import type { EstadoForm } from "@/components/form-acao";
@@ -170,4 +170,14 @@ export async function receberEtapa(id: number, _: EstadoForm, dados: FormData): 
   await revalidar(etapa.matriculaId);
   const destino = destinoSeguro(String(dados.get("voltar") ?? ""), "/exames?aba=receber");
   redirect(`${destino}${destino.includes("?") ? "&" : "?"}taxaRecebida=${id}`);
+}
+
+// Taxa que o aluno paga direto no banco (ex.: guia do Detran): marca que o
+// aluno já pagou (hoje) ou desfaz.
+export async function marcarPagamentoAluno(id: number, pago: boolean) {
+  await exigirSessao();
+  const etapa = await db.etapa.findUnique({ where: { id } });
+  if (!etapa || etapa.cobranca !== "aluno") return;
+  await db.etapa.update({ where: { id }, data: { pagoEm: pago ? dia(hojeISO()) : null, forma: null } });
+  await revalidar(etapa.matriculaId);
 }

@@ -7,7 +7,14 @@ import { exigirSessao } from "@/lib/auth";
 import { CATEGORIAS, hojeISO, lerMoeda, lerPercentual } from "@/lib/format";
 import { gerarParcelas } from "@/lib/parcelas";
 import { FORMAS_ENTRADA, FORMAS_MATRICULA } from "@/lib/pagamentos";
-import { CURSOS_TEORICOS, PROCESSOS_COM_CNH, TIPOS_PROCESSO, gerarEtapas, lerTaxasPadrao } from "@/lib/etapas";
+import {
+  CURSOS_TEORICOS,
+  PROCESSOS_COM_CNH,
+  PROCESSOS_SEM_PRATICA,
+  TIPOS_PROCESSO,
+  gerarEtapas,
+  lerTaxasPadrao,
+} from "@/lib/etapas";
 import { praticasPorCategoria } from "@/lib/aulas";
 import { lerCanceladas, semCategoria, type CategoriaCancelada } from "@/lib/categorias";
 import type { EstadoForm } from "@/components/form-acao";
@@ -68,7 +75,7 @@ export async function criarMatricula(alunoId: number, _: EstadoForm, dados: Form
   if (qtdPraticas === null || qtdTeoricas === null) {
     return { erro: "Informe a quantidade de aulas (de cada categoria)." };
   }
-  if (qtdPraticas + qtdTeoricas === 0 && tipoProcesso !== "reciclagem") {
+  if (qtdPraticas + qtdTeoricas === 0 && !PROCESSOS_SEM_PRATICA.includes(tipoProcesso)) {
     return { erro: "A matrícula precisa ter ao menos uma aula." };
   }
   if (valorTotal === null) return { erro: "Valor total inválido. Use o formato 1.500,00." };
@@ -214,7 +221,7 @@ export async function editarMatricula(matriculaId: number, _: EstadoForm, dados:
     return { erro: "Informe a quantidade de aulas (de cada categoria)." };
   }
   const tipoProcesso = String(dados.get("tipoProcesso") ?? "");
-  if (qtdPraticas + qtdTeoricas === 0 && tipoProcesso !== "reciclagem") {
+  if (qtdPraticas + qtdTeoricas === 0 && !PROCESSOS_SEM_PRATICA.includes(tipoProcesso)) {
     return { erro: "A matrícula precisa ter ao menos uma aula." };
   }
   if (valorTotal === null) return { erro: "Valor total inválido. Use o formato 1.500,00." };

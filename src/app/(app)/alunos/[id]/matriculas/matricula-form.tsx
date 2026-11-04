@@ -71,11 +71,11 @@ export function MatriculaForm({
             aoMudar={(v) => {
               setProcesso(v);
               if (v === "adicao") setCurso("dispensado");
-              if (v === "reciclagem") setCurso("autoescola");
+              if (v === "reciclagem" || v === "especializado") setCurso("autoescola");
             }}
           />
           <Opcoes
-            key={processo === "adicao" || processo === "reciclagem" ? processo : "outro"}
+            key={["adicao", "reciclagem", "especializado"].includes(processo) ? processo : "outro"}
             nome="cursoTeorico"
             legenda="Curso teórico"
             opcoes={CURSOS_TEORICOS}

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { FileText, Receipt } from "lucide-react";
 import { FormAcao } from "@/components/form-acao";
+import { Campo, Select } from "@/components/ui";
 import { salvarImpressora } from "./actions";
 
 const OPCOES = [
@@ -20,7 +21,26 @@ const OPCOES = [
   },
 ];
 
-export function ImpressoraForm({ atual }: { atual: string }) {
+// Larguras úteis comuns: bobina de 80 mm imprime até 72 mm; bobina de 58 mm, até 48 mm.
+const LARGURAS = [
+  [72, "72 mm (largura máxima da bobina de 80 mm)"],
+  [70, "70 mm"],
+  [68, "68 mm (recomendado)"],
+  [66, "66 mm"],
+  [64, "64 mm"],
+  [60, "60 mm"],
+  [48, "48 mm (bobina de 58 mm)"],
+] as const;
+
+export function ImpressoraForm({
+  atual,
+  largura,
+  alinhamento,
+}: {
+  atual: string;
+  largura: number;
+  alinhamento: string;
+}) {
   const [escolha, setEscolha] = useState(atual);
   return (
     <FormAcao acao={salvarImpressora} textoBotao="Salvar">
@@ -52,6 +72,31 @@ export function ImpressoraForm({ atual }: { atual: string }) {
               </label>
             );
           })}
+        </div>
+      </fieldset>
+      <fieldset className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+        <legend className="px-1 text-base font-medium text-slate-800">Ajuste da térmica</legend>
+        <p className="mb-3 text-sm text-slate-600">
+          Se a impressão estiver cortando um pedaço do lado direito, diminua a largura ou deixe encostado à esquerda.
+          Use o <b>cupom de teste</b> (ao lado) para conferir: ele tem uma régua em milímetros.
+        </p>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Campo label="Largura da impressão">
+            <Select name="larguraTermica" defaultValue={String(largura)}>
+              {LARGURAS.map(([mm, texto]) => (
+                <option key={mm} value={mm}>
+                  {texto}
+                </option>
+              ))}
+              {!LARGURAS.some(([mm]) => mm === largura) && <option value={largura}>{largura} mm</option>}
+            </Select>
+          </Campo>
+          <Campo label="Posição no papel">
+            <Select name="alinhamentoTermica" defaultValue={alinhamento}>
+              <option value="esquerda">Encostado à esquerda (recomendado)</option>
+              <option value="centro">Centralizado</option>
+            </Select>
+          </Campo>
         </div>
       </fieldset>
       <p className="text-sm text-slate-600">

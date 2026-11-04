@@ -8,12 +8,14 @@ import {
   Flag,
   HandCoins,
   Hourglass,
+  Landmark,
   type LucideIcon,
 } from "lucide-react";
 import { BotaoLink, Cabecalho, Cartao, IconeRedondo, Tabela, Vazio, type CorIcone } from "@/components/ui";
 import { db } from "@/lib/db";
 import { formatarMoeda, hojeISO } from "@/lib/format";
 import { prontosParaExamePratico } from "@/lib/prontos-exame";
+import { TIPOS_GUIA } from "@/lib/guia-taxas";
 import { AvisoTaxaRecebida } from "./aviso-taxa";
 import { TabelaEtapas } from "./tabela-etapas";
 
@@ -37,6 +39,13 @@ const ABAS: { id: string; label: string; icone: LucideIcon; cor: CorIcone; vazio
   },
   { id: "semdata", label: "Ainda sem data", icone: ClipboardList, cor: "cinza", vazio: "Todos os exames têm data." },
   { id: "receber", label: "Taxas a receber", icone: HandCoins, cor: "verde", vazio: "Nenhuma taxa a receber." },
+  {
+    id: "detran",
+    label: "Taxas do Detran que o aluno não pagou",
+    icone: Landmark,
+    cor: "vermelho",
+    vazio: "Todos os alunos pagaram as taxas do Detran (ou elas não estão cadastradas).",
+  },
 ];
 
 // Visão geral do processo de todos os alunos ativos: o que está marcado,
@@ -55,6 +64,15 @@ export default async function ExamesPage({
     resultado: { ...ativos, resultado: null, data: { lt: hoje } },
     semdata: { ...ativos, resultado: null, data: null },
     receber: { cobranca: "autoescola", pagoEm: null, valorCentavos: { gt: 0 } },
+    // Pagas pelo próprio aluno no banco (guia de taxas), ainda não marcadas como pagas.
+    detran: {
+      ...ativos,
+      tipo: { in: TIPOS_GUIA },
+      cobranca: "aluno",
+      valorCentavos: { gt: 0 },
+      pagoEm: null,
+      resultado: null,
+    },
   };
   const abasDeEtapa = ABAS.filter((a) => a.id !== "prontos");
 
@@ -80,7 +98,7 @@ export default async function ExamesPage({
         cor="roxo"
       />
       <AvisoTaxaRecebida id={taxaRecebida} />
-      <div className="mb-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-5">
+      <div className="mb-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {ABAS.map((a, i) => (
           <Link key={a.id} href={`/exames?aba=${a.id}`}>
             <Cartao
