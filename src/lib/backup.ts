@@ -29,6 +29,7 @@ export async function exportarAutoescola(autoescolaId: number) {
     etapas,
     feriados,
     modelos,
+    posts,
   ] = await Promise.all([
     dbGlobal.configuracao.findUnique({ where: { id: autoescolaId }, omit: { id: true, contratoArquivo: false } }),
     dbGlobal.usuario.findMany({
@@ -54,6 +55,11 @@ export async function exportarAutoescola(autoescolaId: number) {
       orderBy: { id: "asc" },
       where: { autoescolaId },
       omit: { autoescolaId: true },
+    }),
+    dbGlobal.postSocial.findMany({
+      orderBy: { id: "asc" },
+      where: { autoescolaId },
+      omit: { autoescolaId: true, imagem: false },
     }),
   ]);
   return {
@@ -83,6 +89,7 @@ export async function exportarAutoescola(autoescolaId: number) {
     feriados,
     // Modelos de documentos (.docx) em base64, como o contrato.
     modelos: modelos.map((m) => ({ ...m, arquivo: Buffer.from(m.arquivo).toString("base64") })),
+    posts,
   };
 }
 
@@ -181,6 +188,7 @@ export async function importarAutoescola(arquivo: unknown) {
   const etapas = lista(o, "etapas");
   const feriados = lista(o, "feriados");
   const modelos = lista(o, "modelos");
+  const posts = lista(o, "posts");
 
   // E-mail de login é único no sistema todo.
   const u = ler("usuários");
@@ -457,6 +465,19 @@ export async function importarAutoescola(arquivo: unknown) {
           nome: mo.str(x, "nome"),
           arquivo: Buffer.from(mo.str(x, "arquivo"), "base64"),
           enviadoEm: mo.dataN(x, "enviadoEm") ?? undefined,
+        })),
+      });
+
+      const po = ler("posts");
+      await tx.postSocial.createMany({
+        data: posts.map((x) => ({
+          autoescolaId,
+          modelo: po.str(x, "modelo"),
+          formato: po.strN(x, "formato") ?? "feed",
+          titulo: po.str(x, "titulo"),
+          legenda: po.str(x, "legenda"),
+          imagem: po.str(x, "imagem"),
+          criadoEm: po.dataN(x, "criadoEm") ?? undefined,
         })),
       });
 

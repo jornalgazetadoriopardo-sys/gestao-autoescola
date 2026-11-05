@@ -8,7 +8,7 @@ import { sessaoDoCookie } from "./sessao-atual";
 // A foto do aluno e o arquivo do contrato só são lidos quando pedidos
 // (omit: { foto: false }), para as consultas comuns não carregarem arquivos.
 function novoCliente() {
-  return new PrismaClient({ datasourceUrl: urlDoBanco(), omit: { aluno: { foto: true, govbrSenha: true }, configuracao: { contratoArquivo: true } } });
+  return new PrismaClient({ datasourceUrl: urlDoBanco(), omit: { aluno: { foto: true, govbrSenha: true }, configuracao: { contratoArquivo: true }, postSocial: { imagem: true } } });
 }
 
 // Reaproveita a conexão entre recarregamentos no modo de desenvolvimento.
@@ -54,6 +54,7 @@ const FILTRO: Record<string, (autoescolaId: number) => object> = {
   Despesa: (id) => ({ autoescolaId: id }),
   Feriado: (id) => ({ autoescolaId: id }),
   ModeloDocumento: (id) => ({ autoescolaId: id }),
+  PostSocial: (id) => ({ autoescolaId: id }),
 };
 
 // Coluna preenchida automaticamente ao criar.
@@ -65,6 +66,7 @@ const COLUNA: Record<string, string> = {
   Despesa: "autoescolaId",
   Feriado: "autoescolaId",
   ModeloDocumento: "autoescolaId",
+  PostSocial: "autoescolaId",
   Configuracao: "id",
 };
 

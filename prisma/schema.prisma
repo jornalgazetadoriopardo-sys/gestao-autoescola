@@ -27,6 +27,7 @@ model Autoescola {
   despesas     Despesa[]
   feriados     Feriado[]
   modelos      ModeloDocumento[]
+  posts        PostSocial[]
   configuracao Configuracao?
 }
 
@@ -357,4 +358,21 @@ model Feriado {
   criadoEm     DateTime   @default(now())
 
   @@index([autoescolaId])
+}
+
+// Posts para redes sociais criados na seção Redes sociais (imagem pronta e
+// legenda). A imagem é um JPEG em data URL, gerado no navegador.
+model PostSocial {
+  id           Int        @id @default(autoincrement())
+  autoescolaId Int
+  autoescola   Autoescola @relation(fields: [autoescolaId], references: [id])
+  // Ver MODELOS_POST em src/lib/posts.ts
+  modelo       String
+  formato      String     @default("feed")
+  titulo       String
+  legenda      String
+  imagem       String
+  criadoEm     DateTime   @default(now())
+
+  @@index([autoescolaId, criadoEm])
 }

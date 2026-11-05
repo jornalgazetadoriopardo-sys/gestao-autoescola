@@ -89,6 +89,12 @@ presença e pagamentos.
   "Já paguei"
 - **Veículos** com histórico de manutenção e **lembretes** ("me lembrar no dia...")
   que aparecem na tela inicial 7 dias antes
+- **Redes sociais** (menu Divulgação): seis modelos de post (aluno aprovado, matrículas/promoção,
+  aviso/feriado, dica de trânsito, nova turma/curso, depoimento) em feed quadrado ou stories, com
+  a cor e o logotipo da autoescola. Preenche as informações (ou puxa o aluno do cadastro, com a
+  foto), e o sistema monta a imagem e a legenda com contato e hashtags. Dá para baixar, copiar a
+  legenda, publicar (no celular abre o compartilhamento do aparelho: Instagram, Facebook,
+  WhatsApp; no computador baixa a imagem, copia a legenda e abre a rede) e salvar no sistema
 - **Relatórios** para imprimir ou salvar em PDF: do aluno (aulas, presenças,
   faltas, quanto falta para concluir e pagamentos), financeiro (para o administrador:
   entradas, despesas, lucro, retiradas e sobra no caixa), despesas por tipo e por pessoa,
