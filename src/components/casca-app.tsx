@@ -13,6 +13,7 @@ import {
   House,
   LoaderCircle,
   LogOut,
+  Megaphone,
   Menu,
   Receipt,
   Settings,
@@ -46,6 +47,10 @@ const GRUPOS: { titulo: string; itens: Item[] }[] = [
       { href: "/despesas", label: "Despesas", icone: Receipt, soAdmin: true },
       { href: "/relatorios", label: "Relatórios", icone: FileText },
     ],
+  },
+  {
+    titulo: "Divulgação",
+    itens: [{ href: "/posts", label: "Redes sociais", icone: Megaphone }],
   },
   {
     titulo: "Cadastros",
