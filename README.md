@@ -89,12 +89,17 @@ presença e pagamentos.
   "Já paguei"
 - **Veículos** com histórico de manutenção e **lembretes** ("me lembrar no dia...")
   que aparecem na tela inicial 7 dias antes
-- **Redes sociais** (menu Divulgação): seis modelos de post (aluno aprovado, matrículas/promoção,
-  aviso/feriado, dica de trânsito, nova turma/curso, depoimento) em feed quadrado ou stories, com
-  a cor e o logotipo da autoescola. Preenche as informações (ou puxa o aluno do cadastro, com a
-  foto), e o sistema monta a imagem e a legenda com contato e hashtags. Dá para baixar, copiar a
-  legenda, publicar (no celular abre o compartilhamento do aparelho: Instagram, Facebook,
-  WhatsApp; no computador baixa a imagem, copia a legenda e abre a rede) e salvar no sistema
+- **Redes sociais** (menu Divulgação): 13 modelos de post, com filtro por assunto (alunos, vendas,
+  avisos, conteúdo, a autoescola): aluno aprovado, resultados do mês (número vindo do sistema),
+  depoimento, matrículas, promoção, aviso, data comemorativa, horário de atendimento, dica de
+  trânsito, quiz, nova turma, nossa frota e instrutor. Formatos quadrado, retrato 4:5 e stories.
+  O sistema monta a imagem e a legenda (com contato, Instagram e hashtags); dá para baixar, copiar,
+  publicar (no celular abre o compartilhamento do aparelho) e salvar
+  - **Identidade visual** (Configurações > Aparência): combinações de cores prontas ou cores
+    escolhidas no seletor (ou pelo código #RRGGBB), fontes de título e de texto (Montserrat,
+    Poppins, Bebas Neue, Playfair...), logotipo, Instagram e texto legal padrão, com prévia ao vivo
+  - Em cada post, "Personalizar este post" muda só ele: cores, fontes, escurecer a foto, logotipo
+    e texto legal
 - **Relatórios** para imprimir ou salvar em PDF: do aluno (aulas, presenças,
   faltas, quanto falta para concluir e pagamentos), financeiro (para o administrador:
   entradas, despesas, lucro, retiradas e sobra no caixa), despesas por tipo e por pessoa,

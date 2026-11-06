@@ -11,7 +11,16 @@ export type CampoPost = {
   max?: number;
 };
 
+export const CATEGORIAS_POST: Record<string, string> = {
+  alunos: "Alunos",
+  vendas: "Vendas",
+  avisos: "Avisos",
+  conteudo: "Conteúdo",
+  institucional: "A autoescola",
+};
+
 export type ModeloPost = {
+  categoria: keyof typeof CATEGORIAS_POST;
   titulo: string;
   descricao: string;
   campos: CampoPost[];
@@ -20,13 +29,15 @@ export type ModeloPost = {
 };
 
 export const FORMATOS_POST = {
-  feed: { titulo: "Feed (quadrado)", largura: 1080, altura: 1080 },
+  feed: { titulo: "Quadrado", largura: 1080, altura: 1080 },
+  retrato: { titulo: "Retrato 4:5", largura: 1080, altura: 1350 },
   story: { titulo: "Stories / Status", largura: 1080, altura: 1920 },
 } as const;
 export type FormatoPost = keyof typeof FORMATOS_POST;
 
 export const MODELOS_POST: Record<string, ModeloPost> = {
   aprovado: {
+    categoria: "alunos",
     titulo: "Aluno aprovado",
     descricao: "Comemore quem passou no exame prático.",
     campos: [
@@ -38,6 +49,7 @@ export const MODELOS_POST: Record<string, ModeloPost> = {
     exemplo: { nome: "Ana Beatriz", categoria: "B", mensagem: "Parabéns pela conquista!" },
   },
   matriculas: {
+    categoria: "vendas",
     titulo: "Matrículas abertas / promoção",
     descricao: "Divulgue preço, condições e a validade da oferta.",
     campos: [
@@ -62,6 +74,7 @@ export const MODELOS_POST: Record<string, ModeloPost> = {
     },
   },
   aviso: {
+    categoria: "avisos",
     titulo: "Aviso / feriado",
     descricao: "Recesso, feriado, mudança de horário.",
     campos: [
@@ -76,6 +89,7 @@ export const MODELOS_POST: Record<string, ModeloPost> = {
     },
   },
   dica: {
+    categoria: "conteudo",
     titulo: "Dica de trânsito",
     descricao: "Conteúdo educativo para engajar seguidores.",
     campos: [
@@ -88,6 +102,7 @@ export const MODELOS_POST: Record<string, ModeloPost> = {
     },
   },
   curso: {
+    categoria: "institucional",
     titulo: "Nova turma / curso",
     descricao: "Reciclagem, curso especializado, turma teórica.",
     campos: [
@@ -99,6 +114,7 @@ export const MODELOS_POST: Record<string, ModeloPost> = {
     exemplo: { curso: "Curso de reciclagem", inicio: "10/11", horario: "19h às 22h", detalhes: "Vagas limitadas" },
   },
   depoimento: {
+    categoria: "alunos",
     titulo: "Depoimento de aluno",
     descricao: "A opinião de quem já tirou a CNH com vocês.",
     campos: [
@@ -115,6 +131,126 @@ export const MODELOS_POST: Record<string, ModeloPost> = {
   },
 };
 
+// Modelos acrescentados depois: mesma estrutura dos de cima.
+Object.assign(MODELOS_POST, {
+  promocao: {
+    categoria: "vendas",
+    titulo: "Promoção / desconto",
+    descricao: "Oferta com um destaque grande (ex.: 20% OFF).",
+    campos: [
+      { id: "destaque", rotulo: "Destaque", tipo: "texto", placeholder: "20% OFF", max: 16 },
+      { id: "titulo", rotulo: "Título", tipo: "texto", max: 40 },
+      { id: "texto", rotulo: "Texto", tipo: "textarea", max: 160 },
+      { id: "validade", rotulo: "Validade", tipo: "texto", placeholder: "Só até sexta-feira", max: 40 },
+      { id: "foto", rotulo: "Foto de fundo (opcional)", tipo: "foto" },
+    ],
+    exemplo: {
+      destaque: "20% OFF",
+      titulo: "Semana da habilitação",
+      texto: "Desconto na matrícula da categoria B pagando à vista ou no Pix.",
+      validade: "Só até sexta-feira",
+    },
+  },
+  resultados: {
+    categoria: "alunos",
+    titulo: "Resultados do mês",
+    descricao: "Quantos alunos foram aprovados (o número já vem do sistema).",
+    campos: [
+      { id: "numero", rotulo: "Número", tipo: "texto", max: 6 },
+      { id: "rotulo", rotulo: "Texto do número", tipo: "texto", max: 50 },
+      { id: "texto", rotulo: "Mensagem", tipo: "textarea", max: 140 },
+    ],
+    exemplo: {
+      numero: "32",
+      rotulo: "alunos aprovados este mês",
+      texto: "Obrigado a cada aluno pela confiança. O próximo pode ser você!",
+    },
+  },
+  comemorativa: {
+    categoria: "avisos",
+    titulo: "Data comemorativa",
+    descricao: "Dia do Motorista, Dia das Mães, Natal, aniversário da cidade...",
+    campos: [
+      { id: "data", rotulo: "Data", tipo: "texto", placeholder: "25 de julho", max: 30 },
+      { id: "titulo", rotulo: "Título", tipo: "texto", max: 40 },
+      { id: "mensagem", rotulo: "Mensagem", tipo: "textarea", max: 180 },
+      { id: "foto", rotulo: "Foto de fundo (opcional)", tipo: "foto" },
+    ],
+    exemplo: {
+      data: "25 de julho",
+      titulo: "Dia do Motorista",
+      mensagem: "Parabéns a todos que fazem do trânsito um lugar mais seguro, todos os dias.",
+    },
+  },
+  frota: {
+    categoria: "institucional",
+    titulo: "Nossa frota",
+    descricao: "Mostre um veículo novo ou a frota da autoescola.",
+    campos: [
+      { id: "foto", rotulo: "Foto do veículo", tipo: "foto" },
+      { id: "titulo", rotulo: "Título", tipo: "texto", max: 40 },
+      { id: "modelo", rotulo: "Veículo", tipo: "texto", placeholder: "Chevrolet Onix 2025", max: 40 },
+      { id: "detalhes", rotulo: "Detalhes", tipo: "texto", placeholder: "Ar-condicionado e duplo comando", max: 60 },
+    ],
+    exemplo: {
+      titulo: "Carro novo na frota!",
+      modelo: "Chevrolet Onix 2025",
+      detalhes: "Ar-condicionado, câmbio manual e duplo comando",
+    },
+  },
+  equipe: {
+    categoria: "institucional",
+    titulo: "Instrutor / equipe",
+    descricao: "Apresente um instrutor ou alguém da equipe.",
+    campos: [
+      { id: "foto", rotulo: "Foto", tipo: "foto" },
+      { id: "nome", rotulo: "Nome", tipo: "texto", max: 40 },
+      { id: "cargo", rotulo: "Função", tipo: "texto", placeholder: "Instrutor categorias A e B", max: 50 },
+      { id: "texto", rotulo: "Apresentação", tipo: "textarea", max: 160 },
+    ],
+    exemplo: {
+      nome: "Carlos Pereira",
+      cargo: "Instrutor categorias A e B",
+      texto: "Há 12 anos ensinando a dirigir com calma e segurança.",
+    },
+  },
+  quiz: {
+    categoria: "conteudo",
+    titulo: "Pergunta e resposta",
+    descricao: "Quiz de trânsito para os seguidores comentarem.",
+    campos: [
+      { id: "pergunta", rotulo: "Pergunta", tipo: "textarea", max: 140 },
+      { id: "alternativas", rotulo: "Alternativas (uma por linha)", tipo: "textarea", ajuda: "Até 4 linhas." },
+      { id: "chamada", rotulo: "Chamada", tipo: "texto", placeholder: "Responda nos comentários!", max: 40 },
+    ],
+    exemplo: {
+      pergunta: "Qual a distância mínima para estacionar de uma esquina?",
+      alternativas: "3 metros\n5 metros\n10 metros",
+      chamada: "Responda nos comentários!",
+    },
+  },
+  horario: {
+    categoria: "avisos",
+    titulo: "Horário de atendimento",
+    descricao: "Dias e horários da secretaria e das aulas.",
+    campos: [
+      { id: "titulo", rotulo: "Título", tipo: "texto", max: 40 },
+      {
+        id: "linhas",
+        rotulo: "Horários (uma linha por dia)",
+        tipo: "textarea",
+        ajuda: "Ex.: Segunda a sexta: 8h às 19h",
+      },
+      { id: "obs", rotulo: "Observação", tipo: "texto", max: 60 },
+    ],
+    exemplo: {
+      titulo: "Horário de atendimento",
+      linhas: "Segunda a sexta: 8h às 19h\nSábado: 8h às 12h\nDomingo e feriados: fechado",
+      obs: "Aulas práticas com hora marcada",
+    },
+  },
+} satisfies Record<string, ModeloPost>);
+
 export const DICAS_TRANSITO = [
   "Mantenha distância segura do carro da frente: conte dois segundos depois que ele passar por um ponto fixo.",
   "Use a seta sempre, mesmo quando não houver ninguém por perto. É obrigatório e evita acidentes.",
@@ -128,7 +264,13 @@ export const DICAS_TRANSITO = [
   "Cansou? Pare e descanse. Dirigir com sono é tão perigoso quanto dirigir alcoolizado.",
 ];
 
-export type Autoescola = { nome: string; cidade: string | null; uf: string | null; contato: string | null };
+export type Autoescola = {
+  nome: string;
+  cidade: string | null;
+  uf: string | null;
+  contato: string | null;
+  instagram?: string | null;
+};
 
 function hashtagCidade(cidade: string | null) {
   if (!cidade) return "";
@@ -140,9 +282,11 @@ function hashtagCidade(cidade: string | null) {
 }
 
 function rodape(a: Autoescola) {
-  const linhas = [a.contato && `📲 ${a.contato}`, a.cidade && `📍 ${a.cidade}${a.uf ? `/${a.uf}` : ""}`].filter(
-    Boolean,
-  );
+  const linhas = [
+    a.contato && `📲 ${a.contato}`,
+    a.instagram && `📸 ${a.instagram}`,
+    a.cidade && `📍 ${a.cidade}${a.uf ? `/${a.uf}` : ""}`,
+  ].filter(Boolean);
   return `${linhas.length ? `\n\n${linhas.join("\n")}` : ""}\n\n#autoescola #cnh #habilitacao #direcao${hashtagCidade(a.cidade)}`;
 }
 
@@ -196,6 +340,55 @@ export function legendas(modelo: string, d: Record<string, string>, a: Autoescol
         `⭐⭐⭐⭐⭐\n\n“${v("depoimento")}”\n\n— ${nome}${cat ? `, habilitado(a)${cat}` : ""}\n\nObrigado pelo carinho, ${primeiro}! 💙${fim}`,
         `Quem tira a CNH com a gente recomenda! 🙌\n\n“${v("depoimento")}”\n— ${nome}\n\nVem fazer parte dessa história também.${fim}`,
         `O que nossos alunos dizem 💬\n\n“${v("depoimento")}”\n\n${nome}${cat}. Muito obrigado!${fim}`,
+      ];
+    case "promocao":
+      return [
+        `🔥 ${v("titulo", "Promoção")}: ${v("destaque")}!\n\n${v("texto")}${v("validade") ? `\n\n⏳ ${v("validade")}` : ""}\n\nChame no WhatsApp e aproveite!${fim}`,
+        `Oferta especial na ${a.nome} 💥\n\n${v("destaque")} — ${v("texto")}${v("validade") ? `\n${v("validade")}.` : ""}\n\nNão deixe para depois!${fim}`,
+        `${v("destaque")} pra você tirar a CNH! 🚗\n\n${v("titulo")}\n${v("texto")}${v("validade") ? `\n\n📅 ${v("validade")}` : ""}${fim}`,
+      ];
+    case "resultados":
+      return [
+        `🏆 ${v("numero")} ${v("rotulo", "alunos aprovados")}!\n\n${v("texto")}\n\nQuer ser o próximo? Fale com a gente!${fim}`,
+        `Resultado que dá orgulho 🙌\n\nForam ${v("numero")} ${v("rotulo", "alunos aprovados")} aqui na ${a.nome}.\n${v("texto")}${fim}`,
+        `${v("numero")} sonhos realizados 🚗💨\n\n${v("texto")}\n\nParabéns a todos os nossos alunos!${fim}`,
+      ];
+    case "comemorativa":
+      return [
+        `${v("titulo")}${v("data") ? ` — ${v("data")}` : ""} 💙\n\n${v("mensagem")}\n\nCom carinho, ${a.nome}.${fim}`,
+        `Hoje é ${v("titulo")}! 🎉\n\n${v("mensagem")}${fim}`,
+        `✨ ${v("titulo")} ✨\n\n${v("mensagem")}\n\nUm abraço de toda a equipe da ${a.nome}!${fim}`,
+      ];
+    case "frota":
+      return [
+        `🚗 ${v("titulo", "Nossa frota")}\n\n${v("modelo")}${v("detalhes") ? `\n✅ ${v("detalhes")}` : ""}\n\nAprenda a dirigir com conforto e segurança. Agende sua aula!${fim}`,
+        `Novidade na ${a.nome}! 😍\n\nChegou o ${v("modelo")}${v("detalhes") ? ` — ${v("detalhes").toLowerCase()}` : ""}.\n\nVem fazer sua aula nele!${fim}`,
+        `Conheça nossa frota 👇\n\n${v("modelo")}\n${v("detalhes")}\n\nVeículos revisados e com duplo comando para sua segurança.${fim}`,
+      ];
+    case "equipe":
+      return [
+        `Conheça quem faz a ${a.nome} 💙\n\n${nome}${v("cargo") ? ` — ${v("cargo")}` : ""}.\n${v("texto")}${fim}`,
+        `👋 Este é o ${primeiro}!\n\n${v("cargo")}\n${v("texto")}\n\nVem fazer aula com a nossa equipe!${fim}`,
+        `Nossa equipe 🙌\n\n${nome}\n${v("cargo")}\n\n“${v("texto")}”${fim}`,
+      ];
+    case "quiz": {
+      const alts = v("alternativas")
+        .split("\n")
+        .map((l) => l.trim())
+        .filter(Boolean)
+        .map((l, i) => `${"ABCD"[i]}) ${l}`)
+        .join("\n");
+      return [
+        `🤔 Você sabe?\n\n${v("pergunta")}\n\n${alts}\n\n${v("chamada", "Responda nos comentários!")} 👇${fim}`,
+        `Quiz do trânsito 🚦\n\n${v("pergunta")}\n${alts}\n\nComente a letra certa e marque um amigo!${fim}`,
+        `Teste rápido 📝\n\n${v("pergunta")}\n\n${alts}\n\nAmanhã a gente posta a resposta!${fim}`,
+      ];
+    }
+    case "horario":
+      return [
+        `🕗 ${v("titulo", "Horário de atendimento")}\n\n${v("linhas")}${v("obs") ? `\n\n${v("obs")}` : ""}\n\nEstamos te esperando!${fim}`,
+        `Anote nossos horários 📌\n\n${v("linhas")}${v("obs") ? `\n\n${v("obs")}.` : ""}${fim}`,
+        `Precisa falar com a gente? 📲\n\n${v("linhas")}\n\nNo WhatsApp também respondemos!${fim}`,
       ];
     default:
       return [fim.trim()];

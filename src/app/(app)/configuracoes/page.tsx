@@ -10,6 +10,7 @@ import {
   FileText,
   IdCard,
   KeyRound,
+  Megaphone,
   Pencil,
   Printer,
   Settings,
@@ -57,6 +58,10 @@ import { FINAIS, NOMES_MESES, TIPOS_LICENCIAMENTO, lerCalendario } from "@/lib/l
 import { alternarUsuario, criarUsuario, excluirUsuario, removerContrato, salvarContrato, trocarSenha } from "./actions";
 import { ConfigForm } from "./config-form";
 import { SeletorPaleta } from "./seletor-paleta";
+import { FormIdentidade } from "./form-identidade";
+import { marcaDaAutoescola } from "../posts/marca";
+import { lerIdentidade } from "@/lib/identidade";
+import { coresDaPaleta } from "@/lib/cores";
 import { CopiarMarcacao } from "./copiar-marcacao";
 import { ImpressoraForm } from "./impressora-form";
 
@@ -529,21 +534,37 @@ async function Taxas() {
 }
 
 async function Aparencia() {
-  const config = await obterConfigCompleta();
+  const [config, marca] = await Promise.all([obterConfigCompleta(), marcaDaAutoescola()]);
   return (
-    <Cartao className="max-w-3xl">
-      <h2 className="mb-1 flex items-center gap-2 text-lg font-semibold">
-        <Palette className="size-6 text-blue-600" aria-hidden /> Cor principal
-      </h2>
-      <p className="mb-5 text-base text-slate-600">
-        Escolha a cor que combina com a sua autoescola. Ela aparece nos botões, no menu lateral, nas abas e nos
-        destaques de todas as telas, para todos os usuários. O modo claro ou escuro continua sendo escolhido por cada
-        pessoa, no menu.
-      </p>
-      <FormAcao acao={salvarPaleta} textoBotao="Aplicar cor">
-        <SeletorPaleta atual={config.paleta} />
-      </FormAcao>
-    </Cartao>
+    <div className="space-y-6">
+      <Cartao className="max-w-3xl">
+        <h2 className="mb-1 flex items-center gap-2 text-lg font-semibold">
+          <Palette className="size-6 text-blue-600" aria-hidden /> Cor principal
+        </h2>
+        <p className="mb-5 text-base text-slate-600">
+          Escolha a cor que combina com a sua autoescola. Ela aparece nos botões, no menu lateral, nas abas e nos
+          destaques de todas as telas, para todos os usuários. O modo claro ou escuro continua sendo escolhido por cada
+          pessoa, no menu.
+        </p>
+        <FormAcao acao={salvarPaleta} textoBotao="Aplicar cor">
+          <SeletorPaleta atual={config.paleta} />
+        </FormAcao>
+      </Cartao>
+      <Cartao>
+        <h2 className="mb-1 flex items-center gap-2 text-lg font-semibold">
+          <Megaphone className="size-6 text-blue-600" aria-hidden /> Identidade visual dos posts
+        </h2>
+        <p className="mb-5 text-base text-slate-600">
+          O padrão das imagens criadas em Redes sociais: cores, fontes, logotipo, Instagram e texto legal. Em cada post
+          ainda dá para ajustar, se precisar.
+        </p>
+        <FormIdentidade
+          inicial={lerIdentidade(config.identidadeVisual, config.paleta)}
+          coresDoSistema={coresDaPaleta(config.paleta)}
+          marca={marca}
+        />
+      </Cartao>
+    </div>
   );
 }
 

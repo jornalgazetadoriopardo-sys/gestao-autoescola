@@ -11,6 +11,7 @@ import { TAXAS_CONFIGURAVEIS, type TaxasPadrao } from "@/lib/etapas";
 import { lerMoeda } from "@/lib/format";
 import { feriadosAutomaticos } from "@/lib/feriados";
 import { PALETAS } from "@/lib/paletas";
+import { lerIdentidade } from "@/lib/identidade";
 import { CAMPOS_AULA, TIPOS_DOCUMENTO } from "@/lib/documentos";
 import { CALENDARIO_SP, FINAIS, lerCalendario } from "@/lib/licenciamento";
 import type { EstadoForm } from "@/components/form-acao";
@@ -401,4 +402,27 @@ export async function salvarFormatoFicha(_: EstadoForm, dados: FormData): Promis
         ? "Pronto: a ficha vai sair em meia folha, frente e verso."
         : "Pronto: a ficha vai sair na folha inteira.",
   };
+}
+
+// Identidade visual dos posts (cores, fontes, logotipo, Instagram, texto legal).
+export async function salvarIdentidade(dados: unknown): Promise<EstadoForm> {
+  const sessao = await exigirAdmin();
+  const id = sessao.autoescolaId;
+  const autoescola = await db.autoescola.findFirstOrThrow();
+  const config = await db.configuracao.findFirst({ select: { paleta: true } });
+  // Relê pelo mesmo caminho da leitura: o que não for válido vira o padrão.
+  const lida = lerIdentidade(dados, config?.paleta ?? "azul");
+  const j = dados && typeof dados === "object" ? (dados as Record<string, unknown>) : {};
+  if (typeof j.instagram === "string" && j.instagram.trim() && !lida.instagram) {
+    return { erro: "Instagram inválido. Use só o nome do perfil, ex.: @autoescolarotacerta" };
+  }
+  const identidadeVisual = { ...lida, cores: lida.combinacao === "personalizada" ? lida.cores : undefined };
+  await db.configuracao.upsert({
+    where: { id },
+    create: { id, nome: autoescola.nome, identidadeVisual },
+    update: { identidadeVisual },
+  });
+  revalidatePath("/configuracoes");
+  revalidatePath("/posts");
+  return { ok: "Identidade visual salva! Os próximos posts já saem assim." };
 }

@@ -60,6 +60,7 @@ async function configPadrao(): Promise<Configuracao> {
       larguraTermica: 68,
       alinhamentoTermica: "esquerda",
       obsGuiaTaxas: null,
+      identidadeVisual: null,
     }
   );
 }

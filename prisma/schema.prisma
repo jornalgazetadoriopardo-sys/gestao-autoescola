@@ -302,6 +302,8 @@ model Configuracao {
   alinhamentoTermica      String     @default("esquerda")
   // Observação impressa na guia de taxas do Detran (onde o aluno paga).
   obsGuiaTaxas            String?
+  // Identidade visual dos posts (cores, fontes, Instagram, texto legal): ver src/lib/identidade.ts.
+  identidadeVisual        Json?
 }
 
 // Modelos de documentos em Word (.docx) da autoescola, preenchidos com os dados

@@ -18,7 +18,10 @@ export default async function NovoPostPage({ searchParams }: { searchParams: Pro
   const comAluno = modelo === "aprovado" || modelo === "depoimento";
   const desde = new Date(`${somarDias(hojeISO(), -60)}T00:00:00Z`);
 
-  const [marca, alunos, aprovados] = await Promise.all([
+  // Resultados do mês: alunos aprovados no exame prático desde o dia 1º.
+  const hoje = hojeISO();
+  const inicioMes = new Date(`${hoje.slice(0, 7)}-01T00:00:00Z`);
+  const [marca, alunos, aprovados, aprovadosMes] = await Promise.all([
     marcaDaAutoescola(),
     comAluno
       ? db.aluno.findMany({
@@ -33,7 +36,20 @@ export default async function NovoPostPage({ searchParams }: { searchParams: Pro
           select: { matricula: { select: { alunoId: true } } },
         })
       : [],
+    modelo === "resultados"
+      ? db.etapa.findMany({
+          where: { tipo: "exame_pratico", resultado: "ok", data: { gte: inicioMes } },
+          select: { matricula: { select: { alunoId: true } } },
+        })
+      : [],
   ]);
+  const nomeMes = new Date(`${hoje}T12:00:00Z`).toLocaleDateString("pt-BR", { month: "long", timeZone: "UTC" });
+  const totalMes = new Set(aprovadosMes.map((e) => e.matricula.alunoId)).size;
+  // Sempre o número real do sistema (mesmo zero), nunca o do exemplo.
+  const inicial =
+    modelo === "resultados"
+      ? { numero: String(totalMes), rotulo: `${totalMes === 1 ? "aluno aprovado" : "alunos aprovados"} em ${nomeMes}` }
+      : undefined;
   const idsAprovados = new Set(aprovados.map((e) => e.matricula.alunoId));
   const lista: AlunoPost[] = alunos.map((a) => ({
     id: a.id,
@@ -56,7 +72,7 @@ export default async function NovoPostPage({ searchParams }: { searchParams: Pro
           </BotaoLink>
         }
       />
-      <EditorPost modelo={modelo} marca={marca} alunos={lista} />
+      <EditorPost modelo={modelo} marca={marca} alunos={lista} inicial={inicial} />
     </>
   );
 }
