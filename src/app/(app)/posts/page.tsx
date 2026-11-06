@@ -1,19 +1,20 @@
-import Link from "next/link";
-import { ImagePlus, Megaphone } from "lucide-react";
+import { ImagePlus, Megaphone, Palette } from "lucide-react";
 import { BotaoConfirmar } from "@/components/botao-confirmar";
-import { Cabecalho, Cartao, Secao, Vazio } from "@/components/ui";
+import { BotaoLink, Cabecalho, Cartao, Secao, Vazio } from "@/components/ui";
 import { db } from "@/lib/db";
 import { formatarDataLocal } from "@/lib/format";
 import { FORMATOS_POST, MODELOS_POST } from "@/lib/posts";
 import { AcoesPostSalvo } from "./acoes-post-salvo";
 import { excluirPost } from "./actions";
 import { marcaDaAutoescola } from "./marca";
-import { MiniaturaModelo } from "./miniatura";
+import { GaleriaModelos } from "./galeria-modelos";
+import { exigirSessao } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
 // Redes sociais: escolha um modelo, preencha e o sistema monta a imagem e a legenda.
 export default async function PostsPage() {
+  const admin = (await exigirSessao()).papel === "admin";
   const [marca, posts] = await Promise.all([
     marcaDaAutoescola(),
     db.postSocial.findMany({ orderBy: { criadoEm: "desc" }, take: 60 }),
@@ -28,20 +29,18 @@ export default async function PostsPage() {
         cor="roxo"
       />
 
-      <Secao titulo="Criar um post" icone={ImagePlus} />
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {Object.entries(MODELOS_POST).map(([id, m]) => (
-          <Link key={id} href={`/posts/novo?modelo=${id}`} className="group">
-            <Cartao className="h-full p-3! transition group-hover:border-blue-300 group-hover:shadow-md sm:p-3!">
-              <MiniaturaModelo modelo={id} marca={marca} />
-              <div className="px-2 pt-3 pb-1">
-                <div className="text-base font-semibold">{m.titulo}</div>
-                <div className="text-sm text-slate-600">{m.descricao}</div>
-              </div>
-            </Cartao>
-          </Link>
-        ))}
-      </div>
+      <Secao
+        titulo="Criar um post"
+        icone={ImagePlus}
+        acoes={
+          admin && (
+            <BotaoLink href="/configuracoes?aba=aparencia" variante="secundario" tamanho="pequeno" icone={Palette}>
+              Identidade visual
+            </BotaoLink>
+          )
+        }
+      />
+      <GaleriaModelos marca={marca} />
 
       <Secao titulo="Posts salvos" icone={Megaphone} />
       {posts.length === 0 ? (

@@ -238,6 +238,8 @@ export async function importarAutoescola(arquivo: unknown) {
             larguraTermica: r.intN(C, "larguraTermica") ?? undefined,
             alinhamentoTermica: r.strN(C, "alinhamentoTermica") === "centro" ? "centro" : "esquerda",
             obsGuiaTaxas: r.strN(C, "obsGuiaTaxas"),
+            identidadeVisual:
+              C.identidadeVisual && typeof C.identidadeVisual === "object" ? (C.identidadeVisual as object) : undefined,
             contratoArquivo: r.strN(C, "contratoArquivo") ? Buffer.from(r.strN(C, "contratoArquivo")!, "base64") : null,
             contratoNome: r.strN(C, "contratoNome"),
             contratoEm: r.dataN(C, "contratoEm"),
