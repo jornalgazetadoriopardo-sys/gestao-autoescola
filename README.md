@@ -123,6 +123,12 @@ presença e pagamentos.
 - **Plataforma** (só para o dono do sistema): cria autoescolas com o primeiro
   administrador, mostra quantos usuários e alunos cada uma tem e suspende ou reativa
   o acesso (os dados continuam guardados)
+- **Horário de funcionamento** (Configurações → Horários): cada dia da semana abre ou não, com
+  horário próprio (ex.: sábado até o meio-dia, domingo fechado), pausa de almoço e intervalo entre
+  as aulas. Ao agendar, horários e dias fora do funcionamento (e feriados) ficam bloqueados
+  - **Dias especiais**: libera um dia que normalmente fecha (feriado, domingo, mutirão), com horário
+  - **Exceção**: ao agendar, a caixa "Exceção" permite marcar uma aula fora do horário; ela aparece
+    na agenda com a marca "Exceção" (aluno, instrutor e veículo continuam sem conflito)
 - **Mensalidade do sistema** (Plataforma → Mensalidades): valor, dia do vencimento e forma de
   pagamento padrão (cada autoescola pode ter os seus, isenção e início da cobrança para período
   de teste). A mensalidade de cada mês é criada sozinha; se o vencimento cair em fim de semana ou

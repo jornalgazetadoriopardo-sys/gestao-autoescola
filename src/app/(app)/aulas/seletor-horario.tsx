@@ -3,6 +3,7 @@
 import { Clock } from "lucide-react";
 import { Input } from "@/components/ui";
 import {
+  instante,
   motivoOcupado,
   opcoesDeHorario,
   type Expediente,
@@ -38,6 +39,16 @@ export function SeletorHorario({
   ].filter(Boolean);
   const opcoes = opcoesDeHorario(pedido, ocupados, expediente);
   const livres = opcoes.filter((o) => !o.motivo).length;
+  // Dia inteiro fechado (feriado ou dia sem expediente), sem a exceção marcada.
+  const diaFechado =
+    pedido.data && !pedido.excecao
+      ? ocupados.find(
+          (o) =>
+            o.tipo === "fechado" &&
+            o.inicio <= instante(pedido.data, "00:00") &&
+            o.fim >= instante(pedido.data, "23:59"),
+        )
+      : undefined;
   const motivoValor = valor && pedido.data ? motivoOcupado(pedido, valor, ocupados) : null;
 
   return (
@@ -52,7 +63,9 @@ export function SeletorHorario({
           <p className="mb-2 text-sm text-slate-600">
             {carregando
               ? "Conferindo a agenda..."
-              : livres === 0
+              : diaFechado
+                ? `Dia fechado: ${diaFechado.descricao}. Escolha outra data ou marque “Exceção” abaixo.`
+                : livres === 0
                 ? "Nenhum horário livre neste dia. Escolha outra data ou outro instrutor/veículo."
                 : `${livres} ${livres === 1 ? "horário livre" : "horários livres"}. Os riscados estão ocupados.`}
           </p>

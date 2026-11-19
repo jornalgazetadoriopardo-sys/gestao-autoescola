@@ -6,7 +6,7 @@ import { expedienteDe, obterConfig } from "@/lib/config";
 import { formatarDataLocal, hojeISO } from "@/lib/format";
 import { resumoAulas, resumoPorCategoria, somarDias } from "@/lib/aulas";
 import { AulaForm, type OpcaoMatricula } from "../aula-form";
-import { carregarFeriados } from "@/lib/feriados-servidor";
+import { carregarDiasFechados } from "@/lib/feriados-servidor";
 import { AulasLoteForm } from "../aulas-lote-form";
 
 export const dynamic = "force-dynamic";
@@ -102,7 +102,7 @@ export default async function NovaAulaPage({
           matriculaInicial={matriculaInicial}
           hoje={hoje}
           expediente={expediente}
-          feriados={Object.fromEntries(await carregarFeriados(hoje, somarDias(hoje, 400)))}
+          fechados={await carregarDiasFechados(hoje, somarDias(hoje, 400))}
         />
       ) : (
         <AulaForm

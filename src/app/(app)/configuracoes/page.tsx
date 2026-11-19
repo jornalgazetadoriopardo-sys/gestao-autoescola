@@ -3,6 +3,7 @@ import {
   Building2,
   CalendarOff,
   Car,
+  Clock,
   Palette,
   ClipboardCheck,
   Download,
@@ -60,6 +61,7 @@ import { alternarUsuario, criarUsuario, excluirUsuario, removerContrato, salvarC
 import { ConfigForm } from "./config-form";
 import { SeletorPaleta } from "./seletor-paleta";
 import { FormIdentidade } from "./form-identidade";
+import { HorariosFuncionamento } from "./horarios";
 import { Mensalidade } from "./mensalidade";
 import { marcaDaAutoescola } from "../posts/marca";
 import { lerIdentidade } from "@/lib/identidade";
@@ -75,6 +77,7 @@ const abas = [
   { id: "usuarios", label: "Usuários", icone: Users, soAdmin: true },
   { id: "taxas", label: "Taxas e exames", icone: ClipboardCheck, soAdmin: true },
   { id: "licenciamento", label: "Licenciamento", icone: Car, soAdmin: true },
+  { id: "horarios", label: "Horários", icone: Clock, soAdmin: true },
   { id: "feriados", label: "Feriados", icone: CalendarOff, soAdmin: true },
   { id: "impressora", label: "Impressora", icone: Printer, soAdmin: true },
   { id: "contrato", label: "Contrato", icone: FileSignature, soAdmin: true },
@@ -124,6 +127,7 @@ export default async function ConfiguracoesPage({ searchParams }: { searchParams
       {aba === "usuarios" && <Usuarios usuarioAtual={sessao.usuarioId} />}
       {aba === "taxas" && <Taxas />}
       {aba === "licenciamento" && <Licenciamento />}
+      {aba === "horarios" && <HorariosFuncionamento />}
       {aba === "feriados" && <Feriados />}
       {aba === "impressora" && <Impressora />}
       {aba === "contrato" && <Contrato />}
@@ -589,7 +593,7 @@ async function Feriados() {
           <CalendarOff className="size-6 text-red-600" aria-hidden /> Feriados nacionais e estaduais
         </h2>
         <p className="mb-5 text-base text-slate-600">
-          Nos dias marcados não é possível agendar aulas, e o agendamento de várias aulas pula esses dias sozinho.
+          Nos dias marcados não se agendam aulas (só como exceção), e o agendamento de várias aulas pula esses dias.
           Desmarque os feriados em que a autoescola trabalha normalmente.{" "}
           {uf && ESTADUAIS[uf]
             ? `Os feriados estaduais seguem o estado cadastrado em Dados da autoescola (${uf}).`

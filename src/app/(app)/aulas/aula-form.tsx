@@ -6,6 +6,7 @@ import { Campo, Cartao, Input, Select, Textarea } from "@/components/ui";
 import { DURACOES } from "@/lib/aulas";
 import type { Expediente } from "@/lib/disponibilidade";
 import { agendarAula } from "./actions";
+import { CampoExcecao } from "./campo-excecao";
 import { SeletorHorario } from "./seletor-horario";
 import { useOcupados } from "./use-ocupados";
 
@@ -50,6 +51,7 @@ export function AulaForm({
   const [data, setData] = useState(dia);
   const [hora, setHora] = useState("");
   const [duracao, setDuracao] = useState("50");
+  const [excecao, setExcecao] = useState(false);
   const { ocupados, carregando } = useOcupados([data]);
 
   // Mostra só veículos compatíveis com a categoria da matrícula.
@@ -140,6 +142,7 @@ export function AulaForm({
                 instrutorId: Number(instrutorId) || null,
                 veiculoId: tipo === "pratica" ? Number(veiculoId) || null : null,
                 alunoId: matricula?.alunoId ?? null,
+                excecao,
               }}
               ocupados={ocupados}
               carregando={carregando}
@@ -147,6 +150,9 @@ export function AulaForm({
               valor={hora}
               onChange={setHora}
             />
+            <div className="mt-3">
+              <CampoExcecao marcado={excecao} onChange={setExcecao} />
+            </div>
           </div>
           <Campo label="Observações" className="sm:col-span-2">
             <Textarea name="obs" rows={2} />

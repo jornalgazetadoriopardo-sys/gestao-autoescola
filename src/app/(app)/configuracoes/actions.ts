@@ -12,6 +12,7 @@ import { lerMoeda } from "@/lib/format";
 import { feriadosAutomaticos } from "@/lib/feriados";
 import { PALETAS } from "@/lib/paletas";
 import { lerIdentidade } from "@/lib/identidade";
+import { faixaDaSemana, horaValida, NOMES_DIAS, type Horarios } from "@/lib/horarios";
 import { CAMPOS_AULA, TIPOS_DOCUMENTO } from "@/lib/documentos";
 import { CALENDARIO_SP, FINAIS, lerCalendario } from "@/lib/licenciamento";
 import type { EstadoForm } from "@/components/form-acao";
@@ -36,16 +37,6 @@ export async function salvarConfig(_: EstadoForm, dados: FormData): Promise<Esta
 
   const uf = texto(dados, "uf")?.toUpperCase().slice(0, 2) ?? null;
 
-  // Expediente: horários oferecidos ao agendar aulas.
-  const horaInicio = String(dados.get("horaInicio") ?? "");
-  const horaFim = String(dados.get("horaFim") ?? "");
-  const intervaloMin = Number(dados.get("intervaloMin"));
-  if (!/^\d{2}:\d{2}$/.test(horaInicio) || !/^\d{2}:\d{2}$/.test(horaFim) || horaFim <= horaInicio) {
-    return { erro: "Expediente inválido: o fim deve ser depois do início." };
-  }
-  if (![10, 15, 20, 30, 45, 50, 60, 90, 100, 120].includes(intervaloMin)) {
-    return { erro: "Escolha o intervalo entre os horários das aulas." };
-  }
   const campos = {
     nome,
     razaoSocial: texto(dados, "razaoSocial"),
@@ -61,9 +52,6 @@ export async function salvarConfig(_: EstadoForm, dados: FormData): Promise<Esta
     chavePix: texto(dados, "chavePix"),
     avisoCarne: texto(dados, "avisoCarne"),
     orientacoesAluno: texto(dados, "orientacoesAluno"),
-    horaInicio,
-    horaFim,
-    intervaloMin,
     logo: logo || null,
   };
 
@@ -425,4 +413,78 @@ export async function salvarIdentidade(dados: unknown): Promise<EstadoForm> {
   revalidatePath("/configuracoes");
   revalidatePath("/posts");
   return { ok: "Identidade visual salva! Os próximos posts já saem assim." };
+}
+
+// Horário de funcionamento: cada dia da semana, almoço e intervalo entre as aulas.
+export async function salvarHorarios(_: EstadoForm, dados: FormData): Promise<EstadoForm> {
+  const sessao = await exigirAdmin();
+  const dias: Horarios["dias"] = [];
+  for (let i = 0; i < 7; i++) {
+    const aberto = dados.get(`aberto_${i}`) === "on";
+    const inicio = String(dados.get(`inicio_${i}`) ?? "");
+    const fim = String(dados.get(`fim_${i}`) ?? "");
+    if (aberto && (!horaValida(inicio) || !horaValida(fim) || fim <= inicio)) {
+      return { erro: `${NOMES_DIAS[i]}: o horário de fechar deve ser depois do de abrir.` };
+    }
+    dias.push({
+      aberto,
+      inicio: horaValida(inicio) ? inicio : "08:00",
+      fim: horaValida(fim) && fim > inicio ? fim : "18:00",
+    });
+  }
+  if (!dias.some((d) => d.aberto)) return { erro: "Marque ao menos um dia em que a autoescola abre." };
+
+  let almoco: Horarios["almoco"] = null;
+  if (dados.get("almoco") === "on") {
+    const inicio = String(dados.get("almocoInicio") ?? "");
+    const fim = String(dados.get("almocoFim") ?? "");
+    if (!horaValida(inicio) || !horaValida(fim) || fim <= inicio) {
+      return { erro: "Almoço: o fim deve ser depois do início." };
+    }
+    almoco = { inicio, fim };
+  }
+  const intervaloMin = Number(dados.get("intervaloMin"));
+  if (![10, 15, 20, 30, 45, 50, 60, 90, 100, 120].includes(intervaloMin)) {
+    return { erro: "Escolha o intervalo entre os horários das aulas." };
+  }
+
+  const horarios: Horarios = { dias, almoco };
+  // horaInicio/horaFim guardam a faixa da semana (grade dos formulários e cópias antigas).
+  const faixa = faixaDaSemana(horarios);
+  const campos = { horarios, horaInicio: faixa.inicio, horaFim: faixa.fim, intervaloMin };
+  const id = sessao.autoescolaId;
+  const autoescola = await db.autoescola.findFirstOrThrow();
+  await db.configuracao.upsert({ where: { id }, create: { id, nome: autoescola.nome, ...campos }, update: campos });
+  revalidatePath("/configuracoes");
+  revalidatePath("/aulas");
+  return { ok: "Horário de funcionamento salvo!" };
+}
+
+// Dia em que a autoescola abre fora do normal (feriado, domingo, mutirão...).
+export async function adicionarDiaEspecial(_: EstadoForm, dados: FormData): Promise<EstadoForm> {
+  const sessao = await exigirAdmin();
+  const data = String(dados.get("data") ?? "");
+  const inicio = String(dados.get("inicio") ?? "");
+  const fim = String(dados.get("fim") ?? "");
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(data)) return { erro: "Informe a data." };
+  if (!horaValida(inicio) || !horaValida(fim) || fim <= inicio) {
+    return { erro: "Informe o horário: o fim deve ser depois do início." };
+  }
+  const quando = new Date(`${data}T00:00:00Z`);
+  if (await db.diaEspecial.findFirst({ where: { data: quando } })) {
+    return { erro: "Esse dia já está na lista. Exclua o anterior para mudar o horário." };
+  }
+  await db.diaEspecial.create({
+    data: { autoescolaId: sessao.autoescolaId, data: quando, inicio, fim, motivo: texto(dados, "motivo")?.slice(0, 80) },
+  });
+  revalidatePath("/configuracoes");
+  revalidatePath("/aulas");
+  return { ok: `${data.split("-").reverse().join("/")} liberado das ${inicio} às ${fim}.` };
+}
+
+export async function excluirDiaEspecial(id: number) {
+  await exigirAdmin();
+  await db.diaEspecial.deleteMany({ where: { id } });
+  revalidatePath("/configuracoes");
+  revalidatePath("/aulas");
 }
