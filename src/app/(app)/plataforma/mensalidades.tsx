@@ -1,5 +1,15 @@
 import Link from "next/link";
-import { AlertTriangle, BadgeCheck, CalendarClock, Check, FileText, Lock, Settings2, Wallet } from "lucide-react";
+import {
+  AlertTriangle,
+  BadgeCheck,
+  CalendarClock,
+  Check,
+  FileText,
+  Lock,
+  RotateCcw,
+  Settings2,
+  Wallet,
+} from "lucide-react";
 import { BotaoConfirmar } from "@/components/botao-confirmar";
 import { FormAcao } from "@/components/form-acao";
 import { Opcoes } from "@/components/opcoes";
@@ -16,7 +26,7 @@ import {
   situacaoDaCobranca,
   type SituacaoCobranca,
 } from "@/lib/mensalidades";
-import { confirmarMensalidade, recusarAviso, salvarPlataforma } from "./actions";
+import { confirmarMensalidade, recusarAviso, salvarPlataforma, zerarCobranca } from "./actions";
 
 const data = (dia: string) => dia.split("-").reverse().join("/");
 
@@ -57,7 +67,7 @@ export async function Mensalidades() {
       _count: true,
     }),
     dbGlobal.mensalidade.aggregate({
-      where: { pagoEm: null, autoescola: { isenta: false, ativo: true } },
+      where: { pagoEm: null, autoescolaId: { in: linhas.filter((l) => l.c).map((l) => l.a.id) } },
       _sum: { valorCentavos: true },
       _count: true,
     }),
@@ -231,6 +241,24 @@ export async function Mensalidades() {
             inicial={p.bloquearAutomatico ? "on" : "off"}
           />
         </FormAcao>
+      </Cartao>
+
+      <Cartao className="max-w-4xl border border-red-100">
+        <h2 className="mb-1 flex items-center gap-2 text-lg font-semibold">
+          <RotateCcw className="size-6 text-red-600" aria-hidden /> Zerar cobrança (apagar testes)
+        </h2>
+        <p className="mb-4 text-base text-slate-600">
+          Apaga <b>todas</b> as mensalidades (pagas e em aberto) e tira o valor padrão e o valor de cada autoescola. As
+          faixas e bloqueios somem na hora e ninguém é cobrado até você cadastrar um valor de novo. A chave Pix e as
+          outras configurações continuam. Para apagar só uma mensalidade, use “Cobrança e histórico”.
+        </p>
+        <BotaoConfirmar
+          acao={zerarCobranca}
+          mensagem="Zerar a cobrança? Todas as mensalidades serão apagadas e nenhuma autoescola será cobrada até você cadastrar um valor de novo."
+          icone="desfazer"
+        >
+          Zerar cobrança
+        </BotaoConfirmar>
       </Cartao>
 
       <p className="flex items-center gap-2 text-sm text-slate-500">

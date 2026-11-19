@@ -6,7 +6,8 @@ import { exigirSuperadmin } from "@/lib/auth";
 import { dbGlobal } from "@/lib/db";
 import { dataParaInput, formatarData, formatarDataLocal, formatarMoeda, moedaParaInput } from "@/lib/format";
 import { FORMAS_COBRANCA, condicoes, lerPlataforma, situacaoDaCobranca } from "@/lib/mensalidades";
-import { confirmarMensalidade, salvarCobrancaAutoescola } from "../../actions";
+import { BotaoConfirmar } from "@/components/botao-confirmar";
+import { confirmarMensalidade, excluirMensalidade, salvarCobrancaAutoescola } from "../../actions";
 import { EtiquetaSituacao } from "../../mensalidades";
 
 export const dynamic = "force-dynamic";
@@ -131,6 +132,13 @@ export default async function CobrancaAutoescolaPage({ params }: { params: Promi
                         </Botao>
                       )}
                     </form>
+                    <BotaoConfirmar
+                      acao={excluirMensalidade.bind(null, m.id)}
+                      mensagem={`Excluir a mensalidade de ${m.competencia.split("-").reverse().join("/")}? Use para apagar testes. Se a cobrança continuar ligada, a do mês atual é criada de novo.`}
+                      icone="excluir"
+                    >
+                      Excluir
+                    </BotaoConfirmar>
                   </div>
                 </td>
               </tr>
