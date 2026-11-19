@@ -139,6 +139,10 @@ presença e pagamentos.
   - Depois do prazo: a autoescola vê só a tela com o Pix e o botão **Já paguei** (pode ser
     desligado: só avisar). "Já paguei" (com comprovante opcional) libera o acesso até o dono
     conferir; ele confirma o pagamento ou responde "Não encontrei" na Plataforma
+  - **Período de avaliação**: cada autoescola nova usa grátis por alguns dias (padrão 3, muda em
+    Plataforma → Mensalidades; o de cada autoescola em "Cobrança e histórico"). Durante a avaliação,
+    uma tarja laranja fica no topo: "Período de avaliação válido até dd/mm/aaaa. Contratar agora". A 1ª
+    mensalidade vence no último dia; sem pagamento, segue o fluxo normal (faixa vermelha e bloqueio)
   - A autoescola vê o histórico em Configurações → Mensalidade. O dono do sistema nunca é bloqueado
   - Para apagar testes: **Excluir** em cada mensalidade (Cobrança e histórico) ou **Zerar cobrança**
     (apaga todas as mensalidades e tira os valores; a chave Pix e o resto continuam)

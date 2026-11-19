@@ -28,6 +28,8 @@ model Autoescola {
   isenta              Boolean           @default(false)
   // Cobra a partir desta data (período de teste antes dela).
   cobrancaInicio      DateTime?
+  // Período de avaliação (grátis) até esta data, com a tarja laranja "Contratar agora".
+  avaliacaoAte        DateTime?
   mensalidades        Mensalidade[]
   usuarios            Usuario[]
   alunos              Aluno[]
@@ -421,6 +423,8 @@ model PlataformaConfig {
   instrucoes          String?
   // Bloqueia a autoescola depois do prazo de tolerância, se não pagar nem avisar.
   bloquearAutomatico  Boolean  @default(true)
+  // Dias de avaliação grátis dados a cada autoescola nova (0: sem avaliação).
+  diasAvaliacao       Int      @default(3)
   whatsappCobranca    String?
   atualizadoEm        DateTime @updatedAt
 }

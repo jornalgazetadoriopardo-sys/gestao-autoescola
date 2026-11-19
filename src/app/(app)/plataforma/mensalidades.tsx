@@ -36,6 +36,8 @@ export function EtiquetaSituacao({ s }: { s: SituacaoCobranca | { tipo: "isenta"
       return <Etiqueta>Não cobra</Etiqueta>;
     case "em-dia":
       return <Etiqueta cor="verde">Em dia</Etiqueta>;
+    case "avaliacao":
+      return <Etiqueta cor="amarelo">Avaliação até {data(s.vencimento).slice(0, 5)}</Etiqueta>;
     case "aviso":
       return <Etiqueta cor="azul">Vence {data(s.vencimento).slice(0, 5)}</Etiqueta>;
     case "informada":
@@ -211,6 +213,21 @@ export async function Mensalidades() {
               <Input name="cidadeRecebedor" maxLength={40} defaultValue={p.cidadeRecebedor ?? ""} />
             </Campo>
           </fieldset>
+
+          <Campo
+            label="Período de avaliação (dias)"
+            ajuda="Cada autoescola nova usa grátis por esses dias, com uma tarja laranja “Contratar agora”. A 1ª mensalidade vence no último dia. 0: sem avaliação. Dá para mudar a de cada autoescola em “Cobrança e histórico”."
+            className="max-w-md"
+          >
+            <Input
+              name="diasAvaliacao"
+              type="number"
+              min={0}
+              max={90}
+              defaultValue={p.diasAvaliacao}
+              className="w-32"
+            />
+          </Campo>
 
           <div className="grid gap-5 sm:grid-cols-2">
             <Campo

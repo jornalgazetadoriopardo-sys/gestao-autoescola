@@ -17,11 +17,28 @@ export type DadosPagamento = {
 };
 
 // Tudo o que é preciso para pagar: QR Code, chave em destaque, copiar e "Já paguei".
-export function PainelPagamento({ dados, jaPaguei = false }: { dados: DadosPagamento; jaPaguei?: boolean }) {
+export function PainelPagamento({
+  dados,
+  jaPaguei = false,
+  contratar = false,
+}: {
+  dados: DadosPagamento;
+  jaPaguei?: boolean;
+  // Contratação no fim da avaliação: o pagamento é o da 1ª mensalidade.
+  contratar?: boolean;
+}) {
   return (
     <div className="space-y-5 text-slate-900">
+      {contratar && (
+        <div className="rounded-2xl bg-orange-50 p-4 text-center text-orange-950">
+          <div className="text-lg font-bold">Contratar o Gestão Autoescola</div>
+          <p className="mt-1 text-sm">
+            Para continuar usando depois da avaliação, é só pagar a 1ª mensalidade. Os seus dados continuam todos aqui.
+          </p>
+        </div>
+      )}
       <div className="text-center">
-        <div className="text-sm text-slate-600">Mensalidade do sistema</div>
+        <div className="text-sm text-slate-600">{contratar ? "1ª mensalidade" : "Mensalidade do sistema"}</div>
         <div className="text-3xl font-bold tracking-tight">{dados.valor}</div>
         <div className="text-sm text-slate-600">Vencimento: {dados.vencimento}</div>
       </div>
@@ -76,16 +93,28 @@ export function PainelPagamento({ dados, jaPaguei = false }: { dados: DadosPagam
   );
 }
 
-// Botões "Pagar agora" e "Já paguei" das faixas; os dois abrem o modal de pagamento.
-export function BotoesPagamento({ dados, cor }: { dados: DadosPagamento; cor: "verde" | "vermelho" }) {
+// Botões "Pagar agora" e "Já paguei" das faixas (ou "Contratar agora", na avaliação);
+// todos abrem o modal de pagamento.
+export function BotoesPagamento({
+  dados,
+  cor,
+  contratar = false,
+}: {
+  dados: DadosPagamento;
+  cor: "verde" | "vermelho" | "laranja";
+  contratar?: boolean;
+}) {
   const dialogo = useRef<HTMLDialogElement>(null);
   const [jaPaguei, setJaPaguei] = useState(false);
   const abrir = (informar: boolean) => {
     setJaPaguei(informar);
     dialogo.current?.showModal();
   };
-  const principal =
-    cor === "verde" ? "bg-green-700 text-white hover:bg-green-800" : "bg-red-700 text-white hover:bg-red-800";
+  const principal = {
+    verde: "bg-green-700 text-white hover:bg-green-800",
+    vermelho: "bg-red-700 text-white hover:bg-red-800",
+    laranja: "bg-white text-orange-700 hover:bg-orange-50",
+  }[cor];
   const secundario =
     cor === "verde"
       ? "border-green-400 bg-white text-green-800 hover:bg-green-50"
@@ -99,15 +128,25 @@ export function BotoesPagamento({ dados, cor }: { dados: DadosPagamento; cor: "v
           onClick={() => abrir(false)}
           className={`inline-flex items-center gap-2 rounded-lg px-4 py-2 text-base font-semibold shadow-sm ${principal}`}
         >
-          <QrCode className="size-5" aria-hidden /> Pagar agora
+          {contratar ? (
+            <>
+              <BadgeCheck className="size-5" aria-hidden /> Contratar agora
+            </>
+          ) : (
+            <>
+              <QrCode className="size-5" aria-hidden /> Pagar agora
+            </>
+          )}
         </button>
-        <button
-          type="button"
-          onClick={() => abrir(true)}
-          className={`inline-flex items-center gap-2 rounded-lg border-2 px-4 py-2 text-base font-semibold ${secundario}`}
-        >
-          <BadgeCheck className="size-5" aria-hidden /> Já paguei
-        </button>
+        {!contratar && (
+          <button
+            type="button"
+            onClick={() => abrir(true)}
+            className={`inline-flex items-center gap-2 rounded-lg border-2 px-4 py-2 text-base font-semibold ${secundario}`}
+          >
+            <BadgeCheck className="size-5" aria-hidden /> Já paguei
+          </button>
+        )}
       </div>
 
       <dialog
@@ -128,7 +167,7 @@ export function BotoesPagamento({ dados, cor }: { dados: DadosPagamento; cor: "v
               <X className="size-6" aria-hidden />
             </button>
           </div>
-          <PainelPagamento dados={dados} jaPaguei={jaPaguei} />
+          <PainelPagamento dados={dados} jaPaguei={jaPaguei} contratar={contratar} />
         </div>
       </dialog>
     </>
