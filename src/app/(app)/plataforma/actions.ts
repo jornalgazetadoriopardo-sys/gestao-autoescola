@@ -223,3 +223,23 @@ export async function recusarAviso(id: number) {
   await dbGlobal.mensalidade.update({ where: { id }, data: { informadoEm: null } });
   revalidatePath("/", "layout");
 }
+
+// Apaga uma mensalidade (ex.: lançada em teste). Se a cobrança da autoescola
+// continuar ligada, a do mês atual volta a ser criada.
+export async function excluirMensalidade(id: number) {
+  await exigirSuperadmin();
+  await dbGlobal.mensalidade.deleteMany({ where: { id } });
+  revalidatePath("/", "layout");
+}
+
+// Zera a cobrança (depois de testar): apaga todas as mensalidades e tira os valores
+// (o padrão e o de cada autoescola). Nenhuma autoescola é cobrada até um valor ser cadastrado de novo.
+export async function zerarCobranca() {
+  await exigirSuperadmin();
+  await dbGlobal.$transaction([
+    dbGlobal.mensalidade.deleteMany({}),
+    dbGlobal.autoescola.updateMany({ data: { mensalidadeCentavos: null } }),
+    dbGlobal.plataformaConfig.updateMany({ data: { mensalidadeCentavos: null } }),
+  ]);
+  revalidatePath("/", "layout");
+}

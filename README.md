@@ -133,12 +133,15 @@ presença e pagamentos.
   pagamento padrão (cada autoescola pode ter os seus, isenção e início da cobrança para período
   de teste). A mensalidade de cada mês é criada sozinha; se o vencimento cair em fim de semana ou
   feriado nacional, passa para o próximo dia útil
-  - 2 dias úteis antes do vencimento: faixa verde no topo com QR Code, chave Pix e "copia e cola"
+  - 2 dias úteis antes do vencimento: faixa verde no topo com os botões **Pagar agora** e **Já paguei**,
+    que abrem a janela de pagamento (QR Code, chave Pix em destaque com botão de copiar e "copia e cola")
   - Depois do vencimento: faixa vermelha com o prazo (2 dias úteis) para evitar o bloqueio
   - Depois do prazo: a autoescola vê só a tela com o Pix e o botão **Já paguei** (pode ser
     desligado: só avisar). "Já paguei" (com comprovante opcional) libera o acesso até o dono
     conferir; ele confirma o pagamento ou responde "Não encontrei" na Plataforma
   - A autoescola vê o histórico em Configurações → Mensalidade. O dono do sistema nunca é bloqueado
+  - Para apagar testes: **Excluir** em cada mensalidade (Cobrança e histórico) ou **Zerar cobrança**
+    (apaga todas as mensalidades e tira os valores; a chave Pix e o resto continuam)
 - **Exportar e importar autoescola** (Plataforma): baixa um arquivo `.json` com todos os
   dados de uma autoescola (alunos, matrículas, parcelas, aulas, veículos, manutenções,
   instrutores, configurações e usuários com as senhas) e, em outro servidor, cria a

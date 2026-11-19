@@ -1,11 +1,11 @@
 import { Wallet } from "lucide-react";
 import { Cartao, Etiqueta, Tabela } from "@/components/ui";
-import { InformarPagamento } from "@/components/cobranca/informar-pagamento";
-import { CopiarTexto } from "@/components/cobranca/copiar";
+import { dadosPagamento } from "@/components/cobranca/faixa-cobranca";
+import { PainelPagamento } from "@/components/cobranca/pagamento";
 import { db } from "@/lib/db";
 import { exigirSessao } from "@/lib/auth";
 import { formatarData, formatarDataLocal, formatarMoeda } from "@/lib/format";
-import { FORMAS_COBRANCA, lerPlataforma, pixDaMensalidade, situacaoDaCobranca } from "@/lib/mensalidades";
+import { iso, lerPlataforma, situacaoDaCobranca } from "@/lib/mensalidades";
 
 // Aba "Mensalidade" das configurações: a mensalidade do sistema da autoescola.
 export async function Mensalidade() {
@@ -16,7 +16,6 @@ export async function Mensalidade() {
     db.mensalidade.findMany({ orderBy: { vencimento: "desc" }, take: 24 }),
   ]);
   const aberta = historico.find((m) => !m.pagoEm);
-  const pix = aberta ? await pixDaMensalidade(aberta, p) : null;
 
   return (
     <div className="grid gap-6 xl:grid-cols-[minmax(0,26rem)_1fr] [&>*]:min-w-0">
@@ -28,41 +27,14 @@ export async function Mensalidade() {
           <p className="mt-3 text-base text-slate-600">
             {historico.length ? "Tudo em dia. Obrigado!" : "Nenhuma mensalidade em aberto."}
           </p>
+        ) : s.tipo === "informada" && aberta.informadoEm ? (
+          <p className="mt-3 rounded-xl bg-blue-50 p-3 text-sm text-blue-900">
+            Você avisou o pagamento de {formatarMoeda(aberta.valorCentavos)} em {formatarDataLocal(aberta.informadoEm)}.
+            Estamos conferindo.
+          </p>
         ) : (
-          <div className="mt-3 space-y-4">
-            <p className="text-base">
-              Em aberto: <b>{formatarMoeda(aberta.valorCentavos)}</b>, vencimento em{" "}
-              <b>{formatarData(aberta.vencimento)}</b> ({FORMAS_COBRANCA[aberta.forma] ?? aberta.forma}).
-            </p>
-            {pix ? (
-              <div className="flex flex-wrap items-center gap-4 rounded-xl bg-slate-50 p-4">
-                <div
-                  role="img"
-                  aria-label="QR Code do Pix"
-                  className="size-32 shrink-0 rounded-lg bg-white p-1.5 [&>svg]:size-full"
-                  dangerouslySetInnerHTML={{ __html: pix.svg }}
-                />
-                <div className="min-w-0 space-y-2 text-sm">
-                  <div>
-                    Chave Pix: <b className="break-all">{pix.chave}</b>
-                  </div>
-                  <CopiarTexto
-                    texto={pix.copiaECola}
-                    rotulo="Pix copia e cola"
-                    className="border-slate-300 bg-white text-slate-700 hover:bg-slate-50"
-                  />
-                </div>
-              </div>
-            ) : (
-              p.instrucoes && <p className="rounded-xl bg-slate-50 p-4 text-sm">{p.instrucoes}</p>
-            )}
-            {s.tipo === "informada" ? (
-              <p className="rounded-xl bg-blue-50 p-3 text-sm text-blue-900">
-                Você avisou o pagamento em {formatarDataLocal(aberta.informadoEm)}. Estamos conferindo.
-              </p>
-            ) : (
-              <InformarPagamento mensalidadeId={aberta.id} />
-            )}
+          <div className="mt-4">
+            <PainelPagamento dados={await dadosPagamento(aberta, iso(aberta.vencimento), p)} />
           </div>
         )}
       </Cartao>
