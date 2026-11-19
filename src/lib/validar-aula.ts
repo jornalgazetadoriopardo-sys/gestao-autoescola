@@ -1,7 +1,8 @@
 import "server-only";
 import { db } from "./db";
 import { DURACAO_EXAME } from "./disponibilidade";
-import { carregarFeriados } from "./feriados-servidor";
+import { carregarFeriados, carregarFuncionamento } from "./feriados-servidor";
+import { foraDoHorario } from "./horarios";
 import { fimDaAula, formatarDataHora, formatarHora, resumoAulas, resumoPorCategoria } from "./aulas";
 
 export type NovaAula = {
@@ -10,6 +11,8 @@ export type NovaAula = {
   veiculoId: number | null;
   dataHora: Date;
   duracaoMin: number;
+  // Marcada como exceção: pode ficar fora do horário de funcionamento e em feriado.
+  excecao?: boolean;
 };
 
 // Situações em que a aula ocupa o saldo contratado (falta e cancelamento não ocupam).
@@ -18,12 +21,13 @@ const CONSOME_SALDO = ["agendada", "presente"];
 // Confere um grupo de aulas da mesma matrícula: aluno ativo, instrutor e veículo
 // ativos e compatíveis, saldo de aulas contratadas e conflitos de horário (com as
 // aulas já marcadas e entre as próprias aulas do grupo).
-// `editando` indica a aula que está sendo alterada, para não conflitar consigo mesma.
+// `editando` indica a aula que está sendo alterada, para não conflitar consigo mesma
+// (`mesmoHorario`: a data e o horário não mudaram, então o funcionamento não é conferido).
 // Devolve a mensagem de erro, ou null se estiver tudo certo.
 export async function verificarAulas(
   matriculaId: number,
   aulas: NovaAula[],
-  editando?: { id: number; status: string },
+  editando?: { id: number; status: string; mesmoHorario?: boolean },
 ): Promise<string | null> {
   if (aulas.length === 0) return "Escolha ao menos uma data.";
 
@@ -94,16 +98,23 @@ export async function verificarAulas(
   // mesmo horário são uma turma. Aula cancelada não ocupa horário.
   if (editando?.status === "cancelada") return null;
 
-  // Feriado: não se marca aula (a autoescola pode deixar de seguir um feriado em Configurações).
-  const diasDasAulas = aulas.map((a) => a.dataHora.toLocaleDateString("en-CA", { timeZone: "America/Sao_Paulo" }));
-  const feriados = await carregarFeriados(
-    diasDasAulas.reduce((m, d) => (d < m ? d : m)),
-    diasDasAulas.reduce((m, d) => (d > m ? d : m)),
-  );
-  for (const dia of diasDasAulas) {
-    const nome = feriados.get(dia);
-    if (nome) {
-      return `${dia.split("-").reverse().join("/")} é feriado (${nome}). Escolha outro dia ou desmarque esse feriado em Configurações > Feriados.`;
+  // Horário de funcionamento: dia fechado, feriado, antes de abrir, depois de fechar
+  // ou no almoço, só como exceção (ou num dia especial cadastrado em Configurações > Horários).
+  const conferir = editando?.mesmoHorario ? [] : aulas.filter((a) => !a.excecao);
+  if (conferir.length) {
+    const dias = conferir.map((a) => diaLocal(a.dataHora));
+    const funcionamento = await carregarFuncionamento(
+      dias.reduce((m, d) => (d < m ? d : m)),
+      dias.reduce((m, d) => (d > m ? d : m)),
+    );
+    for (const a of [...conferir].sort((x, y) => x.dataHora.getTime() - y.dataHora.getTime())) {
+      const dia = diaLocal(a.dataHora);
+      const f = funcionamento(dia);
+      const motivo = f.aberto ? foraDoHorario(f, horaLocal(a.dataHora), horaLocal(fimDaAula(a))) : f.motivo;
+      if (motivo) {
+        const quando = `${dia.split("-").reverse().join("/")}${f.aberto ? ` às ${formatarHora(a.dataHora)}` : ""}`;
+        return `${quando}: ${motivo}. Escolha outro dia ou horário, ou marque "Exceção" para agendar mesmo assim.`;
+      }
     }
   }
 
@@ -238,3 +249,12 @@ export async function comCategoria<T extends NovaAula>(aulas: T[]) {
     categoria: a.tipo === "pratica" ? (veiculos.find((v) => v.id === a.veiculoId)?.categoria ?? null) : null,
   }));
 }
+
+const diaLocal = (d: Date) => d.toLocaleDateString("en-CA", { timeZone: "America/Sao_Paulo" });
+const horaLocal = (d: Date) =>
+  d.toLocaleTimeString("pt-BR", {
+    timeZone: "America/Sao_Paulo",
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23",
+  });

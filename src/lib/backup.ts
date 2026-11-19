@@ -28,6 +28,7 @@ export async function exportarAutoescola(autoescolaId: number) {
     despesas,
     etapas,
     feriados,
+    diasEspeciais,
     modelos,
     posts,
   ] = await Promise.all([
@@ -51,6 +52,7 @@ export async function exportarAutoescola(autoescolaId: number) {
     dbGlobal.despesa.findMany({ orderBy: { id: "asc" }, where: { autoescolaId }, omit: { autoescolaId: true } }),
     dbGlobal.etapa.findMany({ orderBy: { id: "asc" }, where: { matricula: doAluno } }),
     dbGlobal.feriado.findMany({ orderBy: { id: "asc" }, where: { autoescolaId }, omit: { autoescolaId: true } }),
+    dbGlobal.diaEspecial.findMany({ orderBy: { id: "asc" }, where: { autoescolaId }, omit: { autoescolaId: true } }),
     dbGlobal.modeloDocumento.findMany({
       orderBy: { id: "asc" },
       where: { autoescolaId },
@@ -87,6 +89,7 @@ export async function exportarAutoescola(autoescolaId: number) {
     despesas,
     etapas,
     feriados,
+    diasEspeciais,
     // Modelos de documentos (.docx) em base64, como o contrato.
     modelos: modelos.map((m) => ({ ...m, arquivo: Buffer.from(m.arquivo).toString("base64") })),
     posts,
@@ -187,6 +190,8 @@ export async function importarAutoescola(arquivo: unknown) {
   const despesas = lista(o, "despesas");
   const etapas = lista(o, "etapas");
   const feriados = lista(o, "feriados");
+  // Arquivos exportados antes dos horários de funcionamento não têm esta lista.
+  const diasEspeciais = lista(o, "diasEspeciais");
   const modelos = lista(o, "modelos");
   const posts = lista(o, "posts");
 
@@ -231,6 +236,7 @@ export async function importarAutoescola(arquivo: unknown) {
             horaInicio: r.strN(C, "horaInicio") ?? undefined,
             horaFim: r.strN(C, "horaFim") ?? undefined,
             intervaloMin: r.intN(C, "intervaloMin") ?? undefined,
+            horarios: C.horarios && typeof C.horarios === "object" ? (C.horarios as object) : undefined,
             logo: r.strN(C, "logo"),
             impressoraRecibo: r.strN(C, "impressoraRecibo") === "termica" ? "termica" : "a4",
             paleta: paletaValida(r.strN(C, "paleta")),
@@ -403,6 +409,7 @@ export async function importarAutoescola(arquivo: unknown) {
           duracaoMin: au.int(x, "duracaoMin"),
           status: au.str(x, "status"),
           obs: au.strN(x, "obs"),
+          excecao: x.excecao === true,
         })),
       });
 
@@ -456,6 +463,18 @@ export async function importarAutoescola(arquivo: unknown) {
           nome: fe.str(x, "nome"),
           anual: fe.bool(x, "anual"),
           criadoEm: fe.dataN(x, "criadoEm") ?? undefined,
+        })),
+      });
+
+      const di = ler("dias especiais");
+      await tx.diaEspecial.createMany({
+        data: diasEspeciais.map((x) => ({
+          autoescolaId,
+          data: di.data(x, "data"),
+          inicio: di.str(x, "inicio"),
+          fim: di.str(x, "fim"),
+          motivo: di.strN(x, "motivo"),
+          criadoEm: di.dataN(x, "criadoEm") ?? undefined,
         })),
       });
 

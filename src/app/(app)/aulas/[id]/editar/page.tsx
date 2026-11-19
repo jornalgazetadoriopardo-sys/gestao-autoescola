@@ -69,6 +69,7 @@ export default async function EditarAulaPage({
               data: dia,
               hora: formatarHora(aula.dataHora),
               duracaoMin: aula.duracaoMin,
+              excecao: aula.excecao,
               obs: aula.obs ?? "",
             }}
             categoria={aula.matricula.categoria}

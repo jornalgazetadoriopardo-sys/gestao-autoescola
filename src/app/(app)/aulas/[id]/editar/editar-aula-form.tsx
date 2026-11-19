@@ -6,6 +6,7 @@ import { Campo, Input, Select, Textarea } from "@/components/ui";
 import { DURACOES } from "@/lib/aulas";
 import type { Expediente } from "@/lib/disponibilidade";
 import { editarAula } from "../../actions";
+import { CampoExcecao } from "../../campo-excecao";
 import { SeletorHorario } from "../../seletor-horario";
 import { useOcupados } from "../../use-ocupados";
 
@@ -22,6 +23,7 @@ export type AulaEditavel = {
   hora: string;
   duracaoMin: number;
   obs: string;
+  excecao: boolean;
 };
 
 export function EditarAulaForm({
@@ -45,6 +47,9 @@ export function EditarAulaForm({
   const [data, setData] = useState(aula.data);
   const [hora, setHora] = useState(aula.hora);
   const [duracao, setDuracao] = useState(String(aula.duracaoMin));
+  const [excecao, setExcecao] = useState(aula.excecao);
+  // Sem mudar data, horário e duração, o funcionamento não é conferido de novo (como no servidor).
+  const mesmoHorario = data === aula.data && hora === aula.hora && Number(duracao) === aula.duracaoMin;
   // A própria aula não conta como ocupada.
   const { ocupados, carregando } = useOcupados([data], aula.id);
   const veiculosCompativeis = veiculos.filter((v) => categoria.includes(v.categorias));
@@ -115,6 +120,7 @@ export function EditarAulaForm({
               veiculoId: tipo === "pratica" ? Number(veiculoId) || null : null,
               alunoId: aula.alunoId,
               permitirPassado: true,
+              excecao: excecao || mesmoHorario,
             }}
             ocupados={ocupados}
             carregando={carregando}
@@ -122,6 +128,9 @@ export function EditarAulaForm({
             valor={hora}
             onChange={setHora}
           />
+          <div className="mt-3">
+            <CampoExcecao marcado={excecao} onChange={setExcecao} />
+          </div>
         </div>
         <Campo label="Observação" className="sm:col-span-2">
           <Textarea name="obs" rows={2} defaultValue={aula.obs} />

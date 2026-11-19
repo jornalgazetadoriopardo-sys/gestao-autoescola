@@ -7,6 +7,8 @@ import { revalidatePath } from "next/cache";
 import { dbGlobal } from "@/lib/db";
 import { exigirSuperadmin } from "@/lib/auth";
 import { ErroImportacao, importarAutoescola } from "@/lib/backup";
+import { lerMoeda } from "@/lib/format";
+import { FORMAS_COBRANCA } from "@/lib/mensalidades";
 import type { EstadoForm } from "@/components/form-acao";
 
 function texto(dados: FormData, campo: string) {
@@ -115,8 +117,10 @@ export async function excluirAutoescola(autoescolaId: number, _: EstadoForm, dad
     dbGlobal.aluno.deleteMany({ where: { autoescolaId } }),
     dbGlobal.despesa.deleteMany({ where: { autoescolaId } }),
     dbGlobal.feriado.deleteMany({ where: { autoescolaId } }),
+    dbGlobal.diaEspecial.deleteMany({ where: { autoescolaId } }),
     dbGlobal.modeloDocumento.deleteMany({ where: { autoescolaId } }),
     dbGlobal.postSocial.deleteMany({ where: { autoescolaId } }),
+    dbGlobal.mensalidade.deleteMany({ where: { autoescolaId } }),
     dbGlobal.manutencao.deleteMany({ where: { veiculo: { autoescolaId } } }),
     dbGlobal.veiculo.deleteMany({ where: { autoescolaId } }),
     dbGlobal.instrutor.deleteMany({ where: { autoescolaId } }),
@@ -126,4 +130,96 @@ export async function excluirAutoescola(autoescolaId: number, _: EstadoForm, dad
   ]);
   revalidatePath("/plataforma");
   redirect("/plataforma");
+}
+
+// ---- Mensalidades das autoescolas -------------------------------------------
+
+function dia(v: string | null) {
+  const n = Number(v);
+  return Number.isInteger(n) && n >= 1 && n <= 31 ? n : null;
+}
+
+// Configuração geral da cobrança (valor e dia padrão, Pix de quem recebe...).
+export async function salvarPlataforma(_: EstadoForm, dados: FormData): Promise<EstadoForm> {
+  await exigirSuperadmin();
+  const valorTexto = texto(dados, "valor");
+  const mensalidadeCentavos = valorTexto ? lerMoeda(valorTexto) : null;
+  if (valorTexto && (mensalidadeCentavos === null || mensalidadeCentavos <= 0)) {
+    return { erro: "Valor inválido. Ex.: 99,00" };
+  }
+  const diaVencimento = dia(texto(dados, "diaVencimento"));
+  if (!diaVencimento) return { erro: "Escolha o dia de vencimento (1 a 31)." };
+  const formaPadrao = String(dados.get("formaPadrao") ?? "pix");
+  if (!(formaPadrao in FORMAS_COBRANCA)) return { erro: "Forma de pagamento inválida." };
+  const chavePix = texto(dados, "chavePix");
+  if (formaPadrao === "pix" && !chavePix) return { erro: "Informe a chave Pix para receber as mensalidades." };
+  const campos = {
+    mensalidadeCentavos,
+    diaVencimento,
+    formaPadrao,
+    chavePix,
+    nomeRecebedor: texto(dados, "nomeRecebedor"),
+    cidadeRecebedor: texto(dados, "cidadeRecebedor"),
+    instrucoes: texto(dados, "instrucoes")?.slice(0, 400) ?? null,
+    whatsappCobranca: texto(dados, "whatsappCobranca"),
+    bloquearAutomatico: dados.get("bloquearAutomatico") === "on",
+  };
+  await dbGlobal.plataformaConfig.upsert({ where: { id: 1 }, create: { id: 1, ...campos }, update: campos });
+  revalidatePath("/", "layout");
+  return {
+    ok: mensalidadeCentavos
+      ? "Cobrança salva! As mensalidades do mês são criadas sozinhas para cada autoescola."
+      : "Salvo. Sem valor padrão, só são cobradas as autoescolas com valor próprio.",
+  };
+}
+
+// Valor, dia, forma, isenção e início da cobrança de uma autoescola.
+export async function salvarCobrancaAutoescola(
+  autoescolaId: number,
+  _: EstadoForm,
+  dados: FormData,
+): Promise<EstadoForm> {
+  await exigirSuperadmin();
+  const valorTexto = texto(dados, "valor");
+  const mensalidadeCentavos = valorTexto ? lerMoeda(valorTexto) : null;
+  if (valorTexto && (mensalidadeCentavos === null || mensalidadeCentavos <= 0)) {
+    return { erro: "Valor inválido. Ex.: 99,00" };
+  }
+  const diaTexto = texto(dados, "diaVencimento");
+  const diaVencimento = diaTexto ? dia(diaTexto) : null;
+  if (diaTexto && !diaVencimento) return { erro: "Dia de vencimento inválido (1 a 31)." };
+  const forma = texto(dados, "formaCobranca");
+  if (forma && !(forma in FORMAS_COBRANCA)) return { erro: "Forma de pagamento inválida." };
+  const inicio = texto(dados, "cobrancaInicio");
+  await dbGlobal.autoescola.update({
+    where: { id: autoescolaId },
+    data: {
+      mensalidadeCentavos,
+      diaVencimento,
+      formaCobranca: forma,
+      isenta: dados.get("isenta") === "on",
+      cobrancaInicio: inicio && /^\d{4}-\d{2}-\d{2}$/.test(inicio) ? new Date(`${inicio}T00:00:00Z`) : null,
+    },
+  });
+  revalidatePath("/plataforma", "layout");
+  return { ok: "Cobrança da autoescola salva!" };
+}
+
+// Confirma (ou desfaz) o pagamento de uma mensalidade.
+export async function confirmarMensalidade(id: number, pago: boolean) {
+  await exigirSuperadmin();
+  const m = await dbGlobal.mensalidade.findUnique({ where: { id }, select: { forma: true } });
+  if (!m) return;
+  await dbGlobal.mensalidade.update({
+    where: { id },
+    data: pago ? { pagoEm: new Date() } : { pagoEm: null, informadoEm: null },
+  });
+  revalidatePath("/", "layout");
+}
+
+// O aviso de "Já paguei" não confere: volta a cobrar normalmente (faixa e prazo).
+export async function recusarAviso(id: number) {
+  await exigirSuperadmin();
+  await dbGlobal.mensalidade.update({ where: { id }, data: { informadoEm: null } });
+  revalidatePath("/", "layout");
 }

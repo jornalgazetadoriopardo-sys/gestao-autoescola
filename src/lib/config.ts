@@ -2,6 +2,7 @@ import "server-only";
 import type { Configuracao } from "@prisma/client";
 import { cache } from "react";
 import { db, dbGlobal, situacaoDaSessao } from "./db";
+import { faixaDaSemana, lerHorarios } from "./horarios";
 
 // Dados da autoescola de quem está logado, sem a imagem do logotipo: em
 // `logo` vem o endereço /logo, que o navegador baixa uma vez e guarda.
@@ -47,6 +48,7 @@ async function configPadrao(): Promise<Configuracao> {
       horaInicio: "07:00",
       horaFim: "20:00",
       intervaloMin: 60,
+    horarios: null,
       logo: null,
       impressoraRecibo: "a4",
       contratoArquivo: null,
@@ -66,8 +68,11 @@ async function configPadrao(): Promise<Configuracao> {
 }
 
 // Horários de aula oferecidos nos formulários de agendamento.
+// A grade vai da menor abertura ao maior fechamento da semana; o que estiver fora
+// do horário de cada dia aparece desabilitado (ver buscarOcupados).
 export function expedienteDe(c: Configuracao) {
-  return { horaInicio: c.horaInicio, horaFim: c.horaFim, intervaloMin: c.intervaloMin };
+  const faixa = faixaDaSemana(lerHorarios(c.horarios, c.horaInicio, c.horaFim));
+  return { horaInicio: faixa.inicio, horaFim: faixa.fim, intervaloMin: c.intervaloMin };
 }
 
 // "Rua X, 100 - Centro - Cidade/UF - CEP 00000-000"

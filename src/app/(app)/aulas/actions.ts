@@ -23,12 +23,14 @@ function lerComum(dados: FormData, lote = false) {
   const veiculoId = tipo === "pratica" ? id(dados, "veiculoId") : null;
   const duracaoMin = Number(dados.get("duracaoMin"));
   const obs = String(dados.get("obs") ?? "").trim() || null;
+  // Exceção: fora do horário de funcionamento ou em feriado.
+  const excecao = dados.get("excecao") === "on";
 
   if (!(tipo in TIPOS_AULA)) return { erro: "Selecione o tipo de aula." };
   if (!lote && !instrutorId) return { erro: "Selecione o instrutor." };
   if (!lote && tipo === "pratica" && !veiculoId) return { erro: "Selecione o veículo da aula prática." };
   if (!DURACOES.includes(duracaoMin)) return { erro: "Duração inválida." };
-  return { tipo, instrutorId, veiculoId, duracaoMin, obs };
+  return { tipo, instrutorId, veiculoId, duracaoMin, obs, excecao };
 }
 
 function diaDe(data: Date) {
@@ -127,8 +129,15 @@ export async function editarAula(aulaId: number, _: EstadoForm, dados: FormData)
   const dataHora = lerDataHora(String(dados.get("data") ?? ""), String(dados.get("hora") ?? ""));
   if (!dataHora) return { erro: "Informe a data e o horário." };
 
-  const aula: NovaAula = { ...comum, dataHora };
-  const erro = await verificarAulas(atual.matriculaId, [aula], { id: atual.id, status: atual.status });
+  // Sem mudar a data, o horário e a duração, não confere de novo o funcionamento
+  // (a aula pode ter sido marcada antes de a autoescola cadastrar os horários).
+  const mesmoHorario = dataHora.getTime() === atual.dataHora.getTime() && comum.duracaoMin === atual.duracaoMin;
+  const aula: NovaAula = { ...comum, dataHora, excecao: comum.excecao || (mesmoHorario && atual.excecao) };
+  const erro = await verificarAulas(atual.matriculaId, [aula], {
+    id: atual.id,
+    status: atual.status,
+    mesmoHorario,
+  });
   if (erro) return { erro };
 
   const [comCat] = await comCategoria([aula]);
@@ -175,6 +184,7 @@ export async function marcarAula(aulaId: number, status: string) {
           veiculoId: aula.veiculoId,
           dataHora: aula.dataHora,
           duracaoMin: aula.duracaoMin,
+          excecao: aula.excecao,
         },
       ],
       { id: aula.id, status: "agendada" },

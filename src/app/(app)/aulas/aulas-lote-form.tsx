@@ -27,6 +27,7 @@ import {
 } from "@/lib/disponibilidade";
 import { agendarVarias } from "./actions";
 import { textoRestantes, type OpcaoMatricula } from "./aula-form";
+import { CampoExcecao } from "./campo-excecao";
 import { useOcupados } from "./use-ocupados";
 
 type Opcao = { id: number; nome: string; categorias: string };
@@ -66,7 +67,7 @@ export function AulasLoteForm({
   matriculaInicial,
   hoje,
   expediente,
-  feriados = {},
+  fechados = {},
 }: {
   matriculas: OpcaoMatricula[];
   instrutores: Opcao[];
@@ -74,8 +75,9 @@ export function AulasLoteForm({
   matriculaInicial?: number;
   hoje: string;
   expediente: Expediente;
-  // Feriados dos próximos meses (AAAA-MM-DD → nome): ficam bloqueados no calendário.
-  feriados?: Record<string, string>;
+  // Dias fechados dos próximos meses (feriados e dias sem expediente, AAAA-MM-DD → motivo):
+  // ficam bloqueados no calendário, a não ser que as aulas sejam marcadas como exceção.
+  fechados?: Record<string, string>;
 }) {
   const [matriculaId, setMatriculaId] = useState(String(matriculaInicial ?? ""));
   const matricula = matriculas.find((m) => String(m.id) === matriculaId);
@@ -86,6 +88,8 @@ export function AulasLoteForm({
   const [veiculoPadrao, setVeiculoPadrao] = useState("");
   const [itens, setItens] = useState<Item[]>([]);
   const [mes, setMes] = useState(hoje.slice(0, 7));
+  const [excecao, setExcecao] = useState(false);
+  const feriados = excecao ? {} : fechados;
 
   // Preenchimento rápido: dias da semana a partir de uma data.
   const [diasRep, setDiasRep] = useState<number[]>([]);
@@ -187,6 +191,7 @@ export function AulasLoteForm({
     instrutorId: Number(item.instrutorId) || null,
     veiculoId: tipo === "pratica" ? Number(item.veiculoId) || null : null,
     alunoId: matricula?.alunoId ?? null,
+    excecao,
   });
   const comoOcupado = (item: Item): Ocupado => {
     const inicio = instante(item.data, item.hora);
@@ -405,6 +410,9 @@ export function AulasLoteForm({
               ))}
             </Select>
           </Campo>
+          <div className="sm:col-span-2">
+            <CampoExcecao marcado={excecao} onChange={setExcecao} />
+          </div>
         </div>
       </Cartao>
 
@@ -457,8 +465,8 @@ export function AulasLoteForm({
                   disabled={passado || (Boolean(feriado) && qtd === 0)}
                   onClick={() => alternarDia(iso)}
                   aria-pressed={qtd > 0}
-                  aria-label={feriado ? `${formatarCurto(iso)}, feriado: ${feriado}` : formatarCurto(iso)}
-                  title={feriado ? `Feriado: ${feriado}` : undefined}
+                  aria-label={feriado ? `${formatarCurto(iso)}, fechado: ${feriado}` : formatarCurto(iso)}
+                  title={feriado ? `Fechado: ${feriado}` : undefined}
                   className={`relative aspect-square rounded-lg border-2 text-base font-semibold transition sm:text-lg ${
                     qtd > 0
                       ? "border-blue-600 bg-blue-600 text-white"
@@ -480,13 +488,18 @@ export function AulasLoteForm({
             })}
           </div>
 
-          {dias.some((d) => feriados[d]) && (
+          {dias.some((d) => feriados[d]?.startsWith("feriado")) && (
             <p className="mt-3 text-sm text-red-700">
               Feriados neste mês (sem aula):{" "}
               {dias
-                .filter((d) => feriados[d])
-                .map((d) => `${formatarCurto(d)} – ${feriados[d]}`)
+                .filter((d) => feriados[d]?.startsWith("feriado"))
+                .map((d) => `${formatarCurto(d)} – ${feriados[d].replace(/^feriado \((.*)\)$/, "$1")}`)
                 .join(" · ")}
+            </p>
+          )}
+          {!excecao && Object.keys(fechados).length > 0 && (
+            <p className="mt-2 text-sm text-slate-500">
+              Os dias riscados estão fora do horário de funcionamento. Para agendar neles, marque “Exceção” acima.
             </p>
           )}
 

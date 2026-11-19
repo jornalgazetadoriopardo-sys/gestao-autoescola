@@ -27,6 +27,8 @@ export type Pedido = {
   alunoId: number | null;
   // Na edição de uma aula antiga, horários passados continuam valendo.
   permitirPassado?: boolean;
+  // Exceção: pode marcar fora do horário de funcionamento e em feriado.
+  excecao?: boolean;
 };
 
 function minutos(hora: string) {
@@ -55,15 +57,19 @@ export function horariosDoExpediente(exp: Expediente, duracaoMin: number) {
 
 // Motivo de o horário não estar disponível, ou null se estiver livre.
 // Mesmas regras do servidor: aluno, veículo e instrutor não podem estar em duas
-// aulas ao mesmo tempo; aulas teóricas do mesmo instrutor formam turma. Em
-// feriado não há aula, e exame do Detran marcado ocupa aluno, veículo e instrutor.
+// aulas ao mesmo tempo; aulas teóricas do mesmo instrutor formam turma. Fora do
+// horário de funcionamento (feriado, dia fechado, almoço) só como exceção, e exame
+// do Detran marcado ocupa aluno, veículo e instrutor.
 export function motivoOcupado(p: Pedido, hora: string, ocupados: Ocupado[], agora = Date.now()) {
   const ini = instante(p.data, hora);
   const fim = ini + p.duracaoMin * 60_000;
   if (!p.permitirPassado && ini < agora) return "horário já passou";
   for (const o of ocupados) {
     if (o.inicio >= fim || o.fim <= ini) continue;
-    if (o.tipo === "feriado") return `feriado (${o.descricao})`;
+    if (o.tipo === "fechado") {
+      if (p.excecao) continue;
+      return o.descricao;
+    }
     if (p.alunoId && o.alunoId === p.alunoId) return `o aluno já tem aula (${o.descricao})`;
     if (p.veiculoId && o.veiculoId === p.veiculoId) return `veículo em uso (${o.descricao})`;
     if (p.instrutorId && o.instrutorId === p.instrutorId && !(p.tipo === "teorica" && o.tipo === "teorica")) {

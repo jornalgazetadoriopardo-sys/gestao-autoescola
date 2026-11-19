@@ -123,6 +123,22 @@ presença e pagamentos.
 - **Plataforma** (só para o dono do sistema): cria autoescolas com o primeiro
   administrador, mostra quantos usuários e alunos cada uma tem e suspende ou reativa
   o acesso (os dados continuam guardados)
+- **Horário de funcionamento** (Configurações → Horários): cada dia da semana abre ou não, com
+  horário próprio (ex.: sábado até o meio-dia, domingo fechado), pausa de almoço e intervalo entre
+  as aulas. Ao agendar, horários e dias fora do funcionamento (e feriados) ficam bloqueados
+  - **Dias especiais**: libera um dia que normalmente fecha (feriado, domingo, mutirão), com horário
+  - **Exceção**: ao agendar, a caixa "Exceção" permite marcar uma aula fora do horário; ela aparece
+    na agenda com a marca "Exceção" (aluno, instrutor e veículo continuam sem conflito)
+- **Mensalidade do sistema** (Plataforma → Mensalidades): valor, dia do vencimento e forma de
+  pagamento padrão (cada autoescola pode ter os seus, isenção e início da cobrança para período
+  de teste). A mensalidade de cada mês é criada sozinha; se o vencimento cair em fim de semana ou
+  feriado nacional, passa para o próximo dia útil
+  - 2 dias úteis antes do vencimento: faixa verde no topo com QR Code, chave Pix e "copia e cola"
+  - Depois do vencimento: faixa vermelha com o prazo (2 dias úteis) para evitar o bloqueio
+  - Depois do prazo: a autoescola vê só a tela com o Pix e o botão **Já paguei** (pode ser
+    desligado: só avisar). "Já paguei" (com comprovante opcional) libera o acesso até o dono
+    conferir; ele confirma o pagamento ou responde "Não encontrei" na Plataforma
+  - A autoescola vê o histórico em Configurações → Mensalidade. O dono do sistema nunca é bloqueado
 - **Exportar e importar autoescola** (Plataforma): baixa um arquivo `.json` com todos os
   dados de uma autoescola (alunos, matrículas, parcelas, aulas, veículos, manutenções,
   instrutores, configurações e usuários com as senhas) e, em outro servidor, cria a

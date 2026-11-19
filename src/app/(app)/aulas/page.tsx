@@ -22,7 +22,7 @@ import {
   intervaloDoDia,
   somarDias,
 } from "@/lib/aulas";
-import { carregarFeriados } from "@/lib/feriados-servidor";
+import { carregarFuncionamento } from "@/lib/feriados-servidor";
 import { AcoesAula } from "./acoes-aula";
 
 export const dynamic = "force-dynamic";
@@ -38,7 +38,7 @@ export default async function AgendaPage({
   const instrutorId = Number(params.instrutor) || null;
   const { inicio, fim } = intervaloDoDia(dia);
 
-  const [aulas, instrutores, exames, feriados] = await Promise.all([
+  const [aulas, instrutores, exames, funcionamento] = await Promise.all([
     db.aula.findMany({
       where: { dataHora: { gte: inicio, lt: fim }, ...(instrutorId ? { instrutorId } : {}) },
       orderBy: { dataHora: "asc" },
@@ -55,9 +55,11 @@ export default async function AgendaPage({
       orderBy: [{ hora: "asc" }, { id: "asc" }],
       include: { matricula: { include: { aluno: true } }, instrutor: true, veiculo: true },
     }),
-    carregarFeriados(dia, dia),
+    carregarFuncionamento(dia, dia),
   ]);
-  const feriado = feriados.get(dia);
+  const f = funcionamento(dia);
+  const fechado = f.aberto ? null : f.motivo;
+  const feriado = fechado?.match(/^feriado \((.*)\)$/)?.[1] ?? null;
   const temDeclaracao = (await db.modeloDocumento.count({ where: { tipo: "declaracao" } })) > 0;
 
   const link = (d: string) => `/aulas?dia=${d}${instrutorId ? `&instrutor=${instrutorId}` : ""}`;
@@ -110,15 +112,32 @@ export default async function AgendaPage({
         </BotaoLink>
       </div>
 
-      {feriado && (
+      {fechado && (
         <Aviso tipo="alerta" icone={CalendarOff}>
           <span>
-            <strong>Feriado: {feriado}.</strong> Não é possível marcar aulas neste dia. Para trabalhar mesmo assim,
-            desmarque o feriado em{" "}
-            <Link href="/configuracoes?aba=feriados" className="font-medium underline">
-              Configurações › Feriados
+            <strong>{feriado ? `Feriado: ${feriado}.` : `Fechado: ${fechado}.`}</strong> Para dar aula neste dia, marque
+            “Exceção” ao agendar ou abra o dia em{" "}
+            <Link href="/configuracoes?aba=horarios" className="font-medium underline">
+              Configurações › Horários
             </Link>
+            {feriado && (
+              <>
+                {" "}
+                (ou desmarque o feriado em{" "}
+                <Link href="/configuracoes?aba=feriados" className="font-medium underline">
+                  Feriados
+                </Link>
+                )
+              </>
+            )}
             .
+          </span>
+        </Aviso>
+      )}
+      {f.aberto && f.especial && (
+        <Aviso tipo="info" icone={CalendarDays}>
+          <span>
+            <strong>Dia especial:</strong> aberto das {f.inicio} às {f.fim}.
           </span>
         </Aviso>
       )}
@@ -146,10 +165,12 @@ export default async function AgendaPage({
 
       {aulas.length === 0 ? (
         <Vazio
-          icone={feriado ? CalendarOff : CalendarDays}
-          titulo={feriado ? `Feriado – ${feriado}` : "Nenhuma aula neste dia"}
+          icone={fechado ? CalendarOff : CalendarDays}
+          titulo={
+            feriado ? `Feriado – ${feriado}` : fechado ? "Autoescola fechada neste dia" : "Nenhuma aula neste dia"
+          }
           acao={
-            !feriado && (
+            !fechado && (
               <BotaoLink href={`/aulas/nova?dia=${dia}`} icone={CalendarPlus}>
                 Agendar aula
               </BotaoLink>
@@ -178,6 +199,11 @@ export default async function AgendaPage({
                 <Etiqueta cor={COR_STATUS_AULA[a.status as keyof typeof COR_STATUS_AULA] ?? "cinza"}>
                   {STATUS_AULA[a.status] ?? a.status}
                 </Etiqueta>
+                {a.excecao && (
+                  <span className="ml-1.5">
+                    <Etiqueta cor="amarelo">Exceção</Etiqueta>
+                  </span>
+                )}
               </td>
               <td className="px-4 py-3">
                 <AcoesAula aula={a} voltar={link(dia)} declaracao={temDeclaracao} />

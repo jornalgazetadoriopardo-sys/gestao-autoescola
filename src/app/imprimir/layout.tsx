@@ -1,12 +1,16 @@
 import { exigirSessao } from "@/lib/auth";
 import { obterConfig } from "@/lib/config";
+import { situacaoDaCobranca } from "@/lib/mensalidades";
+import { redirect } from "next/navigation";
 import { BarraImpressao } from "./barra-impressao";
 import "./impressao.css";
 
 // Páginas para impressão: sem menu, fundo cinza na tela e papel branco A4.
 // A largura e a posição dos cupons da térmica vêm de Configurações > Impressora.
 export default async function ImprimirLayout({ children }: { children: React.ReactNode }) {
-  await exigirSessao();
+  const sessao = await exigirSessao();
+  // Conta bloqueada por falta de pagamento: volta para o aviso (com o Pix).
+  if (!sessao.superadmin && (await situacaoDaCobranca(sessao.autoescolaId)).tipo === "bloqueada") redirect("/");
   const config = await obterConfig();
   const largura = Math.min(Math.max(config.larguraTermica, 44), 80);
   return (

@@ -16,19 +16,29 @@ datasource db {
 // usuários, alunos, instrutores e veículos pertencem a uma autoescola, e as demais
 // tabelas pertencem a ela por meio deles (ver src/lib/db.ts).
 model Autoescola {
-  id           Int           @id @default(autoincrement())
-  nome         String
-  ativo        Boolean       @default(true)
-  criadoEm     DateTime      @default(now())
-  usuarios     Usuario[]
-  alunos       Aluno[]
-  instrutores  Instrutor[]
-  veiculos     Veiculo[]
-  despesas     Despesa[]
-  feriados     Feriado[]
-  modelos      ModeloDocumento[]
-  posts        PostSocial[]
-  configuracao Configuracao?
+  id                  Int               @id @default(autoincrement())
+  nome                String
+  ativo               Boolean           @default(true)
+  criadoEm            DateTime          @default(now())
+  // Mensalidade do sistema (ver src/lib/mensalidades.ts). Em branco: usa o
+  // padrão da plataforma. Isenta: não cobra (ex.: a do dono do sistema).
+  mensalidadeCentavos Int?
+  diaVencimento       Int?
+  formaCobranca       String?
+  isenta              Boolean           @default(false)
+  // Cobra a partir desta data (período de teste antes dela).
+  cobrancaInicio      DateTime?
+  mensalidades        Mensalidade[]
+  usuarios            Usuario[]
+  alunos              Aluno[]
+  instrutores         Instrutor[]
+  veiculos            Veiculo[]
+  despesas            Despesa[]
+  feriados            Feriado[]
+  diasEspeciais       DiaEspecial[]
+  modelos             ModeloDocumento[]
+  posts               PostSocial[]
+  configuracao        Configuracao?
 }
 
 // Responsáveis da autoescola que acessam o sistema.
@@ -133,33 +143,33 @@ model Veiculo {
 
 // Pacote contratado pelo aluno. Valores em centavos.
 model Matricula {
-  id                 Int       @id @default(autoincrement())
-  alunoId            Int
-  aluno              Aluno     @relation(fields: [alunoId], references: [id])
-  categoria          String
-  qtdPraticas        Int
+  id                   Int       @id @default(autoincrement())
+  alunoId              Int
+  aluno                Aluno     @relation(fields: [alunoId], references: [id])
+  categoria            String
+  qtdPraticas          Int
   // Aulas práticas por categoria, ex.: {"A": 10, "B": 20} (a soma é qtdPraticas).
   praticasPorCategoria Json?
-  qtdTeoricas        Int
-  valorTotalCentavos Int
+  qtdTeoricas          Int
+  valorTotalCentavos   Int
   // Juros ao mês em centésimos de ponto percentual (199 = 1,99% a.m.).
-  jurosMesBp         Int       @default(0)
+  jurosMesBp           Int       @default(0)
   // Como o valor (ou o restante, se houve entrada) é pago:
   // "carne" (parcelado pela autoescola) | "cartao" | "pix" | "dinheiro" (pago na hora, já quitado)
-  formaPagamento     String    @default("carne")
+  formaPagamento       String    @default("carne")
   // Entrada paga na matrícula (fica na parcela de número 0).
-  entradaCentavos    Int       @default(0)
-  entradaForma       String?
+  entradaCentavos      Int       @default(0)
+  entradaForma         String?
   // "primeira" | "adicao" | "mudanca" | "reabilitacao" (ver src/lib/etapas.ts)
-  tipoProcesso       String    @default("primeira")
+  tipoProcesso         String    @default("primeira")
   // Curso teórico: "autoescola" (aulas pagas) | "online" (grátis no app CNH do Brasil) | "dispensado"
-  cursoTeorico       String    @default("autoescola")
+  cursoTeorico         String    @default("autoescola")
   // Categorias que o aluno desistiu: [{ categoria, em, motivo, praticas }].
   categoriasCanceladas Json?
-  data               DateTime  @default(now())
-  aulas              Aula[]
-  parcelas           Parcela[]
-  etapas             Etapa[]
+  data                 DateTime  @default(now())
+  aulas                Aula[]
+  parcelas             Parcela[]
+  etapas               Etapa[]
 }
 
 // Exames e taxas externas do processo de habilitação (médico, psicológico,
@@ -215,6 +225,8 @@ model Aula {
   duracaoMin  Int        @default(50)
   status      String     @default("agendada")
   obs         String?
+  // Marcada fora do horário de funcionamento ou em feriado, como exceção.
+  excecao     Boolean    @default(false)
 
   @@index([dataHora])
 }
@@ -275,6 +287,8 @@ model Configuracao {
   // Expediente usado para oferecer os horários de aula (HH:MM) e o intervalo entre eles.
   horaInicio              String     @default("07:00")
   horaFim                 String     @default("20:00")
+  // Horário de funcionamento por dia da semana e almoço (lib/horarios.ts). Vazio: todos os dias, horaInicio–horaFim.
+  horarios                Json?
   intervaloMin            Int        @default(60)
   // Logotipo em data URL (imagem já reduzida no navegador).
   logo                    String?
@@ -350,6 +364,20 @@ model Despesa {
 
 // Feriados cadastrados pela autoescola (municipais, recessos...). `anual`: repete
 // todo ano no mesmo dia e mês. Os nacionais e estaduais são calculados no código.
+// Dia em que a autoescola abre fora do normal (feriado, domingo, mutirão...), com o horário.
+model DiaEspecial {
+  id           Int        @id @default(autoincrement())
+  autoescolaId Int
+  autoescola   Autoescola @relation(fields: [autoescolaId], references: [id])
+  data         DateTime
+  inicio       String
+  fim          String
+  motivo       String?
+  criadoEm     DateTime   @default(now())
+
+  @@index([autoescolaId])
+}
+
 model Feriado {
   id           Int        @id @default(autoincrement())
   autoescolaId Int
@@ -377,4 +405,42 @@ model PostSocial {
   criadoEm     DateTime   @default(now())
 
   @@index([autoescolaId, criadoEm])
+}
+
+// Configuração da cobrança das autoescolas pelo dono do sistema (uma linha só, id 1).
+model PlataformaConfig {
+  id                  Int      @id @default(1)
+  mensalidadeCentavos Int?
+  diaVencimento       Int      @default(10)
+  // "pix" | "boleto" | "cartao" | "transferencia"
+  formaPadrao         String   @default("pix")
+  chavePix            String?
+  nomeRecebedor       String?
+  cidadeRecebedor     String?
+  // Instruções para boleto, cartão ou transferência (aparecem na faixa).
+  instrucoes          String?
+  // Bloqueia a autoescola depois do prazo de tolerância, se não pagar nem avisar.
+  bloquearAutomatico  Boolean  @default(true)
+  whatsappCobranca    String?
+  atualizadoEm        DateTime @updatedAt
+}
+
+// Mensalidade de uma autoescola num mês (competência AAAA-MM).
+model Mensalidade {
+  id              Int        @id @default(autoincrement())
+  autoescolaId    Int
+  autoescola      Autoescola @relation(fields: [autoescolaId], references: [id])
+  competencia     String
+  vencimento      DateTime
+  valorCentavos   Int
+  forma           String     @default("pix")
+  pagoEm          DateTime?
+  // A autoescola avisou que pagou (botão "Já paguei"), com o comprovante opcional.
+  informadoEm     DateTime?
+  comprovante     String?
+  comprovanteNome String?
+  obs             String?
+  criadoEm        DateTime   @default(now())
+
+  @@unique([autoescolaId, competencia])
 }
