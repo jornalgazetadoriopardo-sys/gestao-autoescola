@@ -1,4 +1,4 @@
-import { AlertTriangle, CalendarClock, Clock, Lock, MessageCircle } from "lucide-react";
+import { AlertTriangle, CalendarClock, Clock, Hourglass, Lock, MessageCircle } from "lucide-react";
 import { formatarMoeda, hojeISO } from "@/lib/format";
 import { FORMAS_COBRANCA, pixDaMensalidade, type Plataforma, type SituacaoCobranca } from "@/lib/mensalidades";
 import { BotoesPagamento, PainelPagamento, type DadosPagamento } from "./pagamento";
@@ -50,6 +50,26 @@ export async function FaixaCobranca({ s, p }: { s: SituacaoCobranca; p: Platafor
   }
 
   const dados = await dadosPagamento(s.mensalidade, s.vencimento, p);
+
+  // Período de avaliação: tarja laranja presa no topo da tela.
+  if (s.tipo === "avaliacao") {
+    const [ano, mes, dia] = s.vencimento.split("-");
+    return (
+      <div className="sticky top-14 z-20 -mx-4 -mt-4 mb-6 flex flex-wrap items-center justify-center gap-x-4 gap-y-2 bg-orange-500 px-4 py-2.5 text-white shadow-sm sm:-mx-6 sm:-mt-6 md:top-0 lg:-mx-10 lg:-mt-8">
+        <span className="flex items-center gap-2 text-base font-medium">
+          <Hourglass className="size-5 shrink-0" aria-hidden />
+          <span>
+            Período de avaliação válido até{" "}
+            <b>
+              {dia}/{mes}/{ano}
+            </b>
+            .
+          </span>
+        </span>
+        <BotoesPagamento dados={dados} cor="laranja" contratar />
+      </div>
+    );
+  }
 
   if (s.tipo === "aviso") {
     const hoje = s.vencimento === hojeISO();

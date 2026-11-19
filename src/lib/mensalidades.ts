@@ -12,6 +12,9 @@ import { codigoPix, qrCodePix } from "./pix";
 //   com o prazo de tolerância (2 dias úteis). Depois do prazo, sem pagamento nem
 //   aviso de pagamento ("Já paguei"), a conta fica bloqueada (se estiver ligado).
 // O pagamento é confirmado pelo dono do sistema na Plataforma.
+// Avaliação: autoescola nova ganha alguns dias grátis (tarja laranja "Contratar agora").
+// A 1ª mensalidade vence no último dia da avaliação; sem pagar, segue o fluxo normal
+// (faixa vermelha com prazo e, depois, bloqueio).
 
 export const FORMAS_COBRANCA: Record<string, string> = {
   pix: "Pix",
@@ -35,6 +38,7 @@ const PADRAO: Omit<PlataformaConfig, "atualizadoEm"> = {
   cidadeRecebedor: null,
   instrucoes: null,
   bloquearAutomatico: true,
+  diasAvaliacao: 3,
   whatsappCobranca: null,
 };
 
@@ -45,7 +49,7 @@ export type Plataforma = Awaited<ReturnType<typeof lerPlataforma>>;
 
 type AutoescolaCobranca = Pick<
   Autoescola,
-  "id" | "isenta" | "mensalidadeCentavos" | "diaVencimento" | "formaCobranca" | "cobrancaInicio"
+  "id" | "isenta" | "mensalidadeCentavos" | "diaVencimento" | "formaCobranca" | "cobrancaInicio" | "avaliacaoAte"
 >;
 
 // Valor, dia e forma de uma autoescola (o próprio ou o padrão). Null: não paga.
@@ -69,13 +73,26 @@ export function vencimentoDe(competencia: string, dia: number) {
 
 export const iso = (d: Date) => d.toISOString().slice(0, 10);
 
+// Último dia da avaliação de uma autoescola criada hoje (null: sem avaliação).
+export function fimDaAvaliacao(dias: number, hoje = hojeISO()) {
+  if (!dias || dias <= 0) return null;
+  const d = new Date(`${hoje}T00:00:00Z`);
+  d.setUTCDate(d.getUTCDate() + dias);
+  return d;
+}
+
 // Cria a mensalidade do mês atual, se ainda não existe (e se já começou a cobrança).
 export async function garantirMensalidade(a: AutoescolaCobranca, p: Plataforma, hoje = hojeISO()) {
   const c = condicoes(a, p);
   if (!c) return;
-  const competencia = hoje.slice(0, 7);
-  const vencimento = vencimentoDe(competencia, c.dia);
-  if (a.cobrancaInicio && vencimento < iso(a.cobrancaInicio)) return;
+  let competencia = hoje.slice(0, 7);
+  let vencimento = vencimentoDe(competencia, c.dia);
+  // Na avaliação (e no mês em que ela termina), a 1ª mensalidade vence no último dia dela.
+  const fimAvaliacao = a.avaliacaoAte && iso(a.avaliacaoAte);
+  if (fimAvaliacao && competencia <= fimAvaliacao.slice(0, 7)) {
+    competencia = fimAvaliacao.slice(0, 7);
+    vencimento = fimAvaliacao;
+  } else if (a.cobrancaInicio && vencimento < iso(a.cobrancaInicio)) return;
   const existe = await dbGlobal.mensalidade.findUnique({
     where: { autoescolaId_competencia: { autoescolaId: a.id, competencia } },
     select: { id: true },
@@ -100,7 +117,7 @@ export async function garantirMensalidade(a: AutoescolaCobranca, p: Plataforma, 
 export type SituacaoCobranca =
   | { tipo: "em-dia" }
   | {
-      tipo: "aviso" | "atraso" | "bloqueada" | "informada";
+      tipo: "avaliacao" | "aviso" | "atraso" | "bloqueada" | "informada";
       mensalidade: Omit<Mensalidade, "comprovante">;
       vencimento: string;
       limite: string;
@@ -120,6 +137,10 @@ export async function situacaoDaCobranca(autoescolaId: number, hoje = hojeISO())
   const limite = somarDiasUteis(vencimento, DIAS_TOLERANCIA);
   const base = { mensalidade: m, vencimento, limite };
   if (m.informadoEm) return { tipo: "informada", ...base };
+  // Período de avaliação: tarja laranja até o último dia (a mensalidade vence nele).
+  if (a.avaliacaoAte && hoje <= iso(a.avaliacaoAte) && vencimento === iso(a.avaliacaoAte)) {
+    return { tipo: "avaliacao", ...base };
+  }
   if (hoje < somarDiasUteis(vencimento, -DIAS_AVISO)) return { tipo: "em-dia" };
   if (hoje <= vencimento) return { tipo: "aviso", ...base };
   if (hoje <= limite || !p.bloquearAutomatico) return { tipo: "atraso", ...base };

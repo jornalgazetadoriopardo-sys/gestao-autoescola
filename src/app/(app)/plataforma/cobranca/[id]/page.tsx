@@ -72,7 +72,16 @@ export default async function CobrancaAutoescolaPage({ params }: { params: Promi
                 </Select>
               </Campo>
             </div>
-            <Campo label="Cobrar a partir de" ajuda="Para dar um período de teste grátis. Em branco: já cobra.">
+            <Campo
+              label="Avaliação grátis até"
+              ajuda="Até esse dia aparece a tarja laranja “Período de avaliação… Contratar agora”, e a 1ª mensalidade vence nele. Em branco: sem avaliação."
+            >
+              <Input name="avaliacaoAte" type="date" defaultValue={dataParaInput(a.avaliacaoAte)} />
+            </Campo>
+            <Campo
+              label="Cobrar a partir de"
+              ajuda="Adia a cobrança sem mostrar a tarja de avaliação. Em branco: já cobra."
+            >
               <Input name="cobrancaInicio" type="date" defaultValue={dataParaInput(a.cobrancaInicio)} />
             </Campo>
             <label className="flex items-center gap-3 text-base font-medium">

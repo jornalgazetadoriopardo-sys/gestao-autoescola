@@ -8,7 +8,7 @@ import { dbGlobal } from "@/lib/db";
 import { exigirSuperadmin } from "@/lib/auth";
 import { ErroImportacao, importarAutoescola } from "@/lib/backup";
 import { lerMoeda } from "@/lib/format";
-import { FORMAS_COBRANCA } from "@/lib/mensalidades";
+import { FORMAS_COBRANCA, fimDaAvaliacao, iso, lerPlataforma } from "@/lib/mensalidades";
 import type { EstadoForm } from "@/components/form-acao";
 
 function texto(dados: FormData, campo: string) {
@@ -35,7 +35,11 @@ export async function criarAutoescola(_: EstadoForm, dados: FormData): Promise<E
   const senhaHash = await bcrypt.hash(senha, 10);
   try {
     await dbGlobal.$transaction(async (tx) => {
-      const autoescola = await tx.autoescola.create({ data: { nome } });
+      // Autoescola nova ganha o período de avaliação configurado em Plataforma > Mensalidades.
+      const { diasAvaliacao } = await lerPlataforma();
+      const autoescola = await tx.autoescola.create({
+        data: { nome, avaliacaoAte: fimDaAvaliacao(diasAvaliacao) },
+      });
       await tx.configuracao.create({ data: { id: autoescola.id, nome, cidade, uf } });
       await tx.usuario.create({
         data: { autoescolaId: autoescola.id, nome: adminNome, email, senhaHash, papel: "admin" },
@@ -153,6 +157,10 @@ export async function salvarPlataforma(_: EstadoForm, dados: FormData): Promise<
   if (!(formaPadrao in FORMAS_COBRANCA)) return { erro: "Forma de pagamento inválida." };
   const chavePix = texto(dados, "chavePix");
   if (formaPadrao === "pix" && !chavePix) return { erro: "Informe a chave Pix para receber as mensalidades." };
+  const diasAvaliacao = Number(texto(dados, "diasAvaliacao") ?? 0);
+  if (!Number.isInteger(diasAvaliacao) || diasAvaliacao < 0 || diasAvaliacao > 90) {
+    return { erro: "Período de avaliação: de 0 a 90 dias." };
+  }
   const campos = {
     mensalidadeCentavos,
     diaVencimento,
@@ -163,6 +171,7 @@ export async function salvarPlataforma(_: EstadoForm, dados: FormData): Promise<
     instrucoes: texto(dados, "instrucoes")?.slice(0, 400) ?? null,
     whatsappCobranca: texto(dados, "whatsappCobranca"),
     bloquearAutomatico: dados.get("bloquearAutomatico") === "on",
+    diasAvaliacao,
   };
   await dbGlobal.plataformaConfig.upsert({ where: { id: 1 }, create: { id: 1, ...campos }, update: campos });
   revalidatePath("/", "layout");
@@ -191,6 +200,34 @@ export async function salvarCobrancaAutoescola(
   const forma = texto(dados, "formaCobranca");
   if (forma && !(forma in FORMAS_COBRANCA)) return { erro: "Forma de pagamento inválida." };
   const inicio = texto(dados, "cobrancaInicio");
+  const avaliacaoTexto = texto(dados, "avaliacaoAte");
+  if (avaliacaoTexto && !/^\d{4}-\d{2}-\d{2}$/.test(avaliacaoTexto)) return { erro: "Data da avaliação inválida." };
+  const avaliacaoAte = avaliacaoTexto ? new Date(`${avaliacaoTexto}T00:00:00Z`) : null;
+
+  // Mudou a avaliação: a 1ª mensalidade (que vencia no fim dela) acompanha a data nova,
+  // ou é apagada se a avaliação foi tirada (a do mês volta a ser criada no dia normal).
+  const atual = await dbGlobal.autoescola.findUnique({ where: { id: autoescolaId }, select: { avaliacaoAte: true } });
+  if (atual?.avaliacaoAte && atual.avaliacaoAte.getTime() !== avaliacaoAte?.getTime()) {
+    const primeira = await dbGlobal.mensalidade.findFirst({
+      where: { autoescolaId, vencimento: atual.avaliacaoAte, pagoEm: null },
+    });
+    if (primeira) {
+      const competencia = avaliacaoAte ? iso(avaliacaoAte).slice(0, 7) : null;
+      const ocupada =
+        competencia &&
+        competencia !== primeira.competencia &&
+        (await dbGlobal.mensalidade.findUnique({
+          where: { autoescolaId_competencia: { autoescolaId, competencia } },
+        }));
+      if (!avaliacaoAte || ocupada) await dbGlobal.mensalidade.delete({ where: { id: primeira.id } });
+      else
+        await dbGlobal.mensalidade.update({
+          where: { id: primeira.id },
+          data: { vencimento: avaliacaoAte, competencia: competencia ?? primeira.competencia },
+        });
+    }
+  }
+
   await dbGlobal.autoescola.update({
     where: { id: autoescolaId },
     data: {
@@ -199,9 +236,10 @@ export async function salvarCobrancaAutoescola(
       formaCobranca: forma,
       isenta: dados.get("isenta") === "on",
       cobrancaInicio: inicio && /^\d{4}-\d{2}-\d{2}$/.test(inicio) ? new Date(`${inicio}T00:00:00Z`) : null,
+      avaliacaoAte,
     },
   });
-  revalidatePath("/plataforma", "layout");
+  revalidatePath("/", "layout");
   return { ok: "Cobrança da autoescola salva!" };
 }
 
