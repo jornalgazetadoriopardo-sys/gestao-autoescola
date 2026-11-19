@@ -17,6 +17,7 @@ import {
   Upload,
   UserPlus,
   Users,
+  Wallet,
 } from "lucide-react";
 import { BotaoConfirmar } from "@/components/botao-confirmar";
 import { FormAcao } from "@/components/form-acao";
@@ -59,6 +60,7 @@ import { alternarUsuario, criarUsuario, excluirUsuario, removerContrato, salvarC
 import { ConfigForm } from "./config-form";
 import { SeletorPaleta } from "./seletor-paleta";
 import { FormIdentidade } from "./form-identidade";
+import { Mensalidade } from "./mensalidade";
 import { marcaDaAutoescola } from "../posts/marca";
 import { lerIdentidade } from "@/lib/identidade";
 import { coresDaPaleta } from "@/lib/cores";
@@ -77,6 +79,7 @@ const abas = [
   { id: "impressora", label: "Impressora", icone: Printer, soAdmin: true },
   { id: "contrato", label: "Contrato", icone: FileSignature, soAdmin: true },
   { id: "documentos", label: "Documentos", icone: FileText, soAdmin: true },
+  { id: "mensalidade", label: "Mensalidade", icone: Wallet, soAdmin: true },
   { id: "senha", label: "Minha senha", icone: KeyRound, soAdmin: false },
 ];
 
@@ -125,6 +128,7 @@ export default async function ConfiguracoesPage({ searchParams }: { searchParams
       {aba === "impressora" && <Impressora />}
       {aba === "contrato" && <Contrato />}
       {aba === "documentos" && <Documentos />}
+      {aba === "mensalidade" && <Mensalidade />}
       {aba === "senha" && (
         <Cartao className="max-w-md">
           <FormAcao acao={trocarSenha} textoBotao="Trocar senha" limparAoSalvar>

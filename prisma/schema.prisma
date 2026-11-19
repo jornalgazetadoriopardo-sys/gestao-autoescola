@@ -20,6 +20,15 @@ model Autoescola {
   nome         String
   ativo        Boolean       @default(true)
   criadoEm     DateTime      @default(now())
+  // Mensalidade do sistema (ver src/lib/mensalidades.ts). Em branco: usa o
+  // padrão da plataforma. Isenta: não cobra (ex.: a do dono do sistema).
+  mensalidadeCentavos Int?
+  diaVencimento       Int?
+  formaCobranca       String?
+  isenta              Boolean      @default(false)
+  // Cobra a partir desta data (período de teste antes dela).
+  cobrancaInicio      DateTime?
+  mensalidades        Mensalidade[]
   usuarios     Usuario[]
   alunos       Aluno[]
   instrutores  Instrutor[]
@@ -377,4 +386,42 @@ model PostSocial {
   criadoEm     DateTime   @default(now())
 
   @@index([autoescolaId, criadoEm])
+}
+
+// Configuração da cobrança das autoescolas pelo dono do sistema (uma linha só, id 1).
+model PlataformaConfig {
+  id                  Int      @id @default(1)
+  mensalidadeCentavos Int?
+  diaVencimento       Int      @default(10)
+  // "pix" | "boleto" | "cartao" | "transferencia"
+  formaPadrao         String   @default("pix")
+  chavePix            String?
+  nomeRecebedor       String?
+  cidadeRecebedor     String?
+  // Instruções para boleto, cartão ou transferência (aparecem na faixa).
+  instrucoes          String?
+  // Bloqueia a autoescola depois do prazo de tolerância, se não pagar nem avisar.
+  bloquearAutomatico  Boolean  @default(true)
+  whatsappCobranca    String?
+  atualizadoEm        DateTime @updatedAt
+}
+
+// Mensalidade de uma autoescola num mês (competência AAAA-MM).
+model Mensalidade {
+  id             Int        @id @default(autoincrement())
+  autoescolaId   Int
+  autoescola     Autoescola @relation(fields: [autoescolaId], references: [id])
+  competencia    String
+  vencimento     DateTime
+  valorCentavos  Int
+  forma          String     @default("pix")
+  pagoEm         DateTime?
+  // A autoescola avisou que pagou (botão "Já paguei"), com o comprovante opcional.
+  informadoEm    DateTime?
+  comprovante    String?
+  comprovanteNome String?
+  obs            String?
+  criadoEm       DateTime   @default(now())
+
+  @@unique([autoescolaId, competencia])
 }
