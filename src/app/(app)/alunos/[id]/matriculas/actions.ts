@@ -6,7 +6,7 @@ import { db } from "@/lib/db";
 import { exigirSessao } from "@/lib/auth";
 import { CATEGORIAS, hojeISO, lerMoeda, lerPercentual } from "@/lib/format";
 import { gerarParcelas } from "@/lib/parcelas";
-import { FORMAS_ENTRADA, FORMAS_MATRICULA } from "@/lib/pagamentos";
+import { FORMAS_ENTRADA, FORMAS_MATRICULA, valorSemParcelas } from "@/lib/pagamentos";
 import {
   CURSOS_TEORICOS,
   PROCESSOS_COM_CNH,
@@ -255,6 +255,76 @@ export async function editarMatricula(matriculaId: number, _: EstadoForm, dados:
     },
   });
   revalidatePath(`/alunos/${matricula.alunoId}`);
+  // Valor que ficou sem parcelas (ex.: era 0 e agora tem valor): já abre a tela para gerá-las.
+  const atualizada = await db.matricula.findUniqueOrThrow({ where: { id: matriculaId }, include: { parcelas: true } });
+  if (valorSemParcelas(atualizada) > 0) {
+    redirect(`/alunos/${matricula.alunoId}/matriculas/${matriculaId}/parcelas`);
+  }
+  redirect(`/alunos/${matricula.alunoId}`);
+}
+
+// Gera as parcelas do valor da matrícula que ainda não virou parcela: carnê
+// (em aberto) ou pago na hora (Pix, dinheiro, cartão), como ao criar a matrícula.
+export async function gerarParcelasMatricula(matriculaId: number, _: EstadoForm, dados: FormData): Promise<EstadoForm> {
+  await exigirSessao();
+  const matricula = await db.matricula.findUnique({ where: { id: matriculaId }, include: { parcelas: true } });
+  if (!matricula) return { erro: "Matrícula não encontrada." };
+  const valor = valorSemParcelas(matricula);
+  if (valor <= 0) return { erro: "Todo o valor da matrícula já tem parcelas." };
+  const forma = String(dados.get("formaPagamento") ?? "");
+  if (!(forma in FORMAS_MATRICULA)) return { erro: "Escolha a forma de pagamento." };
+
+  const jaTem = matricula.parcelas.filter((p) => p.numero > 0).length;
+  let novas: {
+    numero: number;
+    valorCentavos: number;
+    vencimento: Date;
+    pagoEm?: Date;
+    valorPagoCentavos?: number;
+    forma?: string;
+    obs?: string;
+  }[];
+  let jurosMesBp = matricula.jurosMesBp;
+  if (forma === "carne") {
+    const qtd = inteiro(dados, "qtdParcelas");
+    const vencimento = String(dados.get("primeiroVencimento") ?? "");
+    const juros = lerPercentual(String(dados.get("jurosMes") ?? ""));
+    if (qtd === null || qtd < 1 || qtd > 24) return { erro: "O número de parcelas deve ser entre 1 e 24." };
+    if (valor < qtd) return { erro: "Valor menor que o número de parcelas." };
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(vencimento)) return { erro: "Informe a data do primeiro vencimento." };
+    if (juros === null || juros > 1000) return { erro: "Juros inválido. Informe a porcentagem ao mês, entre 0 e 10." };
+    // Juros só quando a matrícula ainda não tem parcelas (o total é parcelado de uma vez).
+    const jurosBp = qtd > 1 && jaTem === 0 ? juros : 0;
+    if (jaTem === 0) jurosMesBp = jurosBp;
+    novas = gerarParcelas(valor, qtd, new Date(`${vencimento}T00:00:00Z`), jurosBp).map((p) => ({
+      ...p,
+      numero: jaTem + p.numero,
+    }));
+  } else {
+    const hoje = new Date(`${hojeISO()}T00:00:00Z`);
+    const vezes = inteiro(dados, "vezesCartao") ?? 1;
+    novas = [
+      {
+        numero: jaTem + 1,
+        valorCentavos: valor,
+        vencimento: hoje,
+        pagoEm: hoje,
+        valorPagoCentavos: valor,
+        forma,
+        obs: forma === "cartao" && vezes > 1 ? `Cartão de crédito em ${vezes}x` : undefined,
+      },
+    ];
+  }
+
+  await db.$transaction([
+    db.parcela.createMany({ data: novas.map((p) => ({ matriculaId, ...p })) }),
+    db.matricula.update({
+      where: { id: matriculaId },
+      data: { jurosMesBp, ...(jaTem === 0 ? { formaPagamento: forma } : {}) },
+    }),
+  ]);
+  revalidatePath(`/alunos/${matricula.alunoId}`);
+  revalidatePath("/pagamentos");
   redirect(`/alunos/${matricula.alunoId}`);
 }
 

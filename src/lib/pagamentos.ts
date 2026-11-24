@@ -129,3 +129,16 @@ export function descricaoPagamento(
   const comoEntrada = FORMAS_ENTRADA[m.entradaForma ?? ""] ?? m.entradaForma ?? "";
   return `Entrada de ${formatarMoeda(m.entradaCentavos)}${comoEntrada ? ` (${comoEntrada})` : ""} + restante: ${forma.toLowerCase()}`;
 }
+
+// Parte do valor contratado que ainda não virou parcela (ex.: matrícula criada com
+// valor 0 e corrigida depois). Com juros não dá para saber o principal das parcelas,
+// então só conta quando a matrícula não tem nenhuma parcela.
+export function valorSemParcelas(m: {
+  valorTotalCentavos: number;
+  jurosMesBp: number;
+  parcelas: { valorCentavos: number }[];
+}) {
+  if (m.parcelas.length > 0 && m.jurosMesBp > 0) return 0;
+  const parcelado = m.parcelas.reduce((s, p) => s + p.valorCentavos, 0);
+  return Math.max(m.valorTotalCentavos - parcelado, 0);
+}
