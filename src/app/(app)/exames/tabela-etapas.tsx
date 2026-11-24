@@ -5,7 +5,6 @@ import { Etiqueta, Tabela } from "@/components/ui";
 import { formatarData, formatarMoeda } from "@/lib/format";
 import { COR_SITUACAO_ETAPA, TIPOS_ETAPA, situacaoEtapa, textoSituacaoEtapa } from "@/lib/etapas";
 import { marcarEtapa, marcarPagamentoAluno } from "./actions";
-import { entraNaGuia } from "@/lib/guia-taxas";
 
 const botao =
   "inline-flex items-center gap-1.5 rounded-lg border-2 px-3 py-1.5 text-sm font-semibold whitespace-nowrap";
@@ -59,7 +58,9 @@ export function TabelaEtapas({
                   ? `${e.cobranca === "aluno" ? "Aluno pagou" : "Pago"} em ${formatarData(e.pagoEm)}`
                   : e.cobranca === "autoescola"
                     ? "Autoescola cobra · a receber"
-                    : "Aluno paga direto · não pagou"}
+                    : e.resultado
+                      ? "Aluno paga direto"
+                      : "Aluno paga direto · não pagou"}
               </div>
             </td>
             <td className="min-w-64 px-4 py-2.5">
@@ -72,8 +73,8 @@ export function TabelaEtapas({
                     <HandCoins className="size-4" aria-hidden /> Receber
                   </Link>
                 )}
-                {/* Taxa do Detran que o aluno paga no banco: marcar se já pagou. */}
-                {!receber && entraNaGuia(e) && !e.resultado && (
+                {/* Taxa que o aluno paga direto (banco, clínica...): marcar se já pagou. */}
+                {!receber && e.cobranca === "aluno" && !e.resultado && (
                   <form action={marcarPagamentoAluno.bind(null, e.id, !e.pagoEm)}>
                     {e.pagoEm ? (
                       <button

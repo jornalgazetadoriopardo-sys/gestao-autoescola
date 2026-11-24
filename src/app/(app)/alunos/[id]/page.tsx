@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import {
   ArrowLeft,
+  BadgeCheck,
   BookOpen,
   Camera,
   BookOpenCheck,
@@ -24,7 +25,7 @@ import {
   Wallet,
 } from "lucide-react";
 import { BotaoConfirmar } from "@/components/botao-confirmar";
-import { Aviso, BotaoDownload, BotaoLink, Cabecalho, Cartao, Etiqueta, Secao, Tabela, Vazio } from "@/components/ui";
+import { Aviso, Botao, BotaoDownload, BotaoLink, Cabecalho, Cartao, Etiqueta, Secao, Tabela, Vazio } from "@/components/ui";
 import { db } from "@/lib/db";
 import { prontosParaExamePratico } from "@/lib/prontos-exame";
 import { NIVEIS_GOVBR } from "@/lib/govbr-niveis";
@@ -55,6 +56,7 @@ import { descricaoPagamento, rotuloParcela, totalDeParcelas } from "@/lib/pagame
 import { CURSOS_TEORICOS, TIPOS_PROCESSO } from "@/lib/etapas";
 import { AvisoTaxaRecebida } from "../../exames/aviso-taxa";
 import { TabelaEtapas } from "../../exames/tabela-etapas";
+import { marcarTaxasPagas } from "../../exames/actions";
 import { urlFoto } from "@/lib/foto";
 import { AcoesAula } from "../../aulas/acoes-aula";
 import { estornarParcela, excluirParcela } from "../../pagamentos/actions";
@@ -501,6 +503,14 @@ export default async function FichaAlunoPage({
                         </span>
                       )}
                     </BotaoLink>
+                  )}
+                  {m.etapas.some((e) => e.cobranca === "aluno" && !e.pagoEm && !e.resultado) && (
+                    <form action={marcarTaxasPagas.bind(null, m.id)}>
+                      <Botao variante="secundario" tamanho="pequeno" icone={BadgeCheck}>
+                        Marcar taxas como pagas (
+                        {m.etapas.filter((e) => e.cobranca === "aluno" && !e.pagoEm && !e.resultado).length})
+                      </Botao>
+                    </form>
                   )}
                   <BotaoLink
                     href={`/exames/nova?matricula=${m.id}`}
