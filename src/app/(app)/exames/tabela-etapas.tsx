@@ -5,7 +5,6 @@ import { Etiqueta, Tabela } from "@/components/ui";
 import { formatarData, formatarMoeda } from "@/lib/format";
 import { COR_SITUACAO_ETAPA, TIPOS_ETAPA, situacaoEtapa, textoSituacaoEtapa } from "@/lib/etapas";
 import { marcarEtapa, marcarPagamentoAluno } from "./actions";
-import { entraNaGuia } from "@/lib/guia-taxas";
 
 const botao =
   "inline-flex items-center gap-1.5 rounded-lg border-2 px-3 py-1.5 text-sm font-semibold whitespace-nowrap";
@@ -72,8 +71,8 @@ export function TabelaEtapas({
                     <HandCoins className="size-4" aria-hidden /> Receber
                   </Link>
                 )}
-                {/* Taxa do Detran que o aluno paga no banco: marcar se já pagou. */}
-                {!receber && entraNaGuia(e) && !e.resultado && (
+                {/* Taxa que o aluno paga direto (banco, clínica...): marcar se já pagou. */}
+                {!receber && e.cobranca === "aluno" && (
                   <form action={marcarPagamentoAluno.bind(null, e.id, !e.pagoEm)}>
                     {e.pagoEm ? (
                       <button
@@ -87,7 +86,7 @@ export function TabelaEtapas({
                         className={`${botao} border-blue-300 text-blue-800 hover:bg-blue-50`}
                         title="O aluno já pagou esta taxa"
                       >
-                        <BadgeCheck className="size-4" aria-hidden /> Aluno pagou
+                        <BadgeCheck className="size-4" aria-hidden /> Marcar como pago
                       </button>
                     )}
                   </form>
