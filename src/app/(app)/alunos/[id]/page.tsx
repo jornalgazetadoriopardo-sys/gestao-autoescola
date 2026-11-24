@@ -51,7 +51,7 @@ import {
   resumoPorCategoria,
   textoPraticas,
 } from "@/lib/aulas";
-import { descricaoPagamento, rotuloParcela, totalDeParcelas } from "@/lib/pagamentos";
+import { descricaoPagamento, rotuloParcela, totalDeParcelas, valorSemParcelas } from "@/lib/pagamentos";
 import { CURSOS_TEORICOS, TIPOS_PROCESSO } from "@/lib/etapas";
 import { AvisoTaxaRecebida } from "../../exames/aviso-taxa";
 import { TabelaEtapas } from "../../exames/tabela-etapas";
@@ -536,6 +536,21 @@ export default async function FichaAlunoPage({
                   cor={emAberto ? "text-amber-700" : undefined}
                 />
               </div>
+
+              {valorSemParcelas(m) > 0 && (
+                <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-amber-950">
+                  <span className="text-base">
+                    <b>{formatarMoeda(valorSemParcelas(m))}</b> do valor contratado ainda não tem parcelas para receber.
+                  </span>
+                  <BotaoLink
+                    href={`/alunos/${aluno.id}/matriculas/${m.id}/parcelas`}
+                    tamanho="pequeno"
+                    icone={HandCoins}
+                  >
+                    Gerar parcelas
+                  </BotaoLink>
+                </div>
+              )}
 
               {m.parcelas.length > 0 && (
                 <Tabela cabecalhos={["Parcela", "Vencimento", "Valor", "Situação", "Pagamento", ""]}>
