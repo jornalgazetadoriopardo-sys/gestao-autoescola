@@ -181,14 +181,3 @@ export async function marcarPagamentoAluno(id: number, pago: boolean) {
   await db.etapa.update({ where: { id }, data: { pagoEm: pago ? dia(hojeISO()) : null, forma: null } });
   await revalidar(etapa.matriculaId);
 }
-
-// Marca de uma vez como pagas (hoje) as taxas que o aluno paga direto e ainda
-// estão em aberto numa matrícula (as que já tiveram resultado não entram).
-export async function marcarTaxasPagas(matriculaId: number) {
-  await exigirSessao();
-  await db.etapa.updateMany({
-    where: { matriculaId, cobranca: "aluno", pagoEm: null, resultado: null },
-    data: { pagoEm: dia(hojeISO()), forma: null },
-  });
-  await revalidar(matriculaId);
-}

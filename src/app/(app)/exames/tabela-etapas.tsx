@@ -58,9 +58,7 @@ export function TabelaEtapas({
                   ? `${e.cobranca === "aluno" ? "Aluno pagou" : "Pago"} em ${formatarData(e.pagoEm)}`
                   : e.cobranca === "autoescola"
                     ? "Autoescola cobra · a receber"
-                    : e.resultado
-                      ? "Aluno paga direto"
-                      : "Aluno paga direto · não pagou"}
+                    : "Aluno paga direto · não pagou"}
               </div>
             </td>
             <td className="min-w-64 px-4 py-2.5">
@@ -74,7 +72,7 @@ export function TabelaEtapas({
                   </Link>
                 )}
                 {/* Taxa que o aluno paga direto (banco, clínica...): marcar se já pagou. */}
-                {!receber && e.cobranca === "aluno" && !e.resultado && (
+                {!receber && e.cobranca === "aluno" && (
                   <form action={marcarPagamentoAluno.bind(null, e.id, !e.pagoEm)}>
                     {e.pagoEm ? (
                       <button
@@ -88,7 +86,7 @@ export function TabelaEtapas({
                         className={`${botao} border-blue-300 text-blue-800 hover:bg-blue-50`}
                         title="O aluno já pagou esta taxa"
                       >
-                        <BadgeCheck className="size-4" aria-hidden /> Aluno pagou
+                        <BadgeCheck className="size-4" aria-hidden /> Marcar como pago
                       </button>
                     )}
                   </form>
