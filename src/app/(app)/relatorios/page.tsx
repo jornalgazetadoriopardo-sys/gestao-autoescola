@@ -1,9 +1,10 @@
-import { CalendarDays, CalendarRange, FileText, Receipt, UserRound, Wallet } from "lucide-react";
+import { CalendarDays, CalendarRange, FileText, GraduationCap, Receipt, UserRound, Wallet } from "lucide-react";
 import { Botao, Cabecalho, Campo, Cartao, IconeRedondo, Input, Select } from "@/components/ui";
 import { exigirSessao } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { CATEGORIAS_DESPESA, TITULO_MANUTENCAO } from "@/lib/despesas";
-import { hojeISO } from "@/lib/format";
+import { CATEGORIAS, hojeISO } from "@/lib/format";
+import { TIPOS_PROCESSO } from "@/lib/etapas";
 import { somarDias } from "@/lib/aulas";
 
 export const dynamic = "force-dynamic";
@@ -92,6 +93,39 @@ export default async function RelatoriosPage() {
                 ))}
               </Select>
             </Campo>
+            <Botao icone={FileText}>Gerar relatório</Botao>
+          </form>
+        </Relatorio>
+
+        <Relatorio
+          icone={GraduationCap}
+          titulo="Matrículas por período"
+          texto="Matrículas feitas no período, com totais por categoria, processo e forma de pagamento, e o valor contratado, recebido e em aberto."
+        >
+          <form action="/imprimir/matriculas" target="_blank" className="space-y-4">
+            <Periodo de={inicioMes} ate={hojeTexto} />
+            <div className="grid grid-cols-2 gap-3">
+              <Campo label="Categoria">
+                <Select name="categoria" defaultValue="">
+                  <option value="">Todas</option>
+                  {CATEGORIAS.map((c) => (
+                    <option key={c} value={c}>
+                      {c}
+                    </option>
+                  ))}
+                </Select>
+              </Campo>
+              <Campo label="Processo">
+                <Select name="processo" defaultValue="">
+                  <option value="">Todos</option>
+                  {Object.entries(TIPOS_PROCESSO).map(([id, t]) => (
+                    <option key={id} value={id}>
+                      {t.titulo}
+                    </option>
+                  ))}
+                </Select>
+              </Campo>
+            </div>
             <Botao icone={FileText}>Gerar relatório</Botao>
           </form>
         </Relatorio>

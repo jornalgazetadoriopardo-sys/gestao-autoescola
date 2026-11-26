@@ -103,7 +103,8 @@ presença e pagamentos.
 - **Relatórios** para imprimir ou salvar em PDF: do aluno (aulas, presenças,
   faltas, quanto falta para concluir e pagamentos), financeiro (para o administrador:
   entradas, despesas, lucro, retiradas e sobra no caixa), despesas por tipo e por pessoa,
-  resumo do ano mês a mês e aulas por período
+  resumo do ano mês a mês, aulas por período e matrículas por período (totais por categoria,
+  processo e forma de pagamento, com valor contratado, recebido e em aberto)
 - **Impressora térmica** (ex.: Elgin i9, bobina 80 mm): recibo (1 ou 2 vias) e carnê (um cupom
   por parcela) saem em cupom; escolha o padrão em Configurações > Impressora e troque entre A4 e
   térmica na própria tela de impressão. Guia do aluno, relatórios e contrato continuam em A4.
